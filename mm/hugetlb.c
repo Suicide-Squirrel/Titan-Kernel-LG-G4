@@ -1732,6 +1732,29 @@ static void __init hugetlb_sysfs_init(void)
 
 #ifdef CONFIG_NUMA
 
+static void clear_huge_page(struct page *page, unsigned long addr)
+{
+	int i;
+
+	might_sleep();
+	for (i = 0; i < (HPAGE_SIZE/PAGE_SIZE); i++) {
+		cond_resched();
+		clear_user_highpage(page + i, addr);
+	}
+}
+
+static void copy_huge_page(struct page *dst, struct page *src,
+			   unsigned long addr)
+{
+	int i;
+
+	might_sleep();
+	for (i = 0; i < HPAGE_SIZE/PAGE_SIZE; i++) {
+		cond_resched();
+		copy_user_highpage(dst + i, src + i, addr + i*PAGE_SIZE);
+	}
+}
+
 /*
  * node_hstate/s - associate per node hstate attributes, via their kobjects,
  * with node devices in node_devices[] using a parallel array.  The array
@@ -2678,6 +2701,8 @@ retry_avoidcopy:
 	 * Retake the page_table_lock to check for racing updates
 	 * before the page tables are altered
 	 */
+	spin_unlock(&mm->page_table_lock);
+	copy_huge_page(new_page, old_page, address);
 	spin_lock(&mm->page_table_lock);
 	ptep = huge_pte_offset(mm, address & huge_page_mask(h));
 	if (likely(pte_same(huge_ptep_get(ptep), pte))) {
