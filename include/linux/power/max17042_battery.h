@@ -47,6 +47,11 @@ enum max17042_register {
 	MAX17042_AvSOC		= 0x0E,
 	MAX17042_RemCap		= 0x0F,
 	MAX17042_FullCAP	= 0x10,
+	MAX17042_Qresidual	= 0x0C,
+	MAX17042_SOC		= 0x0D,
+	MAX17042_AvSOC		= 0x0E,
+	MAX17042_RemCap		= 0x0F,
+	MAX17402_FullCAP	= 0x10,
 	MAX17042_TTE		= 0x11,
 	MAX17042_V_empty	= 0x12,
 
@@ -72,6 +77,14 @@ enum max17042_register {
 	MAX17042_AIN		= 0x27,
 	MAX17042_LearnCFG	= 0x28,
 	MAX17042_FilterCFG	= 0x29,
+	MAX17042_DevChem	= 0x22,
+
+	MAX17042_TempNom	= 0x24,
+	MAX17042_TempCold	= 0x25,
+	MAX17042_TempHot	= 0x26,
+	MAX17042_AIN		= 0x27,
+	MAX17042_LearnCFG	= 0x28,
+	MAX17042_SHFTCFG	= 0x29,
 	MAX17042_RelaxCFG	= 0x2A,
 	MAX17042_MiscCFG	= 0x2B,
 	MAX17042_TGAIN		= 0x2C,
@@ -90,6 +103,13 @@ enum max17042_register {
 	MAX17042_TempCo		= 0x39,
 	MAX17042_EmptyTempCo	= 0x3A,
 	MAX17042_K_empty0	= 0x3B,
+	MAX17042_Q_empty	= 0x33,
+	MAX17042_T_empty	= 0x34,
+
+	MAX17042_RCOMP0		= 0x38,
+	MAX17042_TempCo		= 0x39,
+	MAX17042_Rx		= 0x3A,
+	MAX17042_T_empty0	= 0x3B,
 	MAX17042_TaskPeriod	= 0x3C,
 	MAX17042_FSTAT		= 0x3D,
 
@@ -127,6 +147,12 @@ enum max17047_register {
 };
 
 enum max170xx_chip_type {MAX17042, MAX17047};
+
+	MAX17042_VFRemCap	= 0x4A,
+
+	MAX17042_QH		= 0x4D,
+	MAX17042_QL		= 0x4E,
+};
 
 /*
  * used for setting a register to a desired value
