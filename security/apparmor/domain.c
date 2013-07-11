@@ -148,7 +148,7 @@ static struct aa_profile *__attach_match(const char *name,
 	int len = 0;
 	struct aa_profile *profile, *candidate = NULL;
 
-	list_for_each_entry(profile, head, base.list) {
+	list_for_each_entry_rcu(profile, head, base.list) {
 		if (profile->flags & PFLAG_NULL)
 			continue;
 		if (profile->xmatch && profile->xmatch_len > len) {
@@ -181,9 +181,9 @@ static struct aa_profile *find_attach(struct aa_namespace *ns,
 {
 	struct aa_profile *profile;
 
-	read_lock(&ns->lock);
+	rcu_read_lock();
 	profile = aa_get_profile(__attach_match(name, list));
-	read_unlock(&ns->lock);
+	rcu_read_unlock();
 
 	return profile;
 }
@@ -647,7 +647,10 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	if (count) {
 		/* attempting to change into a new hat or switch to a sibling */
 		struct aa_profile *root;
-		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
+		if (PROFILE_IS_HAT(profile))
+			root = aa_get_profile_rcu(&profile->parent);
+		else
+			root = aa_get_profile(profile);
 
 		/* find first matching hat */
 		for (i = 0; i < count && !hat; i++)
@@ -659,6 +662,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 					error = -ECHILD;
 				else
 					error = -ENOENT;
+				aa_put_profile(root);
 				goto out;
 			}
 
@@ -673,6 +677,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 
 			/* freed below */
 			name = new_compound_name(root->base.hname, hats[0]);
+			aa_put_profile(root);
 			target = name;
 			/* released below */
 			hat = aa_new_null_profile(profile, 1);
@@ -682,6 +687,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 				goto audit;
 			}
 		} else {
+			aa_put_profile(root);
 			target = hat->base.hname;
 			if (!PROFILE_IS_HAT(hat)) {
 				info = "target not hat";

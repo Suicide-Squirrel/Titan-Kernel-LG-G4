@@ -67,6 +67,12 @@ void aa_info_message(const char *str);
 void *kvmalloc(size_t size);
 
 
+/* returns 0 if kref not incremented */
+static inline int kref_get_not0(struct kref *kref)
+{
+	return atomic_inc_not_zero(&kref->refcount);
+}
+
 /**
  * aa_strneq - compare null terminated @str to a non null terminated substring
  * @str: a null terminated string
