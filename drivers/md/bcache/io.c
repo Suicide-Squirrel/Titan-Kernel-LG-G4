@@ -20,11 +20,12 @@ static void bch_bi_iter.bi_idx_hack_endio(struct bio *bio, int error)
 static void bch_generic_make_request_hack(struct bio *bio)
 {
 	if (bio->bi_iter.bi_idx) {
+		int i;
+		struct bio_vec *bv;
 		struct bio *clone = bio_alloc(GFP_NOIO, bio_segments(bio));
 
-		memcpy(clone->bi_io_vec,
-		       bio_iovec(bio),
-		       bio_segments(bio) * sizeof(struct bio_vec));
+		bio_for_each_segment(bv, bio, i)
+			clone->bi_io_vec[clone->bi_vcnt++] = *bv;
 
 		clone->bi_iter.bi_sector	= bio->bi_iter.bi_sector;
 		clone->bi_bdev		= bio->bi_bdev;
@@ -111,7 +112,7 @@ struct bio *bch_bio_split(struct bio *bio, int sectors,
 			if (!ret)
 				return NULL;
 
-			memcpy(ret->bi_io_vec, bio_iovec(bio),
+			memcpy(ret->bi_io_vec, __bio_iovec(bio),
 			       sizeof(struct bio_vec) * vcnt);
 
 			break;
@@ -120,7 +121,7 @@ struct bio *bch_bio_split(struct bio *bio, int sectors,
 			if (!ret)
 				return NULL;
 
-			memcpy(ret->bi_io_vec, bio_iovec(bio),
+			memcpy(ret->bi_io_vec, __bio_iovec(bio),
 			       sizeof(struct bio_vec) * vcnt);
 
 			ret->bi_io_vec[vcnt - 1].bv_len = nbytes;
@@ -191,7 +192,7 @@ static unsigned bch_bio_max_sectors(struct bio *bio)
 	ret = min(ret, queue_max_sectors(q));
 
 	WARN_ON(!ret);
-	ret = max_t(int, ret, bio_iovec(bio)->bv_len >> 9);
+	ret = max_t(int, ret, bio_iovec(bio).bv_len >> 9);
 
 	return ret;
 }
