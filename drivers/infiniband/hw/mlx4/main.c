@@ -54,6 +54,8 @@
 #define DRV_VERSION	"1.0"
 #define DRV_RELDATE	"April 4, 2008"
 
+#define MLX4_IB_FLOW_MAX_PRIO 0xFFF
+
 MODULE_AUTHOR("Roland Dreier");
 MODULE_DESCRIPTION("Mellanox ConnectX HCA InfiniBand driver");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -87,6 +89,31 @@ static void init_query_mad(struct ib_smp *mad)
 }
 
 static union ib_gid zgid;
+
+static int check_flow_steering_support(struct mlx4_dev *dev)
+{
+	int eth_num_ports = 0;
+	int ib_num_ports = 0;
+
+	int dmfs = dev->caps.steering_mode == MLX4_STEERING_MODE_DEVICE_MANAGED;
+
+	if (dmfs) {
+		int i;
+		mlx4_foreach_port(i, dev, MLX4_PORT_TYPE_ETH)
+			eth_num_ports++;
+		mlx4_foreach_port(i, dev, MLX4_PORT_TYPE_IB)
+			ib_num_ports++;
+		dmfs &= (!ib_num_ports ||
+			 (dev->caps.flags2 & MLX4_DEV_CAP_FLAG2_DMFS_IPOIB)) &&
+			(!eth_num_ports ||
+			 (dev->caps.flags2 & MLX4_DEV_CAP_FLAG2_FS_EN));
+		if (ib_num_ports && mlx4_is_mfunc(dev)) {
+			pr_warn("Device managed flow steering is unavailable for IB port in multifunction env.\n");
+			dmfs = 0;
+		}
+	}
+	return dmfs;
+}
 
 static int mlx4_ib_query_device(struct ib_device *ibdev,
 				struct ib_device_attr *props)
@@ -144,6 +171,8 @@ static int mlx4_ib_query_device(struct ib_device *ibdev,
 			props->device_cap_flags |= IB_DEVICE_MEM_WINDOW_TYPE_2B;
 		else
 			props->device_cap_flags |= IB_DEVICE_MEM_WINDOW_TYPE_2A;
+	if (dev->steering_support ==  MLX4_STEERING_MODE_DEVICE_MANAGED)
+		props->device_cap_flags |= IB_DEVICE_MANAGED_FLOW_STEERING;
 	}
 
 	props->vendor_id	   = be32_to_cpup((__be32 *) (out_mad->data + 36)) &
@@ -590,7 +619,7 @@ static struct ib_ucontext *mlx4_ib_alloc_ucontext(struct ib_device *ibdev,
 		resp.cqe_size	      = dev->dev->caps.cqe_size;
 	}
 
-	context = kmalloc(sizeof *context, GFP_KERNEL);
+	context = kzalloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
 		return ERR_PTR(-ENOMEM);
 
@@ -627,21 +656,145 @@ static int mlx4_ib_dealloc_ucontext(struct ib_ucontext *ibcontext)
 	return 0;
 }
 
+static void  mlx4_ib_vma_open(struct vm_area_struct *area)
+{
+	/* vma_open is called when a new VMA is created on top of our VMA.
+	 * This is done through either mremap flow or split_vma (usually due
+	 * to mlock, madvise, munmap, etc.). We do not support a clone of the
+	 * vma, as this VMA is strongly hardware related. Therefore we set the
+	 * vm_ops of the newly created/cloned VMA to NULL, to prevent it from
+	 * calling us again and trying to do incorrect actions. We assume that
+	 * the original vma size is exactly a single page that there will be no
+	 * "splitting" operations on.
+	 */
+	area->vm_ops = NULL;
+}
+
+static void  mlx4_ib_vma_close(struct vm_area_struct *area)
+{
+	struct mlx4_ib_vma_private_data *mlx4_ib_vma_priv_data;
+
+	/* It's guaranteed that all VMAs opened on a FD are closed before the
+	 * file itself is closed, therefore no sync is needed with the regular
+	 * closing flow. (e.g. mlx4_ib_dealloc_ucontext) However need a sync
+	 * with accessing the vma as part of mlx4_ib_disassociate_ucontext.
+	 * The close operation is usually called under mm->mmap_sem except when
+	 * process is exiting.  The exiting case is handled explicitly as part
+	 * of mlx4_ib_disassociate_ucontext.
+	 */
+	mlx4_ib_vma_priv_data = (struct mlx4_ib_vma_private_data *)
+				area->vm_private_data;
+
+	/* set the vma context pointer to null in the mlx4_ib driver's private
+	 * data to protect against a race condition in mlx4_ib_dissassociate_ucontext().
+	 */
+	mlx4_ib_vma_priv_data->vma = NULL;
+}
+
+static const struct vm_operations_struct mlx4_ib_vm_ops = {
+	.open = mlx4_ib_vma_open,
+	.close = mlx4_ib_vma_close
+};
+
+static void mlx4_ib_disassociate_ucontext(struct ib_ucontext *ibcontext)
+{
+	int i;
+	int ret = 0;
+	struct vm_area_struct *vma;
+	struct mlx4_ib_ucontext *context = to_mucontext(ibcontext);
+	struct task_struct *owning_process  = NULL;
+	struct mm_struct   *owning_mm       = NULL;
+
+	owning_process = get_pid_task(ibcontext->tgid, PIDTYPE_PID);
+	if (!owning_process)
+		return;
+
+	owning_mm = get_task_mm(owning_process);
+	if (!owning_mm) {
+		pr_info("no mm, disassociate ucontext is pending task termination\n");
+		while (1) {
+			/* make sure that task is dead before returning, it may
+			 * prevent a rare case of module down in parallel to a
+			 * call to mlx4_ib_vma_close.
+			 */
+			put_task_struct(owning_process);
+			msleep(1);
+			owning_process = get_pid_task(ibcontext->tgid,
+						      PIDTYPE_PID);
+			if (!owning_process ||
+			    owning_process->state == TASK_DEAD) {
+				pr_info("disassociate ucontext done, task was terminated\n");
+				/* in case task was dead need to release the task struct */
+				if (owning_process)
+					put_task_struct(owning_process);
+				return;
+			}
+		}
+	}
+
+	/* need to protect from a race on closing the vma as part of
+	 * mlx4_ib_vma_close().
+	 */
+	down_write(&owning_mm->mmap_sem);
+	for (i = 0; i < HW_BAR_COUNT; i++) {
+		vma = context->hw_bar_info[i].vma;
+		if (!vma)
+			continue;
+
+		ret = zap_vma_ptes(context->hw_bar_info[i].vma,
+				   context->hw_bar_info[i].vma->vm_start,
+				   PAGE_SIZE);
+		if (ret) {
+			pr_err("Error: zap_vma_ptes failed for index=%d, ret=%d\n", i, ret);
+			BUG_ON(1);
+		}
+
+		context->hw_bar_info[i].vma->vm_flags &=
+			~(VM_SHARED | VM_MAYSHARE);
+		/* context going to be destroyed, should not access ops any more */
+		context->hw_bar_info[i].vma->vm_ops = NULL;
+	}
+
+	up_write(&owning_mm->mmap_sem);
+	mmput(owning_mm);
+	put_task_struct(owning_process);
+}
+
+static void mlx4_ib_set_vma_data(struct vm_area_struct *vma,
+				 struct mlx4_ib_vma_private_data *vma_private_data)
+{
+	vma_private_data->vma = vma;
+	vma->vm_private_data = vma_private_data;
+	vma->vm_ops =  &mlx4_ib_vm_ops;
+}
+
 static int mlx4_ib_mmap(struct ib_ucontext *context, struct vm_area_struct *vma)
 {
 	struct mlx4_ib_dev *dev = to_mdev(context->device);
+	struct mlx4_ib_ucontext *mucontext = to_mucontext(context);
 
 	if (vma->vm_end - vma->vm_start != PAGE_SIZE)
 		return -EINVAL;
 
 	if (vma->vm_pgoff == 0) {
+		/* We prevent double mmaping on same context */
+		if (mucontext->hw_bar_info[HW_BAR_DB].vma)
+			return -EINVAL;
+
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
 		if (io_remap_pfn_range(vma, vma->vm_start,
 				       to_mucontext(context)->uar.pfn,
 				       PAGE_SIZE, vma->vm_page_prot))
 			return -EAGAIN;
+
+		mlx4_ib_set_vma_data(vma, &mucontext->hw_bar_info[HW_BAR_DB]);
+
 	} else if (vma->vm_pgoff == 1 && dev->dev->caps.bf_reg_size != 0) {
+		/* We prevent double mmaping on same context */
+		if (mucontext->hw_bar_info[HW_BAR_BF].vma)
+			return -EINVAL;
+
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 		if (io_remap_pfn_range(vma, vma->vm_start,
@@ -649,7 +802,34 @@ static int mlx4_ib_mmap(struct ib_ucontext *context, struct vm_area_struct *vma)
 				       dev->dev->caps.num_uars,
 				       PAGE_SIZE, vma->vm_page_prot))
 			return -EAGAIN;
-	} else
+
+		mlx4_ib_set_vma_data(vma, &mucontext->hw_bar_info[HW_BAR_BF]);
+
+	} else if (vma->vm_pgoff == 3) {
+		struct mlx4_clock_params params;
+		int ret;
+
+		/* We prevent double mmaping on same context */
+		if (mucontext->hw_bar_info[HW_BAR_CLOCK].vma)
+			return -EINVAL;
+
+		ret = mlx4_get_internal_clock_params(dev->dev, &params);
+
+		if (ret)
+			return ret;
+
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		if (io_remap_pfn_range(vma, vma->vm_start,
+				       (pci_resource_start(dev->dev->persist->pdev,
+							   params.bar) +
+					params.offset)
+				       >> PAGE_SHIFT,
+				       PAGE_SIZE, vma->vm_page_prot))
+			return -EAGAIN;
+
+		mlx4_ib_set_vma_data(vma,
+				     &mucontext->hw_bar_info[HW_BAR_CLOCK]);
+	} else {
 		return -EINVAL;
 
 	return 0;
@@ -797,6 +977,209 @@ struct mlx4_ib_steering {
 	u64 reg_id;
 	union ib_gid gid;
 };
+
+static int parse_flow_attr(struct mlx4_dev *dev,
+			   union ib_flow_spec *ib_spec,
+			   struct _rule_hw *mlx4_spec)
+{
+	enum mlx4_net_trans_rule_id type;
+
+	switch (ib_spec->type) {
+	case IB_FLOW_SPEC_ETH:
+		type = MLX4_NET_TRANS_RULE_ID_ETH;
+		memcpy(mlx4_spec->eth.dst_mac, ib_spec->eth.val.dst_mac,
+		       ETH_ALEN);
+		memcpy(mlx4_spec->eth.dst_mac_msk, ib_spec->eth.mask.dst_mac,
+		       ETH_ALEN);
+		mlx4_spec->eth.vlan_tag = ib_spec->eth.val.vlan_tag;
+		mlx4_spec->eth.vlan_tag_msk = ib_spec->eth.mask.vlan_tag;
+		break;
+
+	case IB_FLOW_SPEC_IPV4:
+		type = MLX4_NET_TRANS_RULE_ID_IPV4;
+		mlx4_spec->ipv4.src_ip = ib_spec->ipv4.val.src_ip;
+		mlx4_spec->ipv4.src_ip_msk = ib_spec->ipv4.mask.src_ip;
+		mlx4_spec->ipv4.dst_ip = ib_spec->ipv4.val.dst_ip;
+		mlx4_spec->ipv4.dst_ip_msk = ib_spec->ipv4.mask.dst_ip;
+		break;
+
+	case IB_FLOW_SPEC_TCP:
+	case IB_FLOW_SPEC_UDP:
+		type = ib_spec->type == IB_FLOW_SPEC_TCP ?
+					MLX4_NET_TRANS_RULE_ID_TCP :
+					MLX4_NET_TRANS_RULE_ID_UDP;
+		mlx4_spec->tcp_udp.dst_port = ib_spec->tcp_udp.val.dst_port;
+		mlx4_spec->tcp_udp.dst_port_msk = ib_spec->tcp_udp.mask.dst_port;
+		mlx4_spec->tcp_udp.src_port = ib_spec->tcp_udp.val.src_port;
+		mlx4_spec->tcp_udp.src_port_msk = ib_spec->tcp_udp.mask.src_port;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+	if (mlx4_map_sw_to_hw_steering_id(dev, type) < 0 ||
+	    mlx4_hw_rule_sz(dev, type) < 0)
+		return -EINVAL;
+	mlx4_spec->id = cpu_to_be16(mlx4_map_sw_to_hw_steering_id(dev, type));
+	mlx4_spec->size = mlx4_hw_rule_sz(dev, type) >> 2;
+	return mlx4_hw_rule_sz(dev, type);
+}
+
+static int __mlx4_ib_create_flow(struct ib_qp *qp, struct ib_flow_attr *flow_attr,
+			  int domain,
+			  enum mlx4_net_trans_promisc_mode flow_type,
+			  u64 *reg_id)
+{
+	int ret, i;
+	int size = 0;
+	void *ib_flow;
+	struct mlx4_ib_dev *mdev = to_mdev(qp->device);
+	struct mlx4_cmd_mailbox *mailbox;
+	struct mlx4_net_trans_rule_hw_ctrl *ctrl;
+	size_t rule_size = sizeof(struct mlx4_net_trans_rule_hw_ctrl) +
+			   (sizeof(struct _rule_hw) * flow_attr->num_of_specs);
+
+	static const u16 __mlx4_domain[] = {
+		[IB_FLOW_DOMAIN_USER] = MLX4_DOMAIN_UVERBS,
+		[IB_FLOW_DOMAIN_ETHTOOL] = MLX4_DOMAIN_ETHTOOL,
+		[IB_FLOW_DOMAIN_RFS] = MLX4_DOMAIN_RFS,
+		[IB_FLOW_DOMAIN_NIC] = MLX4_DOMAIN_NIC,
+	};
+
+	if (flow_attr->priority > MLX4_IB_FLOW_MAX_PRIO) {
+		pr_err("Invalid priority value %d\n", flow_attr->priority);
+		return -EINVAL;
+	}
+
+	if (domain >= IB_FLOW_DOMAIN_NUM) {
+		pr_err("Invalid domain value %d\n", domain);
+		return -EINVAL;
+	}
+
+	if (mlx4_map_sw_to_hw_steering_mode(mdev->dev, flow_type) < 0)
+		return -EINVAL;
+
+	mailbox = mlx4_alloc_cmd_mailbox(mdev->dev);
+	if (IS_ERR(mailbox))
+		return PTR_ERR(mailbox);
+	memset(mailbox->buf, 0, rule_size);
+	ctrl = mailbox->buf;
+
+	ctrl->prio = cpu_to_be16(__mlx4_domain[domain] |
+				 flow_attr->priority);
+	ctrl->type = mlx4_map_sw_to_hw_steering_mode(mdev->dev, flow_type);
+	ctrl->port = flow_attr->port;
+	ctrl->qpn = cpu_to_be32(qp->qp_num);
+
+	ib_flow = flow_attr + 1;
+	size += sizeof(struct mlx4_net_trans_rule_hw_ctrl);
+	for (i = 0; i < flow_attr->num_of_specs; i++) {
+		ret = parse_flow_attr(mdev->dev, ib_flow, mailbox->buf + size);
+		if (ret < 0) {
+			mlx4_free_cmd_mailbox(mdev->dev, mailbox);
+			return -EINVAL;
+		}
+		ib_flow += ((union ib_flow_spec *) ib_flow)->size;
+		size += ret;
+	}
+
+	ret = mlx4_cmd_imm(mdev->dev, mailbox->dma, reg_id, size >> 2, 0,
+			   MLX4_QP_FLOW_STEERING_ATTACH, MLX4_CMD_TIME_CLASS_A,
+			   MLX4_CMD_NATIVE);
+	if (ret == -ENOMEM)
+		pr_err("mcg table is full. Fail to register network rule.\n");
+	else if (ret == -ENXIO)
+		pr_err("Device managed flow steering is disabled. Fail to register network rule.\n");
+	else if (ret)
+		pr_err("Invalid argumant. Fail to register network rule.\n");
+
+	mlx4_free_cmd_mailbox(mdev->dev, mailbox);
+	return ret;
+}
+
+static int __mlx4_ib_destroy_flow(struct mlx4_dev *dev, u64 reg_id)
+{
+	int err;
+	err = mlx4_cmd(dev, reg_id, 0, 0,
+		       MLX4_QP_FLOW_STEERING_DETACH, MLX4_CMD_TIME_CLASS_A,
+		       MLX4_CMD_NATIVE);
+	if (err)
+		pr_err("Fail to detach network rule. registration id = 0x%llx\n",
+		       reg_id);
+	return err;
+}
+
+static struct ib_flow *mlx4_ib_create_flow(struct ib_qp *qp,
+				    struct ib_flow_attr *flow_attr,
+				    int domain)
+{
+	int err = 0, i = 0;
+	struct mlx4_ib_flow *mflow;
+	enum mlx4_net_trans_promisc_mode type[2];
+
+	memset(type, 0, sizeof(type));
+
+	mflow = kzalloc(sizeof(*mflow), GFP_KERNEL);
+	if (!mflow) {
+		err = -ENOMEM;
+		goto err_free;
+	}
+
+	switch (flow_attr->type) {
+	case IB_FLOW_ATTR_NORMAL:
+		type[0] = MLX4_FS_REGULAR;
+		break;
+
+	case IB_FLOW_ATTR_ALL_DEFAULT:
+		type[0] = MLX4_FS_ALL_DEFAULT;
+		break;
+
+	case IB_FLOW_ATTR_MC_DEFAULT:
+		type[0] = MLX4_FS_MC_DEFAULT;
+		break;
+
+	case IB_FLOW_ATTR_SNIFFER:
+		type[0] = MLX4_FS_UC_SNIFFER;
+		type[1] = MLX4_FS_MC_SNIFFER;
+		break;
+
+	default:
+		err = -EINVAL;
+		goto err_free;
+	}
+
+	while (i < ARRAY_SIZE(type) && type[i]) {
+		err = __mlx4_ib_create_flow(qp, flow_attr, domain, type[i],
+					    &mflow->reg_id[i]);
+		if (err)
+			goto err_free;
+		i++;
+	}
+
+	return &mflow->ibflow;
+
+err_free:
+	kfree(mflow);
+	return ERR_PTR(err);
+}
+
+static int mlx4_ib_destroy_flow(struct ib_flow *flow_id)
+{
+	int err, ret = 0;
+	int i = 0;
+	struct mlx4_ib_dev *mdev = to_mdev(flow_id->qp->device);
+	struct mlx4_ib_flow *mflow = to_mflow(flow_id);
+
+	while (i < ARRAY_SIZE(mflow->reg_id) && mflow->reg_id[i]) {
+		err = __mlx4_ib_destroy_flow(mdev->dev, mflow->reg_id[i]);
+		if (err)
+			ret = err;
+		i++;
+	}
+
+	kfree(mflow);
+	return ret;
+}
 
 static int mlx4_ib_mcg_attach(struct ib_qp *ibqp, union ib_gid *gid, u16 lid)
 {
@@ -1451,6 +1834,7 @@ static void *mlx4_ib_add(struct mlx4_dev *dev)
 	ibdev->ib_dev.detach_mcast	= mlx4_ib_mcg_detach;
 	ibdev->ib_dev.process_mad	= mlx4_ib_process_mad;
 	ibdev->ib_dev.get_port_immutable = mlx4_port_immutable;
+	ibdev->ib_dev.disassociate_ucontext = mlx4_ib_disassociate_ucontext;
 
 	if (!mlx4_is_slave(ibdev->dev)) {
 		ibdev->ib_dev.alloc_fmr		= mlx4_ib_fmr_alloc;
@@ -1478,6 +1862,16 @@ static void *mlx4_ib_add(struct mlx4_dev *dev)
 			(1ull << IB_USER_VERBS_CMD_CLOSE_XRCD);
 	}
 
+	if (check_flow_steering_support(dev)) {
+		ibdev->steering_support = MLX4_STEERING_MODE_DEVICE_MANAGED;
+		ibdev->ib_dev.create_flow	= mlx4_ib_create_flow;
+		ibdev->ib_dev.destroy_flow	= mlx4_ib_destroy_flow;
+
+		ibdev->ib_dev.uverbs_cmd_mask	|=
+			(1ull << IB_USER_VERBS_CMD_CREATE_FLOW) |
+			(1ull << IB_USER_VERBS_CMD_DESTROY_FLOW);
+	}
+
 	mlx4_ib_alloc_eqs(dev, ibdev);
 
 	spin_lock_init(&iboe->lock);
@@ -1498,8 +1892,35 @@ static void *mlx4_ib_add(struct mlx4_dev *dev)
 	spin_lock_init(&ibdev->sm_lock);
 	mutex_init(&ibdev->cap_mask_mutex);
 
+	if (ibdev->steering_support == MLX4_STEERING_MODE_DEVICE_MANAGED) {
+		ibdev->steer_qpn_count = MLX4_IB_UC_MAX_NUM_QPS;
+		err = mlx4_qp_reserve_range(dev, ibdev->steer_qpn_count,
+					    MLX4_IB_UC_STEER_QPN_ALIGN,
+					    &ibdev->steer_qpn_base);
+		if (err)
+			goto err_counter;
+
+		ibdev->ib_uc_qpns_bitmap =
+			kmalloc(BITS_TO_LONGS(ibdev->steer_qpn_count) *
+				sizeof(long),
+				GFP_KERNEL);
+		if (!ibdev->ib_uc_qpns_bitmap) {
+			dev_err(&dev->pdev->dev, "bit map alloc failed\n");
+			goto err_steer_qp_release;
+		}
+
+		bitmap_zero(ibdev->ib_uc_qpns_bitmap, ibdev->steer_qpn_count);
+
+		err = mlx4_FLOW_STEERING_IB_UC_QP_RANGE(
+				dev, ibdev->steer_qpn_base,
+				ibdev->steer_qpn_base +
+				ibdev->steer_qpn_count - 1);
+		if (err)
+			goto err_steer_free_bitmap;
+	}
+
 	if (ib_register_device(&ibdev->ib_dev, NULL))
-		goto err_counter;
+		goto err_steer_free_bitmap;
 
 	if (mlx4_ib_mad_init(ibdev))
 		goto err_reg;
@@ -1550,6 +1971,13 @@ err_mad:
 err_reg:
 	ib_unregister_device(&ibdev->ib_dev);
 
+err_steer_free_bitmap:
+	kfree(ibdev->ib_uc_qpns_bitmap);
+
+err_steer_qp_release:
+	if (ibdev->steering_support == MLX4_STEERING_MODE_DEVICE_MANAGED)
+		mlx4_qp_release_range(dev, ibdev->steer_qpn_base,
+				      ibdev->steer_qpn_count);
 err_counter:
 	for (; i; --i)
 		if (ibdev->counters[i - 1] != -1)
@@ -1570,6 +1998,69 @@ err_dealloc:
 	return NULL;
 }
 
+int mlx4_ib_steer_qp_alloc(struct mlx4_ib_dev *dev, int count, int *qpn)
+{
+	int offset;
+
+	WARN_ON(!dev->ib_uc_qpns_bitmap);
+
+	offset = bitmap_find_free_region(dev->ib_uc_qpns_bitmap,
+					 dev->steer_qpn_count,
+					 get_count_order(count));
+	if (offset < 0)
+		return offset;
+
+	*qpn = dev->steer_qpn_base + offset;
+	return 0;
+}
+
+void mlx4_ib_steer_qp_free(struct mlx4_ib_dev *dev, u32 qpn, int count)
+{
+	if (!qpn ||
+	    dev->steering_support != MLX4_STEERING_MODE_DEVICE_MANAGED)
+		return;
+
+	BUG_ON(qpn < dev->steer_qpn_base);
+
+	bitmap_release_region(dev->ib_uc_qpns_bitmap,
+			      qpn - dev->steer_qpn_base,
+			      get_count_order(count));
+}
+
+int mlx4_ib_steer_qp_reg(struct mlx4_ib_dev *mdev, struct mlx4_ib_qp *mqp,
+			 int is_attach)
+{
+	int err;
+	size_t flow_size;
+	struct ib_flow_attr *flow = NULL;
+	struct ib_flow_spec_ib *ib_spec;
+
+	if (is_attach) {
+		flow_size = sizeof(struct ib_flow_attr) +
+			    sizeof(struct ib_flow_spec_ib);
+		flow = kzalloc(flow_size, GFP_KERNEL);
+		if (!flow)
+			return -ENOMEM;
+		flow->port = mqp->port;
+		flow->num_of_specs = 1;
+		flow->size = flow_size;
+		ib_spec = (struct ib_flow_spec_ib *)(flow + 1);
+		ib_spec->type = IB_FLOW_SPEC_IB;
+		ib_spec->size = sizeof(struct ib_flow_spec_ib);
+		/* Add an empty rule for IB L2 */
+		memset(&ib_spec->mask, 0, sizeof(ib_spec->mask));
+
+		err = __mlx4_ib_create_flow(&mqp->ibqp, flow,
+					    IB_FLOW_DOMAIN_NIC,
+					    MLX4_FS_REGULAR,
+					    &mqp->reg_id);
+	} else {
+		err = __mlx4_ib_destroy_flow(mdev->dev, mqp->reg_id);
+	}
+	kfree(flow);
+	return err;
+}
+
 static void mlx4_ib_remove(struct mlx4_dev *dev, void *ibdev_ptr)
 {
 	struct mlx4_ib_dev *ibdev = ibdev_ptr;
@@ -1583,6 +2074,13 @@ static void mlx4_ib_remove(struct mlx4_dev *dev, void *ibdev_ptr)
 			pr_warn("failure unregistering notifier\n");
 		ibdev->iboe.nb.notifier_call = NULL;
 	}
+
+	if (ibdev->steering_support == MLX4_STEERING_MODE_DEVICE_MANAGED) {
+		mlx4_qp_release_range(dev, ibdev->steer_qpn_base,
+				      ibdev->steer_qpn_count);
+		kfree(ibdev->ib_uc_qpns_bitmap);
+	}
+
 	iounmap(ibdev->uar_map);
 	for (p = 0; p < ibdev->num_ports; ++p)
 		if (ibdev->counters[p] != -1)
