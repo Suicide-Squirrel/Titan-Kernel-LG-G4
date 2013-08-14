@@ -24,6 +24,7 @@
 #include "include/apparmor.h"
 #include "include/audit.h"
 #include "include/context.h"
+#include "include/crypto.h"
 #include "include/match.h"
 #include "include/policy.h"
 #include "include/policy_unpack.h"
@@ -755,10 +756,12 @@ int aa_unpack(void *udata, size_t size, struct list_head *lh, const char **ns)
 
 	*ns = NULL;
 	while (e.pos < e.end) {
+		void *start;
 		error = verify_header(&e, e.pos == e.start, ns);
 		if (error)
 			goto fail;
 
+		start = e.pos;
 		profile = unpack_profile(&e);
 		if (IS_ERR(profile)) {
 			error = PTR_ERR(profile);
@@ -766,16 +769,18 @@ int aa_unpack(void *udata, size_t size, struct list_head *lh, const char **ns)
 		}
 
 		error = verify_profile(profile);
-		if (error) {
-			aa_free_profile(profile);
-			goto fail;
-		}
+		if (error)
+			goto fail_profile;
+
+		error = aa_calc_profile_hash(profile, e.version, start,
+					     e.pos - start);
+		if (error)
+			goto fail_profile;
 
 		ent = aa_load_ent_alloc();
 		if (!ent) {
 			error = -ENOMEM;
-			aa_put_profile(profile);
-			goto fail;
+			goto fail_profile;
 		}
 
 		ent->new = profile;
@@ -783,6 +788,9 @@ int aa_unpack(void *udata, size_t size, struct list_head *lh, const char **ns)
 	}
 
 	return 0;
+
+fail_profile:
+	aa_put_profile(profile);
 
 fail:
 	list_for_each_entry_safe(ent, tmp, lh, list) {
