@@ -63,6 +63,11 @@ int pmd_huge_support(void)
 	return 1;
 }
 
+int pmd_huge_support(void)
+{
+	return 1;
+}
+
 static __init int setup_hugepagesz(char *opt)
 {
 	unsigned long ps = memparse(opt, &opt);

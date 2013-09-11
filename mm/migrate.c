@@ -1116,7 +1116,7 @@ int migrate_pages(struct list_head *from, new_page_t get_new_page,
 				rc = unmap_and_move_huge_page(get_new_page, put_new_page,
 						private, page, pass > 2, mode);
 			else
-				rc = unmap_and_move(get_new_page, private, put_new_page,
+				rc = unmap_and_move(get_new_page, put_new_page,
 						private, page, pass > 2, mode);
 
 			switch(rc) {
