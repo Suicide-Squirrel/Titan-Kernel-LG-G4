@@ -28,6 +28,7 @@
 #include <linux/skbuff.h>
 
 #include <net/inet_sock.h>
+#include <net/route.h>
 #include <net/snmp.h>
 #include <net/flow.h>
 
@@ -57,6 +58,9 @@ struct ipcm_cookie {
 	int			oif;
 	struct ip_options_rcu	*opt;
 	__u8			tx_flags;
+	__u8			ttl;
+	__s16			tos;
+	char			priority;
 };
 
 #define IPCB(skb) ((struct inet_skb_parm*)((skb)->cb))
@@ -138,6 +142,16 @@ extern struct sk_buff  *ip_make_skb(struct sock *sk,
 static inline struct sk_buff *ip_finish_skb(struct sock *sk, struct flowi4 *fl4)
 {
 	return __ip_make_skb(sk, fl4, &sk->sk_write_queue, &inet_sk(sk)->cork.base);
+}
+
+static inline __u8 get_rttos(struct ipcm_cookie* ipc, struct inet_sock *inet)
+{
+	return (ipc->tos != -1) ? RT_TOS(ipc->tos) : RT_TOS(inet->tos);
+}
+
+static inline __u8 get_rtconn_flags(struct ipcm_cookie* ipc, struct sock* sk)
+{
+	return (ipc->tos != -1) ? RT_CONN_FLAGS_TOS(sk, ipc->tos) : RT_CONN_FLAGS(sk);
 }
 
 /* datagram.c */
