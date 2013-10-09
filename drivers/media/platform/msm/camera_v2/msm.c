@@ -811,8 +811,12 @@ int msm_post_event(struct v4l2_event *event, int timeout)
 		wait_for_completion(&cmd_ack->wait_complete);
 	} else {
 	/* should wait on session based condition */
-		rc = wait_for_completion_timeout(&cmd_ack->wait_complete,
-				msecs_to_jiffies(timeout));
+		do {
+			rc = wait_for_completion_timeout(&cmd_ack->wait_complete,
+					msecs_to_jiffies(timeout));
+			if (rc != -ERESTARTSYS)
+				break;
+		} while (1);
 
 		if (list_empty_careful(&cmd_ack->command_q.list)) {
 			if (!rc) {
