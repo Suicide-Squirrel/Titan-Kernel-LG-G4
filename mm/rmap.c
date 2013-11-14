@@ -607,7 +607,7 @@ pte_t *__page_check_address(struct page *page, struct mm_struct *mm,
 		if (!pte)
 			return NULL;
 
-		ptl = &mm->page_table_lock;
+		ptl = huge_pte_lockptr(page_hstate(page), mm, pte);
 		goto check;
 	}
 
