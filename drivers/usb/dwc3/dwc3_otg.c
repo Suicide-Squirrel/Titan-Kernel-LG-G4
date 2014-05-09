@@ -744,6 +744,11 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					dwc3_otg_set_power(phy,
 								100);
 #endif
+					if (dotg->otg.gadget &&
+						usb_gadget_get_charge_enabled(
+							dotg->otg.gadget))
+						dwc3_otg_set_power(phy,
+							DWC3_IDEV_CHG_MIN);
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;
