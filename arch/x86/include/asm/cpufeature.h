@@ -225,6 +225,12 @@
 #define X86_FEATURE_AVX512ER	( 9*32+27) /* AVX-512 Exponential and Reciprocal */
 #define X86_FEATURE_AVX512CD	( 9*32+28) /* AVX-512 Conflict Detection */
 
+/* Extended state features, CPUID level 0x0000000d:1 (eax), word 10 */
+#define X86_FEATURE_XSAVEOPT	(10*32+ 0) /* XSAVEOPT */
+#define X86_FEATURE_XSAVEC	(10*32+ 1) /* XSAVEC */
+#define X86_FEATURE_XGETBV1	(10*32+ 2) /* XGETBV with ECX = 1 */
+#define X86_FEATURE_XSAVES	(10*32+ 3) /* XSAVES/XRSTORS */
+
 /*
  * BUG word(s)
  */
