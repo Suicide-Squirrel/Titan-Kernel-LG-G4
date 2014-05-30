@@ -71,3 +71,4 @@ obj-y				+= qcom/
 obj-$(CONFIG_LGE_IRRC)		+= lge_uei_irrc.o
 obj-$(CONFIG_LGE_EVENT_LOCK) += lge_factory_misc.o
 obj-$(CONFIG_LGE_APPSPORT)		+= appsport.o
+obj-$(CONFIG_HOB_SHARED_RAM) += hob_ram_mmap.o
