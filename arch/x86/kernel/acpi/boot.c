@@ -355,6 +355,10 @@ acpi_parse_lapic_nmi(struct acpi_subtable_header * header, const unsigned long e
 #endif				/*CONFIG_X86_LOCAL_APIC */
 
 #ifdef CONFIG_X86_IO_APIC
+static void  mp_override_legacy_irq(u8 bus_irq, u8 polarity, u8 trigger,
+				    u32 gsi);
+static int mp_register_gsi(struct device *dev, u32 gsi, int trigger,
+			   int polarity);
 
 static int __init
 acpi_parse_ioapic(struct acpi_subtable_header * header, const unsigned long end)
@@ -911,7 +915,8 @@ static int __init acpi_parse_madt_lapic_entries(void)
 extern int es7000_plat;
 #endif
 
-void __init mp_override_legacy_irq(u8 bus_irq, u8 polarity, u8 trigger, u32 gsi)
+static void __init mp_override_legacy_irq(u8 bus_irq, u8 polarity, u8 trigger,
+					  u32 gsi)
 {
 	int ioapic;
 	int pin;
@@ -946,7 +951,7 @@ void __init mp_override_legacy_irq(u8 bus_irq, u8 polarity, u8 trigger, u32 gsi)
 	isa_irq_to_gsi[bus_irq] = gsi;
 }
 
-void __init mp_config_acpi_legacy_irqs(void)
+static void __init mp_config_acpi_legacy_irqs(void)
 {
 	int i;
 	struct mpc_intsrc mp_irq;
@@ -1058,7 +1063,8 @@ static int mp_config_acpi_gsi(struct device *dev, u32 gsi, int trigger,
 	return 0;
 }
 
-int mp_register_gsi(struct device *dev, u32 gsi, int trigger, int polarity)
+static int mp_register_gsi(struct device *dev, u32 gsi, int trigger,
+			   int polarity)
 {
 	int ioapic;
 	int ioapic_pin;
