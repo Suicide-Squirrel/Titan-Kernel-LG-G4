@@ -18,6 +18,7 @@
 
 #include <linux/workqueue.h>
 #include <linux/power_supply.h>
+#include <linux/hrtimer.h>
 
 #include <linux/usb/otg.h>
 #include "power.h"
@@ -29,6 +30,9 @@
 #define DWC3_IDEV_CHG_MAX 1500
 #define DWC3_HVDCP_CHG_MAX 1800
 #define DWC3_IDEV_CHG_MIN 500
+#define DWC_LS_DM	  0x1
+#define DWC_LS_DP	  0x2
+#define DWC3_LS		  0x3
 
 /*
  * Module param to override current drawn for DCP charger
@@ -68,6 +72,7 @@ struct dwc3_otg {
 #ifdef CONFIG_LGE_USB_MAXIM_EVP
 	struct delayed_work	evp_connect_work;
 #endif
+	struct timer_list	chg_check_timer;
 };
 
 /**
@@ -115,6 +120,8 @@ struct dwc3_charger {
 #ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
 	struct delayed_work	*drv_check_state_wq;
 #endif
+	/* get the charger linestate */
+	u32	(*get_linestate)(struct dwc3_charger *charger);
 };
 
 /* for external charger driver */
