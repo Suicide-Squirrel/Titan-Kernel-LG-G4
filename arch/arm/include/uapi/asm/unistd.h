@@ -411,6 +411,7 @@
 #define __NR_renameat2			(__NR_SYSCALL_BASE+382)
 #define __NR_seccomp			(__NR_SYSCALL_BASE+383)
 #define __NR_getrandom			(__NR_SYSCALL_BASE+384)
+#define __NR_memfd_create		(__NR_SYSCALL_BASE+385)
 
 /*
  * This may need to be greater than __NR_last_syscall+1 in order to
