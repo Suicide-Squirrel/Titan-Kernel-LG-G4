@@ -5856,7 +5856,9 @@ static int dhd_preinit_proc(dhd_pub_t *dhd, int ifidx, char *name, char *value)
 			memcpy(cspec.country_abbrev, value, WLC_CNTRY_BUF_SZ);
 			memcpy(cspec.ccode, value, WLC_CNTRY_BUF_SZ);
 			get_customized_country_code(dhd->info->adapter,
-				(char *)&cspec.country_abbrev, &cspec);
+				(char *)&cspec.country_abbrev, &cspec,
+				dhd->dhd_cflags);
+
 			memcpy(cspec.country_abbrev, cspec.ccode, WLC_CNTRY_BUF_SZ);
 		}
 		memset(smbuf, 0, sizeof(smbuf));
@@ -8774,6 +8776,18 @@ dhd_dev_get_feature_set_matrix(struct net_device *dev, int *num)
 	return ret;
 }
 
+int
+dhd_dev_set_nodfs(struct net_device *dev, u32 nodfs)
+{
+	dhd_info_t *dhd = DHD_DEV_INFO(dev);
+
+	if (nodfs)
+		dhd->pub.dhd_cflags |= WLAN_PLAT_NODFS_FLAG;
+	else
+		dhd->pub.dhd_cflags &= ~WLAN_PLAT_NODFS_FLAG;
+	return 0;
+}
+
 #ifdef PNO_SUPPORT
 /* Linux wrapper to call common dhd_pno_stop_for_ssid */
 int
@@ -9088,7 +9102,8 @@ void dhd_get_customized_country_code(struct net_device *dev, char *country_iso_c
 	wl_country_t *cspec)
 {
 	dhd_info_t *dhd = DHD_DEV_INFO(dev);
-	get_customized_country_code(dhd->adapter, country_iso_code, cspec);
+	get_customized_country_code(dhd->adapter, country_iso_code, cspec,
+				    dhd->pub.dhd_cflags);
 }
 void dhd_bus_country_set(struct net_device *dev, wl_country_t *cspec, bool notify)
 {
