@@ -74,6 +74,7 @@ struct dwc3_otg {
 #ifdef CONFIG_LGE_USB_MAXIM_EVP
 	struct delayed_work	evp_connect_work;
 #endif
+	int                     falsesdp_retry_count;
 	struct timer_list	chg_check_timer;
 };
 
