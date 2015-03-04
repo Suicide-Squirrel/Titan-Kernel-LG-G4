@@ -2578,11 +2578,9 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 {
 	struct dwc3_msm *mdwc = container_of(psy, struct dwc3_msm,
 								usb_psy);
-#ifndef CONFIG_LGE_PM_QC20_SCENARIO
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 	struct dwc3_otg *dotg = dwc->dotg;
 	struct usb_phy *phy = dotg->otg.phy;
-#endif
 #if defined CONFIG_LGE_USB_MAXIM_EVP && defined CONFIG_LGE_PM_MAXIM_EVP_CONTROL
 	static int evp_vol;
 #endif
@@ -2669,9 +2667,7 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 			break;
 		case POWER_SUPPLY_TYPE_USB_HVDCP:
 			mdwc->charger.chg_type = DWC3_DCP_CHARGER;
-#ifndef CONFIG_LGE_PM_QC20_SCENARIO
-			usb_phy_set_power(phy, hvdcp_max_current);
-#endif
+			usb_phy_set_power(phy, DWC3_HVDCP_CHG_MAX);
 			break;
 		case POWER_SUPPLY_TYPE_USB_CDP:
 			mdwc->charger.chg_type = DWC3_CDP_CHARGER;
