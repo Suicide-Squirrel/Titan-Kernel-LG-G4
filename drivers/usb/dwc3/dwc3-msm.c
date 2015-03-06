@@ -2667,7 +2667,7 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 			break;
 		case POWER_SUPPLY_TYPE_USB_HVDCP:
 			mdwc->charger.chg_type = DWC3_DCP_CHARGER;
-			usb_phy_set_power(phy, DWC3_HVDCP_CHG_MAX);
+			usb_phy_set_power(phy, hvdcp_max_current);
 			break;
 		case POWER_SUPPLY_TYPE_USB_CDP:
 			mdwc->charger.chg_type = DWC3_CDP_CHARGER;
