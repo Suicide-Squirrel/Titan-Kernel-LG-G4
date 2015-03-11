@@ -8,6 +8,7 @@ all: hugepage-mmap hugepage-shm  map_hugetlb thuge-gen
 	$(CC) $(CFLAGS) -o $@ $^
 
 TEST_PROGS := run_vmtests
+TEST_FILES := $(BINARIES)
 
 include ../lib.mk
 
