@@ -21,8 +21,9 @@ else
 	echo "Not an x86 target, can't build kcmp selftest"
 endif
 
-run_tests: all
-	@./kcmp_test || echo "kcmp_test: [FAIL]"
+TEST_PROGS := kcmp_test
+
+include ../lib.mk
 
 clean:
 	rm -fr ./run_test
