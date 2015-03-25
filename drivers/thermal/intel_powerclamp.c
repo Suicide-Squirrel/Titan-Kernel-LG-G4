@@ -667,7 +667,7 @@ static struct thermal_cooling_device_ops powerclamp_cooling_ops = {
 };
 
 /* runs on Nehalem and later */
-static const struct x86_cpu_id intel_powerclamp_ids[] = {
+static const struct x86_cpu_id intel_powerclamp_ids[] __initconst = {
 	{ X86_VENDOR_INTEL, 6, 0x1a},
 	{ X86_VENDOR_INTEL, 6, 0x1c},
 	{ X86_VENDOR_INTEL, 6, 0x1e},
@@ -695,7 +695,7 @@ static const struct x86_cpu_id intel_powerclamp_ids[] = {
 };
 MODULE_DEVICE_TABLE(x86cpu, intel_powerclamp_ids);
 
-static int powerclamp_probe(void)
+static int __init powerclamp_probe(void)
 {
 	if (!x86_match_cpu(intel_powerclamp_ids)) {
 		pr_err("Intel powerclamp does not run on family %d model %d\n",
@@ -761,7 +761,7 @@ file_error:
 	debugfs_remove_recursive(debug_dir);
 }
 
-static int powerclamp_init(void)
+static int __init powerclamp_init(void)
 {
 	int retval;
 	int bitmap_size;
@@ -810,7 +810,7 @@ exit_free:
 }
 module_init(powerclamp_init);
 
-static void powerclamp_exit(void)
+static void __exit powerclamp_exit(void)
 {
 	unregister_hotcpu_notifier(&powerclamp_cpu_notifier);
 	end_power_clamp();
