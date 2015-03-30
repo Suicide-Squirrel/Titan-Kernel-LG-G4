@@ -118,6 +118,7 @@ static inline int driver_match_device(struct device_driver *drv,
 {
 	return drv->bus->match ? drv->bus->match(dev, drv) : 1;
 }
+extern bool driver_allows_async_probing(struct device_driver *drv);
 
 extern char *make_class_name(const char *name, struct kobject *kobj);
 
