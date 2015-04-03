@@ -88,12 +88,6 @@ ENTRY(native_usergs_sysret32)
 	swapgs
 	sysretl
 ENDPROC(native_usergs_sysret32)
-
-ENTRY(native_irq_enable_sysexit)
-	swapgs
-	sti
-	sysexit
-ENDPROC(native_irq_enable_sysexit)
 #endif
 
 /*
