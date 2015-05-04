@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,6 +22,8 @@
 #define FASTRPC_IOCTL_INVOKE_FD  _IOWR('R', 4, struct fastrpc_ioctl_invoke_fd)
 #define FASTRPC_IOCTL_SETMODE    _IOWR('R', 5, uint32_t)
 #define FASTRPC_IOCTL_INIT       _IOWR('R', 6, struct fastrpc_ioctl_init)
+#define FASTRPC_IOCTL_MUNMAP_REMOTE_HEAP  \
+			_IOWR('R', 7, struct fastrpc_ioctl_munmap_remote_heap)
 #define FASTRPC_SMD_GUID "fastrpcsmd-apps-dsp"
 #define DEVICE_NAME      "adsprpc-smd"
 
@@ -89,16 +91,28 @@ do {\
 } while (0)
 #endif
 
+#define remote_arg64_t    union remote_arg64
+
+struct remote_buf64 {
+	uint64_t pv;
+	int64_t len;
+};
+
+union remote_arg64 {
+	struct remote_buf64	buf;
+	uint32_t h;
+};
+
 #define remote_arg_t    union remote_arg
 
 struct remote_buf {
-	void *pv;		/* buffer pointer */
-	ssize_t len;		/* length of buffer */
+	void *pv;
+	size_t len;
 };
 
 union remote_arg {
-	struct remote_buf buf;	/* buffer info */
-	uint32_t h;		/* remote handle */
+	struct remote_buf     buf;
+	uint32_t h;
 };
 
 struct fastrpc_ioctl_invoke {
@@ -127,6 +141,11 @@ struct fastrpc_ioctl_munmap {
 	ssize_t size;		/* size */
 };
 
+struct fastrpc_ioctl_munmap_remote_heap {
+	uintptr_t vaddrout;	/* address to unmap */
+	ssize_t size;		/* size */
+	uint8_t akey;       /* authentication key */
+};
 
 struct fastrpc_ioctl_mmap {
 	int fd;				/* ion fd */
@@ -137,14 +156,14 @@ struct fastrpc_ioctl_mmap {
 };
 
 struct smq_null_invoke {
-	struct smq_invoke_ctx *ctx; /* invoke caller context */
+	uint64_t ctx;			/* invoke caller context */
 	uint32_t handle;	    /* handle to invoke */
 	uint32_t sc;		    /* scalars structure describing the data */
 };
 
 struct smq_phy_page {
-	unsigned long addr;	/* physical address */
-	ssize_t size;		/* size of contiguous region */
+	uint64_t addr;		/* physical address */
+	uint64_t size;		/* size of contiguous region */
 };
 
 struct smq_invoke_buf {
@@ -164,11 +183,11 @@ struct smq_msg {
 };
 
 struct smq_invoke_rsp {
-	struct smq_invoke_ctx *ctx;  /* invoke caller context */
+	uint64_t ctx;			/* invoke caller context */
 	int retval;	             /* invoke return value */
 };
 
-static inline struct smq_invoke_buf *smq_invoke_buf_start(remote_arg_t *pra,
+static inline struct smq_invoke_buf *smq_invoke_buf_start(remote_arg64_t *pra,
 							uint32_t sc)
 {
 	int len = REMOTE_SCALARS_LENGTH(sc);
