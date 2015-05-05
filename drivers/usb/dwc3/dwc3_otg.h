@@ -76,6 +76,7 @@ struct dwc3_otg {
 #endif
 	int                     falsesdp_retry_count;
 	struct timer_list	chg_check_timer;
+	bool			notify_psy;	/* Set PSY Type Again */
 };
 
 /**

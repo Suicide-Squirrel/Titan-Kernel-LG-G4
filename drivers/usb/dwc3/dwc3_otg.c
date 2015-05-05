@@ -318,6 +318,7 @@ static void dwc3_ext_chg_det_done(struct usb_otg *otg, struct dwc3_charger *chg)
 {
 	struct dwc3_otg *dotg = container_of(otg, struct dwc3_otg, otg);
 
+	dotg->notify_psy = true;
 	/*
 	 * Ignore chg_detection notification if BSV has gone off by this time.
 	 * STOP chg_det as part of !BSV handling would reset the chg_det flags
@@ -523,7 +524,8 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 	if (dotg->charger->chg_type == DWC3_SDP_CHARGER ||
 			dotg->charger->chg_type == DWC3_FLOATED_CHARGER)
 #else
-	if (dotg->charger->chg_type != DWC3_INVALID_CHARGER) {
+	if (!dotg->notify_psy &&
+		dotg->charger->chg_type != DWC3_INVALID_CHARGER) {
 		dev_dbg(phy->dev,
 			"SKIP setting power supply type again,chg_type = %d\n",
 			dotg->charger->chg_type);
@@ -542,6 +544,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		power_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
 
 	power_supply_set_supply_type(dotg->psy, power_supply_type);
+	dotg->notify_psy = false;
 
 	#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
 	update_status(1, dotg->charger->chg_type);
