@@ -5135,6 +5135,15 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 		power_supply_set_allow_detection(chip->usb_psy, 1);
 	}
 
+	/*
+	 * set usb_psy's allow_detection if this is a new insertion, i.e. it is
+	 * not already src_detected and usbin_uv is seen falling
+	 */
+	if (!(reg & USBIN_UV_BIT) && !(reg & USBIN_SRC_DET_BIT)) {
+		pr_smb(PR_MISC, "setting usb psy allow detection 1\n");
+		power_supply_set_allow_detection(chip->usb_psy, 1);
+	}
+
 	if ((reg & USBIN_UV_BIT) && (reg & USBIN_SRC_DET_BIT)) {
 		pr_smb(PR_STATUS, "Very weak charger detected\n");
 		chip->very_weak_charger = true;
