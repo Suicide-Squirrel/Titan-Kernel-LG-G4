@@ -821,6 +821,7 @@ static int glink_pkt_init_add_device(struct glink_pkt_dev *devp, int i)
 	spin_lock_init(&devp->pa_spinlock);
 	INIT_LIST_HEAD(&devp->pkt_list);
 	spin_lock_init(&devp->pkt_list_lock);
+	wakeup_source_init(&devp->pa_ws, devp->dev_name);
 	INIT_WORK(&devp->packet_arrival_work, packet_arrival_worker);
 
 	cdev_init(&devp->cdev, &glink_pkt_fops);
