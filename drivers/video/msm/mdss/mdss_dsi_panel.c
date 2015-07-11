@@ -49,6 +49,7 @@ extern int lge_lg4945_panel_mode_cmd_send(int switch_cmd, struct mdss_dsi_ctrl_p
 #if defined(CONFIG_LGE_PP_AD_SUPPORTED)
 extern void qpnp_wled_dimming(int dst_lvl);
 #endif
+#include "mdss_livedisplay.h"
 
 #define DT_CMD_HDR 6
 #define MIN_REFRESH_RATE 30
@@ -762,6 +763,11 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		lge_mdss_dsi.post_mdss_dsi_panel_on(pdata);
 #endif
 	mdss_livedisplay_update(ctrl, MODE_UPDATE_ALL);
+
+	if (pdata->event_handler)
+		pdata->event_handler(pdata, MDSS_EVENT_UPDATE_LIVEDISPLAY,
+				(void *)(unsigned long) MODE_UPDATE_ALL);
+
 
 end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
