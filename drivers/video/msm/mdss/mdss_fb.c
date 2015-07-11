@@ -92,6 +92,7 @@ extern void lm3697_set_ramp_time(u32 interval);
 #if defined(CONFIG_LGE_PP_AD_SUPPORTED)
 extern void mdss_dsi_panel_dimming_ctrl(int bl_level);
 #endif
+#include "mdss_livedisplay.h"
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -1573,7 +1574,8 @@ static int mdss_fb_create_sysfs(struct msm_fb_data_type *mfd)
 	rc = sysfs_create_group(&mfd->fbi->dev->kobj, &mdss_fb_attr_group);
 	if (rc)
 		pr_err("sysfs group creation failed, rc=%d\n", rc);
-	return rc;
+
+	return mdss_livedisplay_create_sysfs(mfd);
 }
 
 static void mdss_fb_remove_sysfs(struct msm_fb_data_type *mfd)
