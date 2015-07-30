@@ -382,6 +382,14 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 		new_level = 1;
 
 	/*
+	 * When waking up from SLUMBER at turbo then set the pwrlevel
+	 * to one level below turbo
+	 */
+	if (new_level == 0 && test_bit(KGSL_PWRFLAGS_WAKEUP_PWRLEVEL,
+		&device->pwrctrl.ctrl_flags))
+		new_level = 1;
+
+	/*
 	 * If thermal cycling is required and the new level hits the
 	 * thermal limit, kick off the cycling.
 	 */
