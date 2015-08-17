@@ -290,6 +290,7 @@ struct qpnp_hap {
 	struct qpnp_pwm_info pwm_info;
 	struct mutex lock;
 	struct mutex wf_lock;
+	struct mutex set_lock;
 	struct completion completion;
 	enum qpnp_hap_mode play_mode;
 	enum qpnp_hap_auto_res_mode auto_res_mode;
@@ -1540,6 +1541,8 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 	u8 val = 0;
 	unsigned long timeout_ns = POLL_TIME_AUTO_RES_ERR_NS;
 
+	mutex_lock(&hap->set_lock);
+
 	if (hap->play_mode == QPNP_HAP_PWM) {
 		if (on)
 			rc = pwm_enable(hap->pwm_info.pwm_dev);
@@ -1549,8 +1552,10 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 			hap->play_mode == QPNP_HAP_DIRECT) {
 		if (on) {
 			rc = qpnp_hap_mod_enable(hap, on);
-			if (rc < 0)
+			if (rc < 0) {
+				mutex_unlock(&hap->set_lock);
 				return rc;
+			}
 
 			if (hap->correct_lra_drive_freq)
 				qpnp_hap_auto_res_enable(hap, 0);
@@ -1562,9 +1567,12 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 					(AUTO_RES_ENABLE_TIMEOUT + 1));
 
 				rc = qpnp_hap_auto_res_enable(hap, 1);
-				if (rc < 0)
+				if (rc < 0) {
+					mutex_unlock(&hap->set_lock);
 					return rc;
-
+				}
+			}
+			if (hap->correct_lra_drive_freq) {
 				/*
 				 * Start timer to poll Auto Resonance error bit
 				 */
@@ -1576,8 +1584,10 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 			}
 		} else {
 			rc = qpnp_hap_play(hap, on);
-			if (rc < 0)
+			if (rc < 0) {
+				mutex_unlock(&hap->set_lock);
 				return rc;
+			}
 
 			if (hap->correct_lra_drive_freq) {
 				rc = qpnp_hap_read_reg(hap, &val,
@@ -1594,6 +1604,7 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 		}
 	}
 
+	mutex_unlock(&hap->set_lock);
 	return rc;
 }
 
@@ -1602,7 +1613,7 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 {
 	struct qpnp_hap *hap = container_of(dev, struct qpnp_hap,
 					 timed_dev);
-	pr_debug("[LGE VIBRATOR] qpnp_hap_td_enable timeout_ms : %d , voltage : %d\n", value , hap->vmax_mv);
+	flush_work(&hap->work);
 
 	mutex_lock(&hap->lock);
 	hrtimer_cancel(&hap->hap_timer);
@@ -1623,7 +1634,10 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 	}
 	mutex_unlock(&hap->lock);
 
-	schedule_work(&hap->work);
+	if (hap->play_mode == QPNP_HAP_DIRECT)
+		qpnp_hap_set(hap, hap->state);
+	else
+		schedule_work(&hap->work);
 }
 
 /* play pwm bytes */
@@ -2277,6 +2291,7 @@ static int qpnp_haptic_probe(struct spmi_device *spmi)
 
 	mutex_init(&hap->lock);
 	mutex_init(&hap->wf_lock);
+	mutex_init(&hap->set_lock);
 	INIT_WORK(&hap->work, qpnp_hap_worker);
 	init_completion(&hap->completion);
 
