@@ -788,9 +788,19 @@ static void ipa_q6_clnt_svc_arrive(struct work_struct *work)
 	}
 	qmi_modem_init_fin = true;
 
-	/* In cold-bootup, first_time_handshake = false */
-	ipa_q6_handshake_complete(first_time_handshake);
-	first_time_handshake = true;
+	/*
+	 * In case the uC is required to be loaded by the Modem,
+	 * the proxy vote will be removed only when uC loading is
+	 * complete and indication is received by the AP. After SSR,
+	 * uC is already loaded. Therefore, proxy vote can be removed
+	 * once Modem init is complete.
+	 */
+	if (!ipa_uc_loaded_check())
+		ipa_proxy_clk_unvote();
+
+        /* In cold-bootup, first_time_handshake = false */
+        ipa_q6_handshake_complete(first_time_handshake);
+        first_time_handshake = true;
 
 	IPAWANDBG("complete, qmi_modem_init_fin : %d\n",
 		qmi_modem_init_fin);
