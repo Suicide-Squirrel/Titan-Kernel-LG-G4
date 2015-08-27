@@ -1681,6 +1681,10 @@ static int msm_routing_ec_ref_rx_put(struct snd_kcontrol *kcontrol,
 	case 10:
 		msm_route_ec_ref_rx = 10;
 		ec_ref_port_id = AFE_PORT_ID_SECONDARY_PCM_RX;
+                break;
+        case 11:
+                msm_route_ec_ref_rx = 11;
+		ec_ref_port_id = SLIMBUS_5_RX;
 		break;
 	default:
 		msm_route_ec_ref_rx = 0; /* NONE */
