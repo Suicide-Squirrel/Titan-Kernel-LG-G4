@@ -3888,8 +3888,6 @@ static int tomtom_codec_enable_dec(struct snd_soc_dapm_widget *w,
 							CF_MIN_3DB_150HZ << 4);
 			}
 
-			/* enable HPF */
-			snd_soc_update_bits(codec, tx_mux_ctl_reg , 0x08, 0x00);
 		} else
 			/* bypass HPF */
 			snd_soc_update_bits(codec, tx_mux_ctl_reg , 0x08, 0x08);
@@ -3898,8 +3896,8 @@ static int tomtom_codec_enable_dec(struct snd_soc_dapm_widget *w,
 
 	case SND_SOC_DAPM_POST_PMU:
 
-		/* Disable TX digital mute */
-		snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x01, 0x00);
+		/* enable HPF */
+		snd_soc_update_bits(codec, tx_mux_ctl_reg , 0x08, 0x00);
 
 		if ((tx_hpf_work[decimator - 1].tx_hpf_cut_of_freq !=
 				CF_MIN_3DB_150HZ) &&
@@ -6183,13 +6181,14 @@ static int tomtom_digital_mute(struct snd_soc_dai *dai, int mute)
 		return -EINVAL;
 	}
 
-	pr_err("%s: enter, mute = %d \n", __func__, mute);
+	dev_dbg(codec->dev, "%s: enter, mute = %d\n", __func__, mute);
 
 	mute = (mute) ? 1 : 0;
-	usleep_range(10000, 10000);
+	/* sleep for 10ms before unmuting the TX path as per HW requirement */
+	usleep_range(10000, 10100);
 	list_for_each_entry(ch, &tomtom->dai[dai->id].wcd9xxx_ch_list, list) {
 		tx_port = ch->port + 1;
-		dev_err(codec->dev, "%s: dai->id = %d, tx_port = %d",
+		dev_dbg(codec->dev, "%s: dai->id = %d, tx_port = %d",
 			__func__, dai->id, tx_port);
 		if ((tx_port < 1) || (tx_port > NUM_DECIMATORS)) {
 			dev_err(codec->dev, "%s: Invalid SLIM TX%u DAI ID is %d\n",
@@ -6213,10 +6212,11 @@ static int tomtom_digital_mute(struct snd_soc_dai *dai, int mute)
 		}
 
 		if (decimator && decimator <= NUM_DECIMATORS) {
-			dev_err(codec->dev, "%s: Decimator used %d\n",
+			dev_dbg(codec->dev, "%s: Decimator used %d\n",
 				__func__, decimator);
 			tx_vol_ctl_reg =
-				TOMTOM_A_CDC_TX1_VOL_CTL_CFG + 8 * (decimator - 1);
+				TOMTOM_A_CDC_TX1_VOL_CTL_CFG +
+				8 * (decimator - 1);
 			/* Set TX digital mute */
 			snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x01, mute);
 		} else {
@@ -6225,7 +6225,6 @@ static int tomtom_digital_mute(struct snd_soc_dai *dai, int mute)
 		}
 	}
 
-	pr_err("%s: leave\n", __func__);
 	return 0;
 }
 
