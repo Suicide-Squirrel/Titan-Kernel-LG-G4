@@ -1251,7 +1251,7 @@ out:
 	return ret;
 }
 
-static struct vm_operations_struct ceph_vmops = {
+static const struct vm_operations_struct ceph_vmops = {
 	.fault		= filemap_fault,
 	.page_mkwrite	= ceph_page_mkwrite,
 	.remap_pages	= generic_file_remap_pages,
