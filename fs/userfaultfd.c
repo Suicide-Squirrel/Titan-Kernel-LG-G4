@@ -137,7 +137,7 @@ static void userfaultfd_ctx_put(struct userfaultfd_ctx *ctx)
 		VM_BUG_ON(waitqueue_active(&ctx->fault_wqh));
 		VM_BUG_ON(spin_is_locked(&ctx->fd_wqh.lock));
 		VM_BUG_ON(waitqueue_active(&ctx->fd_wqh));
-		mmput(ctx->mm);
+		mmdrop(ctx->mm);
 		kmem_cache_free(userfaultfd_ctx_cachep, ctx);
 	}
 }
@@ -287,6 +287,12 @@ int handle_userfault(struct vm_area_struct *vma, unsigned long address,
 		goto out;
 
 	/*
+	 * We don't do userfault handling for the final child pid update.
+	 */
+	if (current->flags & PF_EXITING)
+		goto out;
+
+	/*
 	 * Check that we can return VM_FAULT_RETRY.
 	 *
 	 * NOTE: it should become possible to return VM_FAULT_RETRY
@@ -355,6 +361,30 @@ int handle_userfault(struct vm_area_struct *vma, unsigned long address,
 
 	__set_current_state(TASK_RUNNING);
 
+	if (return_to_userland) {
+		if (signal_pending(current) &&
+		    !fatal_signal_pending(current)) {
+			/*
+			 * If we got a SIGSTOP or SIGCONT and this is
+			 * a normal userland page fault, just let
+			 * userland return so the signal will be
+			 * handled and gdb debugging works.  The page
+			 * fault code immediately after we return from
+			 * this function is going to release the
+			 * mmap_sem and it's not depending on it
+			 * (unlike gup would if we were not to return
+			 * VM_FAULT_RETRY).
+			 *
+			 * If a fatal signal is pending we still take
+			 * the streamlined VM_FAULT_RETRY failure path
+			 * and there's no need to retake the mmap_sem
+			 * in such case.
+			 */
+			down_read(&mm->mmap_sem);
+			ret = VM_FAULT_NOPAGE;
+		}
+	}
+
 	/*
 	 * Here we race with the list_del; list_add in
 	 * userfaultfd_ctx_read(), however because we don't ever run
@@ -399,6 +429,9 @@ static int userfaultfd_release(struct inode *inode, struct file *file)
 
 	ACCESS_ONCE(ctx->released) = true;
 
+	if (!mmget_not_zero(mm))
+		goto wakeup;
+
 	/*
 	 * Flush page faults out of all CPUs. NOTE: all page faults
 	 * must be retried without returning VM_FAULT_SIGBUS if
@@ -431,15 +464,16 @@ static int userfaultfd_release(struct inode *inode, struct file *file)
 		vma->vm_userfaultfd_ctx = NULL_VM_UFFD_CTX;
 	}
 	up_write(&mm->mmap_sem);
-
+	mmput(mm);
+wakeup:
 	/*
 	 * After no new page faults can wait on this fault_*wqh, flush
 	 * the last page faults that may have been already waiting on
 	 * the fault_*wqh.
 	 */
 	spin_lock(&ctx->fault_pending_wqh.lock);
-	__wake_up_locked_key(&ctx->fault_pending_wqh, TASK_NORMAL, 0, &range);
-	__wake_up_locked_key(&ctx->fault_wqh, TASK_NORMAL, 0, &range);
+	__wake_up_locked_key(&ctx->fault_pending_wqh, TASK_NORMAL, &range);
+	__wake_up_locked_key(&ctx->fault_wqh, TASK_NORMAL, &range);
 	spin_unlock(&ctx->fault_pending_wqh.lock);
 
 	wake_up_poll(&ctx->fd_wqh, POLLHUP);
@@ -621,10 +655,10 @@ static void __wake_userfault(struct userfaultfd_ctx *ctx,
 	spin_lock(&ctx->fault_pending_wqh.lock);
 	/* wake all in the range and autoremove */
 	if (waitqueue_active(&ctx->fault_pending_wqh))
-		__wake_up_locked_key(&ctx->fault_pending_wqh, TASK_NORMAL, 0,
+		__wake_up_locked_key(&ctx->fault_pending_wqh, TASK_NORMAL,
 				     range);
 	if (waitqueue_active(&ctx->fault_wqh))
-		__wake_up_locked_key(&ctx->fault_wqh, TASK_NORMAL, 0, range);
+		__wake_up_locked_key(&ctx->fault_wqh, TASK_NORMAL, range);
 	spin_unlock(&ctx->fault_pending_wqh.lock);
 }
 
@@ -725,10 +759,12 @@ static int userfaultfd_register(struct userfaultfd_ctx *ctx,
 	start = uffdio_register.range.start;
 	end = start + uffdio_register.range.len;
 
+	ret = -ENOMEM;
+	if (!mmget_not_zero(mm))
+		goto out;
+
 	down_write(&mm->mmap_sem);
 	vma = find_vma_prev(mm, start, &prev);
-
-	ret = -ENOMEM;
 	if (!vma)
 		goto out_unlock;
 
@@ -829,6 +865,7 @@ static int userfaultfd_register(struct userfaultfd_ctx *ctx,
 	} while (vma && vma->vm_start < end);
 out_unlock:
 	up_write(&mm->mmap_sem);
+	mmput(mm);
 	if (!ret) {
 		/*
 		 * Now that we scanned all vmas we can already tell
@@ -867,10 +904,12 @@ static int userfaultfd_unregister(struct userfaultfd_ctx *ctx,
 	start = uffdio_unregister.start;
 	end = start + uffdio_unregister.len;
 
+	ret = -ENOMEM;
+	if (!mmget_not_zero(mm))
+		goto out;
+
 	down_write(&mm->mmap_sem);
 	vma = find_vma_prev(mm, start, &prev);
-
-	ret = -ENOMEM;
 	if (!vma)
 		goto out_unlock;
 
@@ -963,6 +1002,7 @@ static int userfaultfd_unregister(struct userfaultfd_ctx *ctx,
 	} while (vma && vma->vm_start < end);
 out_unlock:
 	up_write(&mm->mmap_sem);
+	mmput(mm);
 out:
 	return ret;
 }
@@ -999,6 +1039,101 @@ static int userfaultfd_wake(struct userfaultfd_ctx *ctx,
 	wake_userfault(ctx, &range);
 	ret = 0;
 
+out:
+	return ret;
+}
+
+static int userfaultfd_copy(struct userfaultfd_ctx *ctx,
+			    unsigned long arg)
+{
+	__s64 ret;
+	struct uffdio_copy uffdio_copy;
+	struct uffdio_copy __user *user_uffdio_copy;
+	struct userfaultfd_wake_range range;
+
+	user_uffdio_copy = (struct uffdio_copy __user *) arg;
+
+	ret = -EFAULT;
+	if (copy_from_user(&uffdio_copy, user_uffdio_copy,
+			   /* don't copy "copy" last field */
+			   sizeof(uffdio_copy)-sizeof(__s64)))
+		goto out;
+
+	ret = validate_range(ctx->mm, uffdio_copy.dst, uffdio_copy.len);
+	if (ret)
+		goto out;
+	/*
+	 * double check for wraparound just in case. copy_from_user()
+	 * will later check uffdio_copy.src + uffdio_copy.len to fit
+	 * in the userland range.
+	 */
+	ret = -EINVAL;
+	if (uffdio_copy.src + uffdio_copy.len <= uffdio_copy.src)
+		goto out;
+	if (uffdio_copy.mode & ~UFFDIO_COPY_MODE_DONTWAKE)
+		goto out;
+	if (mmget_not_zero(ctx->mm)) {
+		ret = mcopy_atomic(ctx->mm, uffdio_copy.dst, uffdio_copy.src,
+				   uffdio_copy.len);
+		mmput(ctx->mm);
+	}
+	if (unlikely(put_user(ret, &user_uffdio_copy->copy)))
+		return -EFAULT;
+	if (ret < 0)
+		goto out;
+	BUG_ON(!ret);
+	/* len == 0 would wake all */
+	range.len = ret;
+	if (!(uffdio_copy.mode & UFFDIO_COPY_MODE_DONTWAKE)) {
+		range.start = uffdio_copy.dst;
+		wake_userfault(ctx, &range);
+	}
+	ret = range.len == uffdio_copy.len ? 0 : -EAGAIN;
+out:
+	return ret;
+}
+
+static int userfaultfd_zeropage(struct userfaultfd_ctx *ctx,
+				unsigned long arg)
+{
+	__s64 ret;
+	struct uffdio_zeropage uffdio_zeropage;
+	struct uffdio_zeropage __user *user_uffdio_zeropage;
+	struct userfaultfd_wake_range range;
+
+	user_uffdio_zeropage = (struct uffdio_zeropage __user *) arg;
+
+	ret = -EFAULT;
+	if (copy_from_user(&uffdio_zeropage, user_uffdio_zeropage,
+			   /* don't copy "zeropage" last field */
+			   sizeof(uffdio_zeropage)-sizeof(__s64)))
+		goto out;
+
+	ret = validate_range(ctx->mm, uffdio_zeropage.range.start,
+			     uffdio_zeropage.range.len);
+	if (ret)
+		goto out;
+	ret = -EINVAL;
+	if (uffdio_zeropage.mode & ~UFFDIO_ZEROPAGE_MODE_DONTWAKE)
+		goto out;
+
+	if (mmget_not_zero(ctx->mm)) {
+		ret = mfill_zeropage(ctx->mm, uffdio_zeropage.range.start,
+				     uffdio_zeropage.range.len);
+		mmput(ctx->mm);
+	}
+	if (unlikely(put_user(ret, &user_uffdio_zeropage->zeropage)))
+		return -EFAULT;
+	if (ret < 0)
+		goto out;
+	/* len == 0 would wake all */
+	BUG_ON(!ret);
+	range.len = ret;
+	if (!(uffdio_zeropage.mode & UFFDIO_ZEROPAGE_MODE_DONTWAKE)) {
+		range.start = uffdio_zeropage.range.start;
+		wake_userfault(ctx, &range);
+	}
+	ret = range.len == uffdio_zeropage.range.len ? 0 : -EAGAIN;
 out:
 	return ret;
 }
@@ -1060,6 +1195,12 @@ static long userfaultfd_ioctl(struct file *file, unsigned cmd,
 		break;
 	case UFFDIO_WAKE:
 		ret = userfaultfd_wake(ctx, arg);
+		break;
+	case UFFDIO_COPY:
+		ret = userfaultfd_copy(ctx, arg);
+		break;
+	case UFFDIO_ZEROPAGE:
+		ret = userfaultfd_zeropage(ctx, arg);
 		break;
 	}
 	return ret;
@@ -1158,12 +1299,12 @@ static struct file *userfaultfd_file_create(int flags)
 	ctx->released = false;
 	ctx->mm = current->mm;
 	/* prevent the mm struct to be freed */
-	atomic_inc(&ctx->mm->mm_users);
+	atomic_inc(&ctx->mm->mm_count);
 
 	file = anon_inode_getfile("[userfaultfd]", &userfaultfd_fops, ctx,
 				  O_RDWR | (flags & UFFD_SHARED_FCNTL_FLAGS));
 	if (IS_ERR(file)) {
-		mmput(ctx->mm);
+		mmdrop(ctx->mm);
 		kmem_cache_free(userfaultfd_ctx_cachep, ctx);
 	}
 out:
