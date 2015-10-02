@@ -20,6 +20,9 @@ run_tests: all
 		make -C $$TARGET run_tests; \
 	done;
 
+run_pstore_crash:
+	make -C pstore run_crash
+
 clean:
 	for TARGET in $(TARGETS); do \
 		make -C $$TARGET clean; \
