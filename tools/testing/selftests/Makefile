@@ -6,6 +6,7 @@ TARGETS += memory-hotplug
 TARGETS += mqueue
 TARGETS += mount
 TARGETS += net
+TARGETS += pstore
 TARGETS += ptrace
 TARGETS += vm
 
