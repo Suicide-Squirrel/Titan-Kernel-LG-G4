@@ -1,0 +1,2 @@
+Source: https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/
+Tag/Commit: LA.BF64.1.2.1-01420-8x92.0
