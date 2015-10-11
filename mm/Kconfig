@@ -529,6 +529,19 @@ config ZSWAP
 	  they have not be fully explored on the large set of potential
 	  configurations and workloads that exist.
 
+config PROCESS_RECLAIM
+	bool "Enable process reclaim"
+	depends on PROC_FS
+	default n
+	help
+	 It allows to reclaim pages of the process by /proc/pid/reclaim.
+
+	 (echo file > /proc/PID/reclaim) reclaims file-backed pages only.
+	 (echo anon > /proc/PID/reclaim) reclaims anonymous pages only.
+	 (echo all > /proc/PID/reclaim) reclaims all pages.
+
+	 Any other vaule is ignored.
+
 config BALANCE_ANON_FILE_RECLAIM
 	bool "During reclaim treat anon and file backed pages equally"
 	depends on SWAP
@@ -553,3 +566,24 @@ config KSWAPD_CPU_AFFINITY_MASK
 	  the resultant bitmask.
 	  For example to limit kswapd to the first 4 cores use the following:
 	  CONFIG_KSWAPD_CPU_AFFINITY_MASK="f"
+
+config READAHEAD_MMAP_SIZE_ENABLE
+    bool "readahead mmap size set enable"
+    default n
+    help
+       readahead mmap size set enable
+
+config READAHEAD_MMAP_PAGE_CNT
+    int "readahead mmap page count set"
+    depends on READAHEAD_MMAP_SIZE_ENABLE
+    help
+      Select readahead mmap page count
+      Examples:
+        128 ==>512KB
+        64 ==>256KB
+        32 ==>128KB
+        16 ==>64 KB
+        8 ==>32 KB
+        4 ==>16 KB
+        2 ==>8 KB
+        1 ==>4 KB

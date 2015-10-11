@@ -261,6 +261,7 @@ struct hdmi_util_ds_data {
 };
 
 /* video timing related utility routines */
+void hdmi_setup_video_mode_lut(void);
 int hdmi_get_video_id_code(struct msm_hdmi_mode_timing_info *timing_in,
 	struct hdmi_util_ds_data *ds_data);
 int hdmi_get_supported_mode(struct msm_hdmi_mode_timing_info *info,

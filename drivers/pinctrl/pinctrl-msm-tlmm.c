@@ -758,6 +758,22 @@ static void msm_tlmm_set_intr_cfg_type(struct msm_tlmm_irq_chip *ic,
 	udelay(5);
 }
 
+#ifdef CONFIG_LGE_PM_DEBUG
+static int msm_tlmm_gp_show_resume_irq(struct msm_tlmm_irq_chip *ic)
+{
+	unsigned long i;
+
+	for_each_set_bit(i, ic->wake_irqs, ic->num_irqs) {
+		if (msm_tlmm_get_intr_status(ic, i)) {
+			pr_info("%s: hwirq pin %d fired\n",
+					__func__, (unsigned int)i);
+		}
+	}
+
+	return 0;
+}
+#endif
+
 static irqreturn_t msm_tlmm_gp_handle_irq(int irq, struct msm_tlmm_irq_chip *ic)
 {
 	unsigned long i;
@@ -956,6 +972,9 @@ static void msm_tlmm_gp_irq_resume(void)
 	struct msm_tlmm_irq_chip *ic = &msm_tlmm_gp_irq;
 	int num_irqs = ic->num_irqs;
 
+#ifdef CONFIG_LGE_PM_DEBUG
+	msm_tlmm_gp_show_resume_irq(ic);
+#endif
 	spin_lock_irqsave(&ic->irq_lock, irq_flags);
 	for_each_set_bit(i, ic->wake_irqs, num_irqs)
 		msm_tlmm_set_intr_cfg_enable(ic, i, 0);

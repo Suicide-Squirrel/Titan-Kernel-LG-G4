@@ -54,7 +54,26 @@
 #define MDSS_DSI_HW_REV_103		0x10030000	/* 8994    */
 #define MDSS_DSI_HW_REV_103_1		0x10030001	/* 8916/8936 */
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+#define DSV_TPS65132 1
+#define DSV_SM5107 2
+#define DSV_DW8768 3
+
+#define LPWG_TO_DEEP_SLEEP 0
+#define DEEP_SLEEP_TO_LPWG 1
+#define DEEP_SLEEP_TO_ACTIVE 3
+
+#define PROXY_FAR 0
+#define PROXY_NEAR 1
+
+#endif
 #define NONE_PANEL "none"
+
+enum {
+	SWIPE_DONE = 0,
+	DO_SWIPE,
+	ABNORMAL_SWIPE,
+};
 
 enum {		/* mipi dsi panel */
 	DSI_VIDEO_MODE,
@@ -190,7 +209,6 @@ enum dsi_pm_type {
 extern struct device dsi_dev;
 extern u32 dsi_irq;
 extern struct mdss_dsi_ctrl_pdata *ctrl_list[];
-
 struct dsiphy_pll_divider_config {
 	u32 clk_rate;
 	u32 fb_divider;
@@ -243,7 +261,7 @@ struct dsi_panel_cmds {
 
 struct dsi_kickoff_action {
 	struct list_head act_entry;
-	void (*action) (void *);
+	void (*action)(void *);
 	void *data;
 };
 
@@ -288,14 +306,14 @@ enum {
 
 struct mdss_dsi_ctrl_pdata {
 	int ndx;	/* panel_num */
-	int (*on) (struct mdss_panel_data *pdata);
-	int (*off) (struct mdss_panel_data *pdata);
-	int (*low_power_config) (struct mdss_panel_data *pdata, int enable);
-	int (*set_col_page_addr) (struct mdss_panel_data *pdata);
-	int (*check_status) (struct mdss_dsi_ctrl_pdata *pdata);
-	int (*check_read_status) (struct mdss_dsi_ctrl_pdata *pdata);
+	int (*on)(struct mdss_panel_data *pdata);
+	int (*off)(struct mdss_panel_data *pdata);
+	int (*low_power_config)(struct mdss_panel_data *pdata, int enable);
+	int (*set_col_page_addr)(struct mdss_panel_data *pdata);
+	int (*check_status)(struct mdss_dsi_ctrl_pdata *pdata);
+	int (*check_read_status)(struct mdss_dsi_ctrl_pdata *pdata);
 	int (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
-	void (*switch_mode) (struct mdss_panel_data *pdata, int mode);
+	void (*switch_mode)(struct mdss_panel_data *pdata, int mode);
 	struct mdss_panel_data panel_data;
 	unsigned char *ctrl_base;
 	u32 hw_rev;
@@ -337,6 +355,20 @@ struct mdss_dsi_ctrl_pdata {
 	int new_fps;
 	int pwm_enabled;
 	int clk_lane_cnt;
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	int dsv_ena;
+	int dsv_enb;
+	int dsv_manufacturer;
+	int vdd_ldo;
+	int vddio_en;
+#if defined(CONFIG_MACH_MSM8992_P1_CN) \
+|| defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
+	int touch_io;
+#endif
+	struct notifier_block   notif;
+
+	bool touch_driver_registered;
+#endif
 	bool dmap_iommu_map;
 	bool panel_bias_vreg;
 	bool dsi_irq_line;
@@ -360,6 +392,10 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds post_dms_on_cmds;
 	struct dsi_panel_cmds off_cmds;
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	struct dsi_panel_cmds clk_on_cmds;
+	struct dsi_panel_cmds clk_off_cmds;
+#endif
 	struct dsi_panel_cmds status_cmds;
 	u32 status_cmds_rlen;
 	u32 *status_value;
@@ -414,6 +450,14 @@ struct dsi_status_data {
 	struct delayed_work check_status;
 	struct msm_fb_data_type *mfd;
 };
+
+//LGE_UPDATE_S (june1014.lee@lge.com. 2015.03.04). SRE
+#if defined(CONFIG_LGE_P1_SRE_SUPPORTED)
+#define	SRE_CHANGE_OFF	0
+#define	SRE_CHANGE_ON	1
+int mdss_dsi_panel_sre_apply(unsigned int enabled);
+#endif
+//LGE_UPDATE_E (june1014.lee@lge.com. 2015.03.04). SRE
 
 int dsi_panel_device_register(struct device_node *pan_node,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata);
@@ -490,7 +534,14 @@ int mdss_panel_get_dst_fmt(u32 bpp, char mipi_mode, u32 pixel_packing,
 
 int mdss_dsi_register_recovery_handler(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct mdss_intf_recovery *recovery);
-
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+extern int mdss_dsi_lcd_reset(struct mdss_panel_data *pdata, int enable);
+extern int lgd_deep_sleep(struct mdss_dsi_ctrl_pdata *ctrl_pdata, int mode,
+	       int is_no_sleep);
+void mdss_dsi_stub_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
+			struct dsi_panel_cmds *pcmds);
+extern int swipe_status;
+#endif
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {
 	switch (module) {

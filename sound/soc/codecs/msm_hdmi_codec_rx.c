@@ -131,6 +131,9 @@ static int msm_hdmi_audio_codec_rx_dai_hw_params(
 		dev_err_ratelimited(dai->dev,
 			"%s() HDMI cable is not connected (ret val = %d)\n",
 			__func__, msm_hdmi_audio_codec_return_value);
+        /* LGE Changed : Do not change to -EAGAIN.
+               * If the error is EAGAIN, target becomes lockup state.
+               * Target couldn't finish pcm_open in HAL. */
 		return -ENODEV;
 	}
 

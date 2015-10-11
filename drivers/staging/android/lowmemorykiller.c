@@ -52,6 +52,14 @@
 #define _ZONE ZONE_NORMAL
 #endif
 
+#ifdef CONFIG_PROCESS_RECLAIM
+#define PROCESS_RECLAIM_ENABLE_LOG
+
+#ifdef PROCESS_RECLAIM_ENABLE_LOG
+#include <linux/hrtimer.h>
+#endif
+#endif
+
 static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
 	0,
@@ -70,6 +78,9 @@ static int lowmem_minfree_size = 4;
 static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
+#ifdef CONFIG_PROCESS_RECLAIM
+extern ssize_t reclaim_walk_mm(struct task_struct *task, char *type_buf);
+#endif
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -92,6 +103,24 @@ static int test_task_flag(struct task_struct *p, int flag)
 
 	return 0;
 }
+
+#ifdef CONFIG_PROCESS_RECLAIM
+static int test_task_exit_state(struct task_struct *p, long flag)
+{
+	struct task_struct *t = p;
+
+	do {
+		task_lock(t);
+		if (t->exit_state == flag) {
+			task_unlock(t);
+			return 1;
+		}
+		task_unlock(t);
+	} while_each_thread(p, t);
+
+	return 0;
+}
+#endif
 
 static DEFINE_MUTEX(scan_mutex);
 
@@ -338,10 +367,77 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 		if (time_before_eq(jiffies, lowmem_deathpending_timeout)) {
 			if (test_task_flag(tsk, TIF_MEMDIE)) {
+#ifdef CONFIG_PROCESS_RECLAIM
+#ifdef PROCESS_RECLAIM_ENABLE_LOG
+				ktime_t reclaim_before;
+				ktime_t reclaim_after;
+				ktime_t reclaim_diff;
+				long free_before_kb;
+				long free_after_kb;
+				long file_before_kb;
+				long file_after_kb;
+#endif
+				bool rcu_locked = true;
+				/*
+				 if task is ZOMBIE, skip the task
+				 */
+				if (test_task_exit_state(tsk, EXIT_ZOMBIE))
+						continue;
+
+				p = find_lock_task_mm(tsk);
+				if (!p)
+					continue;
+				task_unlock(p);
+
+				/* if task is reclaimed */
+				if (test_task_flag(p, TIF_MM_RECLAIMED))
+					goto exit_timeout;
+
+				get_task_struct(p);
+				set_tsk_thread_flag(p, TIF_MM_RECLAIMED);
+				rcu_read_unlock();
+				rcu_locked = false;
+
+#ifdef PROCESS_RECLAIM_ENABLE_LOG
+				reclaim_before = ktime_get_boottime();
+				free_before_kb = global_page_state(NR_FREE_PAGES) *
+					(long)(PAGE_SIZE / 1024);
+				file_before_kb = global_page_state(NR_FILE_PAGES) *
+					(long)(PAGE_SIZE / 1024);
+#endif
+
+				if (reclaim_walk_mm(p, "file") < 0)
+					clear_tsk_thread_flag(p, TIF_MM_RECLAIMED);
+
+#ifdef PROCESS_RECLAIM_ENABLE_LOG
+				reclaim_after = ktime_get_boottime();
+				reclaim_diff = ktime_sub(reclaim_after, reclaim_before);
+
+				free_after_kb = global_page_state(NR_FREE_PAGES) *
+					(long)(PAGE_SIZE / 1024);
+				file_after_kb = global_page_state(NR_FILE_PAGES) *
+					(long)(PAGE_SIZE / 1024);
+
+				pr_err("LMK::reclaim_walk_mm() time, %ld, us, " \
+						"free inc, %ld, kb, file cache dec, %ld, kb \n",
+						(long)ktime_to_ns(reclaim_diff) / 1000,
+						free_after_kb - free_before_kb,
+						file_after_kb - file_before_kb);
+#endif
+
+				put_task_struct(p);
+exit_timeout:
+				if (rcu_locked)
+					rcu_read_unlock();
+				/* give the system time to free up the memory */
+				msleep_interruptible(20);
+				mutex_unlock(&scan_mutex);
+#else
 				rcu_read_unlock();
 				/* give the system time to free up the memory */
 				msleep_interruptible(20);
 				mutex_unlock(&scan_mutex);
+#endif
 				return 0;
 			}
 		}
@@ -376,7 +472,17 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		lowmem_print(1, "Killing '%s' (%d), adj %hd,\n" \
 				"   to free %ldkB on behalf of '%s' (%d) because\n" \
 				"   cache %ldkB is below limit %ldkB for oom_score_adj %hd\n" \
-				"   Free memory is %ldkB above reserved.\n" \
+				"   Free memory is %ldkB above reserved.\n",
+			     selected->comm, selected->pid,
+			     selected_oom_score_adj,
+			     selected_tasksize * (long)(PAGE_SIZE / 1024),
+			     current->comm, current->pid,
+			     other_file * (long)(PAGE_SIZE / 1024),
+			     minfree * (long)(PAGE_SIZE / 1024),
+			     min_score_adj,
+			     other_free * (long)(PAGE_SIZE / 1024));
+
+		lowmem_print(2, "\n" \
 				"   Free CMA is %ldkB\n" \
 				"   Total reserve is %ldkB\n" \
 				"   Total free pages is %ldkB\n" \
@@ -385,14 +491,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				"   Slab UnReclaimable is %ldkB\n" \
 				"   Total Slab is %ldkB\n" \
 				"   GFP mask is 0x%x\n",
-			     selected->comm, selected->pid,
-			     selected_oom_score_adj,
-			     selected_tasksize * (long)(PAGE_SIZE / 1024),
-			     current->comm, current->pid,
-			     other_file * (long)(PAGE_SIZE / 1024),
-			     minfree * (long)(PAGE_SIZE / 1024),
-			     min_score_adj,
-			     other_free * (long)(PAGE_SIZE / 1024),
 			     global_page_state(NR_FREE_CMA_PAGES) *
 				(long)(PAGE_SIZE / 1024),
 			     totalreserve_pages * (long)(PAGE_SIZE / 1024),

@@ -32,6 +32,7 @@
 #include <soc/qcom/socinfo.h>
 #include <soc/qcom/smem.h>
 #include <soc/qcom/boot_stats.h>
+#include <soc/qcom/clock-krait.h>
 
 #define BUILD_ID_LENGTH 32
 #define SMEM_IMAGE_VERSION_BLOCKS_COUNT 32
@@ -922,6 +923,39 @@ msm_select_image(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+#define QFPROM_RAW_SERIAL_NUM_LSB 0xFC4B81F0
+static ssize_t socinfo_show_msm_serial(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	unsigned int serial = 0;
+	void *addr = ioremap(QFPROM_RAW_SERIAL_NUM_LSB, SZ_4K);
+
+	if (!addr)
+		return 0;
+
+	serial = readl_relaxed(addr);
+
+	iounmap(addr);
+	return snprintf(buf, PAGE_SIZE, "%08x\n", serial);
+}
+
+static ssize_t socinfo_show_a53_speed_bin(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int a53_speed;
+
+	get_a53_speed_bin(&a53_speed);
+	return snprintf(buf, PAGE_SIZE, "%u\n", a53_speed);
+}
+
+static ssize_t socinfo_show_a57_speed_bin(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int a57_speed;
+
+	get_a57_speed_bin(&a57_speed);
+	return snprintf(buf, PAGE_SIZE, "%u\n", a57_speed);
+}
 
 static struct device_attribute msm_soc_attr_raw_version =
 	__ATTR(raw_version, S_IRUGO, msm_get_raw_version,  NULL);
@@ -985,6 +1019,15 @@ static struct device_attribute image_crm_version =
 static struct device_attribute select_image =
 	__ATTR(select_image, S_IRUGO | S_IWUSR,
 			msm_get_image_number, msm_select_image);
+
+static struct device_attribute msm_soc_attr_msm_serial =
+	__ATTR(msm_serial, S_IRUGO, socinfo_show_msm_serial, NULL);
+
+static struct device_attribute msm_soc_attr_a53_speed_bin =
+	__ATTR(a53_speed_bin, S_IRUGO, socinfo_show_a53_speed_bin, NULL);
+
+static struct device_attribute msm_soc_attr_a57_speed_bin =
+	__ATTR(a57_speed_bin, S_IRUGO, socinfo_show_a57_speed_bin, NULL);
 
 static void * __init setup_dummy_socinfo(void)
 {
@@ -1090,6 +1133,12 @@ static void __init populate_soc_sysfs_files(struct device *msm_soc_device)
 	case 1:
 		device_create_file(msm_soc_device,
 					&msm_soc_attr_build_id);
+		device_create_file(msm_soc_device,
+					&msm_soc_attr_msm_serial);
+		device_create_file(msm_soc_device,
+					&msm_soc_attr_a53_speed_bin);
+		device_create_file(msm_soc_device,
+					&msm_soc_attr_a57_speed_bin);
 		break;
 	default:
 		pr_err("%s:Unknown socinfo format:%u\n", __func__,

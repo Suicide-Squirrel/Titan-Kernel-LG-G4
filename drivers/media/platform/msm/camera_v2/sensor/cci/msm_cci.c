@@ -29,7 +29,13 @@
 #define CYCLES_PER_MICRO_SEC_DEFAULT 4915
 #define CCI_MAX_DELAY 1000000
 
+/*LGE_CHANGE S, i2c timeout increase */
+#if 0//QMC origin
 #define CCI_TIMEOUT msecs_to_jiffies(100)
+#else
+#define CCI_TIMEOUT msecs_to_jiffies(300)
+#endif
+/*LGE_CHANGE E, i2c timeout increase */
 
 /* TODO move this somewhere else */
 #define MSM_CCI_DRV_NAME "msm_cci"
@@ -53,6 +59,8 @@ static void msm_cci_set_clk_param(struct cci_device *cci_dev,
 	struct msm_cci_clk_params_t *clk_params = NULL;
 	enum cci_i2c_master_t master = c_ctrl->cci_info->cci_i2c_master;
 	enum i2c_freq_mode_t i2c_freq_mode = c_ctrl->cci_info->i2c_freq_mode;
+	/*LGE_CHANGE, changed into FAST Mode */
+	i2c_freq_mode = 1; //WAR setting to use I2C speed as 400Khz
 
 	if (cci_dev->master_clk_init[master])
 		return;
@@ -440,6 +448,8 @@ static int32_t msm_cci_i2c_read(struct v4l2_subdev *sd,
 			__LINE__, read_words, exp_words);
 		memset(read_cfg->data, 0, read_cfg->num_byte);
 		rc = -EINVAL;
+		/* LGE: QMC patch for cci error */
+		msm_cci_flush_queue(cci_dev, master);
 		goto ERROR;
 	}
 	index = 0;
@@ -931,21 +941,48 @@ static int32_t msm_cci_config(struct v4l2_subdev *sd,
 	struct msm_camera_cci_ctrl *cci_ctrl)
 {
 	int32_t rc = 0;
+/*QCT_PATCH S, add the retrial code only in msm_cci_config() function , 2013-12-09, yousung.kang@lge.com */
+#if 1
+	int32_t trialCnt = 3;
+#endif
+/*QCT_PATCH E, add the retrial code only in msm_cci_config() function , 2013-12-09, yousung.kang@lge.com */
+
 	CDBG("%s line %d cmd %d\n", __func__, __LINE__,
 		cci_ctrl->cmd);
 	switch (cci_ctrl->cmd) {
 	case MSM_CCI_INIT:
 		rc = msm_cci_init(sd, cci_ctrl);
+/* LGE_CHANGE_S, jaehan.jeong, 2014.11.25, To see if cci is acquired*/
+		if(!rc)
+		   cci_ctrl->cci_info->cci_acquired = 1;
+/* LGE_CHANGE_E, jaehan.jeong, 2014.11.25, To see if cci is acquired*/
 		break;
 	case MSM_CCI_RELEASE:
-		rc = msm_cci_release(sd);
+/* LGE_CHANGE_S, jaehan.jeong, 2014.11.25, To see if cci is acquired*/
+		if(cci_ctrl->cci_info) {
+			if(cci_ctrl->cci_info->cci_acquired)
+			  rc = msm_cci_release(sd);
+			cci_ctrl->cci_info->cci_acquired = 0;
+		}
+/* LGE_CHANGE_E, jaehan.jeong, 2014.11.25, To see if cci is acquired*/
 		break;
 	case MSM_CCI_I2C_READ:
 		rc = msm_cci_i2c_read_bytes(sd, cci_ctrl);
 		break;
 	case MSM_CCI_I2C_WRITE:
 	case MSM_CCI_I2C_WRITE_SEQ:
+/*QCT_PATCH S, add the retrial code only in msm_cci_config() function , 2013-12-09, yousung.kang@lge.com */
+#if 1
+	    do{
+			   rc = msm_cci_i2c_write(sd, cci_ctrl);
+			   if(rc < 0)
+					pr_err("%s: line %d trialCnt = %d \n", __func__, __LINE__, trialCnt);
+			   trialCnt--;
+		   }while(rc < 0 && trialCnt > 0);
+#else
 		rc = msm_cci_i2c_write(sd, cci_ctrl);
+#endif
+/*QCT_PATCH E, add the retrial code only in msm_cci_config() function , 2013-12-09, yousung.kang@lge.com */
 		break;
 	case MSM_CCI_GPIO_WRITE:
 		break;
@@ -1040,6 +1077,7 @@ static long msm_cci_subdev_ioctl(struct v4l2_subdev *sd,
 		break;
 	case MSM_SD_SHUTDOWN: {
 		struct msm_camera_cci_ctrl ctrl_cmd;
+		ctrl_cmd.cci_info = NULL;	//LGE_CHANGE, jaehan.jeong, 2014.11.25, To see if cci is acquired
 		ctrl_cmd.cmd = MSM_CCI_RELEASE;
 		rc = msm_cci_config(sd, &ctrl_cmd);
 		break;

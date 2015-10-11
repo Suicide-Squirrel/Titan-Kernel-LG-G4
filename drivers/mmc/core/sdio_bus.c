@@ -29,6 +29,10 @@
 #include <linux/mmc/host.h>
 #endif
 
+#if defined(CONFIG_LGE_MMC_DYNAMIC_LOG)
+#include <linux/mmc/debug_log.h>
+#endif
+
 /* show configuration fields */
 #define sdio_config_attr(field, format_string)				\
 static ssize_t								\

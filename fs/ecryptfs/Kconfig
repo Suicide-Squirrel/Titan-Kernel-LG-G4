@@ -20,3 +20,8 @@ config ECRYPT_FS_MESSAGING
 	  Enables the /dev/ecryptfs entry for use by ecryptfsd. This allows
 	  for userspace to wrap/unwrap file encryption keys by other
 	  backends, like OpenSSL.
+
+config CRYPTO_DEV_HWCRYPTO_FOR_SDCARD
+    bool "Enable Qcom HW crypto for sdcard encryption"
+    help
+      Enables Qcom HW crypto for sdcard encryption.

@@ -64,6 +64,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_STA529 if I2C
 	select SND_SOC_STAC9766 if SND_SOC_AC97_BUS
 	select SND_SOC_TAS5086 if I2C
+	select SND_SOC_TAS2552 if I2C
 	select SND_SOC_TLV320AIC23 if I2C
 	select SND_SOC_TLV320AIC26 if SPI_MASTER
 	select SND_SOC_TLV320AIC32X4 if I2C
@@ -553,9 +554,30 @@ config SND_SOC_TPA6130A2
 config SND_SOC_MSM_STUB
 	tristate
 
+config SND_SOC_TAS2552
+	tristate "tps2552 boost amp"
+	depends on MACH_LGE
+	default n
 config SND_SOC_MSM_HDMI_CODEC_RX
 	bool "HDMI Audio Playback"
 	depends on FB_MSM_MDSS_HDMI_PANEL && (SND_SOC_MSM8974 || SND_SOC_APQ8084 || SND_SOC_MSM8994)
 	help
 	HDMI audio drivers should be built only if the platform
         supports hdmi panel.
+config SND_SOC_SPKINFO
+	bool "spk info"
+	default n
+	depends on SND_SOC_TAS2552
+	help
+	Get spk protection info(temp, excur modeling) when is playing music.
+config SND_SOC_DYBOOST
+	bool "dynamic boost"
+	default n
+	depends on SND_SOC_TAS2552
+	help
+	apply dynamic boost(above pcm 3v) not to use hw boost(apt 1,7)
+config SND_LGE_HIDDEN_AUX
+        bool "hidden aux scenario"
+        default n
+        help
+        apply hidden aux scenario (no icon and device routing)

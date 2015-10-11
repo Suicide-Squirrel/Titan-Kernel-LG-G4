@@ -81,6 +81,7 @@ enum ngd_status {
 	NGD_LADDR		= 1 << 1,
 };
 
+static int err_count = 0;
 static int ngd_slim_runtime_resume(struct device *device);
 static int ngd_slim_power_up(struct msm_slim_ctrl *dev, bool mdm_restart);
 
@@ -721,14 +722,24 @@ static int ngd_xferandwait_ack(struct slim_controller *ctrl,
 			ret = txn->ec;
 	}
 
-	if (ret) {
-		if (ret != -EREMOTEIO || txn->mc != SLIM_USR_MC_CHAN_CTRL)
-			SLIM_ERR(dev, "master msg:0x%x,tid:%d ret:%d\n",
-				txn->mc, txn->tid, ret);
-		mutex_lock(&ctrl->m_ctrl);
-		ctrl->txnt[txn->tid] = NULL;
-		mutex_unlock(&ctrl->m_ctrl);
-	}
+    if (ret) {
+        if (ret != -EREMOTEIO || txn->mc != SLIM_USR_MC_CHAN_CTRL)
+        {
+            SLIM_ERR(dev, "master msg:0x%x,tid:%d ret:%d\n",
+                    txn->mc, txn->tid, ret);
+            if(ret == -ETIMEDOUT)
+                err_count++;
+            if(err_count >= 3)
+                panic("Forced Kernel panic as master msg fail");
+        }
+        mutex_lock(&ctrl->m_ctrl);
+        ctrl->txnt[txn->tid] = NULL;
+        mutex_unlock(&ctrl->m_ctrl);
+    }
+    else
+    {
+        err_count = 0;
+    }
 
 	return ret;
 }

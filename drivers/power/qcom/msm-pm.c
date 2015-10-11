@@ -44,6 +44,10 @@
 #include "pm-boot.h"
 #include "../../../arch/arm/mach-msm/clock.h"
 
+#ifdef CONFIG_LGE_PM
+#include <soc/qcom/lge/board_lge.h>
+#endif
+
 #define SCM_CMD_TERMINATE_PC	(0x2)
 #define SCM_CMD_CORE_HOTPLUGGED (0x10)
 #define SCM_FLUSH_FLAG_MASK	(0x3)
@@ -368,6 +372,10 @@ static bool msm_pm_power_collapse(bool from_idle)
 	if ((!from_idle && cpu_online(cpu))
 			|| (MSM_PM_DEBUG_IDLE_CLK & msm_pm_debug_mask))
 		clock_debug_print_enabled();
+#ifdef CONFIG_LGE_PM
+	if (!from_idle && cpu_online(cpu))
+		gpio_debug_print();
+#endif
 
 	avsdscr = avs_get_avsdscr();
 	avscsr = avs_get_avscsr();

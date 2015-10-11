@@ -16,6 +16,7 @@
 #include "msm_sd.h"
 #include "msm_ois.h"
 #include "msm_cci.h"
+#include "msm_ois_i2c.h"
 
 DEFINE_MSM_MUTEX(msm_ois_mutex);
 /*#define MSM_OIS_DEBUG*/
@@ -27,7 +28,20 @@ DEFINE_MSM_MUTEX(msm_ois_mutex);
 #endif
 
 #define MAX_POLL_COUNT 100
+#define OIS_MAKER_ID_ADDR	(0x700)
 
+#if defined(CONFIG_IMX135)
+extern void lgit_imx135_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
+#endif
+#if defined(CONFIG_IMX214)
+extern void lgit_imx214_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
+#endif
+#if defined(CONFIG_IMX234)
+extern void lgit_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
+extern void lgit_imx234_rohm_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
+extern void lc898122a_af_vcm_code(int16_t UsVcmCod);
+#endif
+static struct msm_ois_ctrl_t *local_msm_ois_t;
 static struct v4l2_file_operations msm_ois_v4l2_subdev_fops;
 static int32_t msm_ois_power_up(struct msm_ois_ctrl_t *o_ctrl);
 static int32_t msm_ois_power_down(struct msm_ois_ctrl_t *o_ctrl);
@@ -156,7 +170,9 @@ static int32_t msm_ois_power_down(struct msm_ois_ctrl_t *o_ctrl)
 	int32_t rc = 0;
 	CDBG("Enter\n");
 	if (o_ctrl->ois_state != OIS_POWER_DOWN) {
-
+#if defined(CONFIG_IMX234)
+		lc898122a_af_vcm_code(0);
+#endif
 		rc = msm_ois_vreg_control(o_ctrl, 0);
 		if (rc < 0) {
 			pr_err("%s failed %d\n", __func__, __LINE__);
@@ -173,6 +189,7 @@ static int32_t msm_ois_power_down(struct msm_ois_ctrl_t *o_ctrl)
 static int msm_ois_init(struct msm_ois_ctrl_t *o_ctrl)
 {
 	int rc = 0;
+	uint16_t chipid = 0;
 	CDBG("Enter\n");
 
 	if (!o_ctrl) {
@@ -185,6 +202,47 @@ static int msm_ois_init(struct msm_ois_ctrl_t *o_ctrl)
 			&o_ctrl->i2c_client, MSM_CCI_INIT);
 		if (rc < 0)
 			pr_err("cci_init failed\n");
+	}
+
+	ois_i2c_e2p_read(OIS_MAKER_ID_ADDR, &chipid, 1);
+	switch (chipid) {
+#if defined(CONFIG_IMX214) || defined(CONFIG_IMX234)
+	case 0x01:
+#if defined(CONFIG_IMX214)
+		lgit_imx214_ois_init(o_ctrl);
+#endif
+#if defined(CONFIG_IMX234)
+		lgit_imx234_onsemi_ois_init(o_ctrl);
+#endif
+		local_msm_ois_t->sid_ois = o_ctrl->sid_ois;
+		rc = ois_i2c_read(0x027F, &chipid, 2);
+		if (rc < 0) {
+			printk("%s: kernel ois not supported, rc = %d\n", __func__, rc);
+			return OIS_INIT_NOT_SUPPORTED;
+		}
+
+		printk("%s : LGIT onsemi i2c shift addr 0x%x!\n", __func__, o_ctrl->sid_ois);
+		break;
+#endif
+#if defined(CONFIG_IMX135) || defined(CONFIG_IMX234)
+	case 0x02:
+	case 0x05:
+#if defined(CONFIG_IMX135)
+		lgit_imx135_ois_init(o_ctrl);
+#endif
+#if defined(CONFIG_IMX234)
+		lgit_imx234_rohm_ois_init(o_ctrl);
+#endif
+		local_msm_ois_t->sid_ois = o_ctrl->sid_ois;
+		printk("%s : LGIT rohm i2c shift addr 0x%x!\n", __func__, o_ctrl->sid_ois);
+		break;
+#endif
+	case 0x03:
+		printk("%s : FujiFilm OIS module!\n", __func__);
+		break;
+	default:
+		printk("%s : unknown module! maker id = %d\n", __func__, chipid);
+		return -EINVAL;
 	}
 	CDBG("Exit\n");
 	return rc;
@@ -263,10 +321,34 @@ static int32_t msm_ois_config(struct msm_ois_ctrl_t *o_ctrl,
 		if (rc < 0)
 			pr_err("msm_ois_init failed %d\n", rc);
 		break;
+	case CFG_GET_OIS_INFO:
+		rc = o_ctrl->func_tbl->ois_stat(o_ctrl,
+										&cdata->cfg.set_info);
+		if (rc < 0)
+			pr_err("ois info failed %d\n", rc);
+		break;
 	case CFG_OIS_POWERDOWN:
 		rc = msm_ois_power_down(o_ctrl);
 		if (rc < 0)
 			pr_err("msm_ois_power_down failed %d\n", rc);
+		break;
+	case CFG_OIS_INI_SET:
+		rc = o_ctrl->func_tbl->ini_set_ois(o_ctrl,
+										   &cdata->cfg.set_info);
+		if (rc < 0)
+			pr_err("init setup ois failed %d\n", rc);
+		break;
+	case CFG_OIS_ENABLE:
+		rc = o_ctrl->func_tbl->enable_ois(o_ctrl,
+										  &cdata->cfg.set_info);
+		if (rc < 0)
+			pr_err("ois enable failed %d\n", rc);
+		break;
+	case CFG_OIS_DISABLE:
+		rc = o_ctrl->func_tbl->disable_ois(o_ctrl,
+										   &cdata->cfg.set_info);
+		if (rc < 0)
+			pr_err("ois disable failed %d\n", rc);
 		break;
 	case CFG_OIS_POWERUP:
 		rc = msm_ois_power_up(o_ctrl);
@@ -326,6 +408,17 @@ static int32_t msm_ois_config(struct msm_ois_ctrl_t *o_ctrl,
 		kfree(reg_setting);
 		break;
 	}
+	case CFG_OIS_MOVE_LENS:
+		rc = o_ctrl->func_tbl->ois_move_lens(o_ctrl, &cdata->cfg.set_info);
+		if (rc < 0)
+			pr_err("ois move lens failed %d\n", rc);
+		break;
+	case CFG_OIS_SET_MODE:
+		rc = o_ctrl->func_tbl->ois_mode(o_ctrl,
+										&cdata->cfg.set_info);
+		if (rc < 0)
+			pr_err("ois mode set failed %d\n", rc);
+		break;
 	default:
 		break;
 	}
@@ -594,6 +687,14 @@ static long msm_ois_subdev_do_ioctl(
 			ois_data.cfg.settings = &settings;
 			parg = &ois_data;
 			break;
+		case CFG_OIS_INI_SET:
+		case CFG_GET_OIS_INFO:
+		case CFG_OIS_SET_MODE:
+		case CFG_OIS_MOVE_LENS:
+			ois_data.cfg.set_info.setting = compat_ptr(u32->cfg.set_info.setting);
+			ois_data.cfg.set_info.ois_info = compat_ptr(u32->cfg.set_info.ois_info);
+			parg = &ois_data;
+			break;
 		default:
 			parg = &ois_data;
 			break;
@@ -610,6 +711,147 @@ static long msm_ois_subdev_fops_ioctl(struct file *file, unsigned int cmd,
 	return video_usercopy(file, cmd, arg, msm_ois_subdev_do_ioctl);
 }
 #endif
+int32_t ois_i2c_write_table(struct msm_camera_i2c_reg_setting *write_setting)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid =  local_msm_ois_t->sid_ois;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_write_table(&local_msm_ois_t->i2c_client, write_setting);
+	return ret;
+}
+int32_t ois_i2c_write_seq_table(struct msm_camera_i2c_seq_reg_setting *write_setting)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid = local_msm_ois_t->sid_ois;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_write_seq_table(&local_msm_ois_t->i2c_client, write_setting);
+	return ret;
+}
+
+int32_t ois_i2c_write(uint16_t addr, uint16_t data, enum msm_camera_i2c_data_type data_type)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid = local_msm_ois_t->sid_ois;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_write(&local_msm_ois_t->i2c_client, addr, data, data_type);
+	return ret;
+}
+
+int32_t ois_i2c_read(uint16_t addr, uint16_t *data, enum msm_camera_i2c_data_type data_type)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid = local_msm_ois_t->sid_ois;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_read(&local_msm_ois_t->i2c_client, addr, &data[0], data_type);
+	return ret;
+}
+
+int32_t ois_i2c_write_seq(uint16_t addr, uint8_t *data, uint16_t num_byte)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid = local_msm_ois_t->sid_ois;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_write_seq(&local_msm_ois_t->i2c_client, addr, data, num_byte);
+	return ret;
+}
+
+int32_t ois_i2c_read_seq(uint16_t addr, uint8_t *data, uint16_t num_byte)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid = local_msm_ois_t->sid_ois;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_read_seq(&local_msm_ois_t->i2c_client, addr, &data[0], num_byte);
+	return ret;
+}
+
+int32_t ois_i2c_e2p_write(uint16_t addr, uint16_t data, enum msm_camera_i2c_data_type data_type)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid = 0xA0 >> 1;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_write(&local_msm_ois_t->i2c_client, addr, data, data_type);
+	return ret;
+}
+
+int32_t ois_i2c_e2p_read(uint16_t addr, uint16_t *data, enum msm_camera_i2c_data_type data_type)
+{
+	int32_t ret = 0;
+	struct msm_camera_cci_client *cci_client = NULL;
+
+
+	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client->sid = 0xA0 >> 1;
+	cci_client->retries = 3;
+	cci_client->id_map = 0;
+	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
+	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_read(&local_msm_ois_t->i2c_client, addr, data, data_type);
+	return ret;
+}
+
+int32_t ois_i2c_act_write(uint8_t data1, uint8_t data2)
+{
+	int32_t ret = 0;
+
+	uint16_t sid = 0;
+	struct msm_camera_i2c_client *ois_i2c_client = NULL;
+	ois_i2c_client = &local_msm_ois_t->i2c_client;
+	sid = ois_i2c_client->cci_client->sid;
+
+
+	ois_i2c_client->cci_client->sid = 0x18 >> 1;
+	ois_i2c_client->addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
+
+	ret = ois_i2c_client->i2c_func_tbl->i2c_write(ois_i2c_client, data1, data2, 1);
+
+	ois_i2c_client->cci_client->sid = sid;
+	ois_i2c_client->addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	return ret;
+}
 
 static int32_t msm_ois_platform_probe(struct platform_device *pdev)
 {
@@ -701,6 +943,7 @@ static int32_t msm_ois_platform_probe(struct platform_device *pdev)
 	msm_ois_t->msm_sd.sd.devnode->fops =
 		&msm_ois_v4l2_subdev_fops;
 
+	local_msm_ois_t = msm_ois_t;
 	CDBG("Exit\n");
 	return rc;
 }

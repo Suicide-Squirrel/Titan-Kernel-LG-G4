@@ -144,6 +144,9 @@ struct kgsl_memdesc {
 	size_t size;
 	unsigned int priv; /* Internal flags and settings */
 	struct scatterlist *sg;
+#if 1  // OFFSET_SEARCH
+        unsigned int offseted_sg;
+#endif
 	unsigned int sglen; /* Active entries in the sglist */
 	struct kgsl_memdesc_ops *ops;
 	unsigned int flags; /* Flags set from userspace */

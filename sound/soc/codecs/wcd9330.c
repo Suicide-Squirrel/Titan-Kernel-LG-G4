@@ -678,8 +678,10 @@ int tomtom_enable_qfuse_sensing(struct snd_soc_codec *codec)
 	 * before checking the status.
 	 */
 	usleep_range(5000, 5500);
-	if ((snd_soc_read(codec, TOMTOM_A_QFUSE_STATUS) & (0x03)) != 0x03)
-		WARN(1, "%s: Qfuse sense is not complete\n", __func__);
+    if ((snd_soc_read(codec, TOMTOM_A_QFUSE_STATUS) & (0x03)) != 0x03) {
+        WARN(1, "%s: Qfuse sense is not complete\n", __func__);
+        return 1;
+    }
 	return 0;
 }
 EXPORT_SYMBOL(tomtom_enable_qfuse_sensing);
@@ -4289,7 +4291,7 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = w->codec;
 	struct tomtom_priv *tomtom = snd_soc_codec_get_drvdata(codec);
-	enum wcd9xxx_notify_event e_pre_on, e_post_off;
+	enum wcd9xxx_notify_event e_pre_on, e_post_off, e_pre_off;
 	u8 req_clsh_state;
 	u32 pa_settle_time = TOMTOM_HPH_PA_SETTLE_COMP_OFF;
 
@@ -4297,10 +4299,12 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 	if (w->shift == 5) {
 		e_pre_on = WCD9XXX_EVENT_PRE_HPHL_PA_ON;
 		e_post_off = WCD9XXX_EVENT_POST_HPHL_PA_OFF;
+		e_pre_off = WCD9XXX_EVENT_PRE_HPHL_PA_OFF;
 		req_clsh_state = WCD9XXX_CLSH_STATE_HPHL;
 	} else if (w->shift == 4) {
 		e_pre_on = WCD9XXX_EVENT_PRE_HPHR_PA_ON;
 		e_post_off = WCD9XXX_EVENT_POST_HPHR_PA_OFF;
+		e_pre_off = WCD9XXX_EVENT_PRE_HPHR_PA_OFF;
 		req_clsh_state = WCD9XXX_CLSH_STATE_HPHR;
 	} else {
 		pr_err("%s: Invalid w->shift %d\n", __func__, w->shift);
@@ -4328,6 +4332,9 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 		}
 		break;
 
+	case SND_SOC_DAPM_PRE_PMD:
+		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_pre_off);
+		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* Let MBHC module know PA turned off */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_off);
@@ -6653,7 +6660,8 @@ static const struct snd_soc_dapm_widget tomtom_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("HEADPHONE"),
 	SND_SOC_DAPM_PGA_E("HPHL", TOMTOM_A_RX_HPH_CNP_EN, 5, 0, NULL, 0,
 		tomtom_hph_pa_event, SND_SOC_DAPM_PRE_PMU |
-		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD |
+		SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_MIXER_E("HPHL DAC", TOMTOM_A_RX_HPH_L_DAC_CTL, 7, 0,
 		hphl_switch, ARRAY_SIZE(hphl_switch), tomtom_hphl_dac_event,
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
@@ -6661,7 +6669,8 @@ static const struct snd_soc_dapm_widget tomtom_dapm_widgets[] = {
 
 	SND_SOC_DAPM_PGA_E("HPHR", TOMTOM_A_RX_HPH_CNP_EN, 4, 0, NULL, 0,
 		tomtom_hph_pa_event, SND_SOC_DAPM_PRE_PMU |
-		SND_SOC_DAPM_POST_PMU |	SND_SOC_DAPM_POST_PMD),
+		SND_SOC_DAPM_POST_PMU |	SND_SOC_DAPM_PRE_PMD |
+		SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_DAC_E("HPHR DAC", NULL, TOMTOM_A_RX_HPH_R_DAC_CTL, 7, 0,
 		tomtom_hphr_dac_event,
@@ -7887,7 +7896,10 @@ static int wcd9xxx_prepare_static_pa(struct wcd9xxx_mbhc *mbhc,
 		{WCD9XXX_A_BUCK_MODE_2, 0xff, 0xEF},
 		{WCD9XXX_A_BUCK_MODE_2, 0xff, 0xEE},
 		{TOMTOM_A_NCP_DTEST, 0xff, 0x20},
+#ifdef CONFIG_MACH_LGE
+#else
 		{WCD9XXX_A_CDC_CLK_OTHR_CTL, 0xff, 0x21},
+#endif
 		{WCD9XXX_A_CDC_RX2_B6_CTL, 0xff, 0x81},
 		{WCD9XXX_A_CDC_CLK_RX_B1_CTL, 0x02, 0x02},
 

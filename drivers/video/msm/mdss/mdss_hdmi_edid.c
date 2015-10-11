@@ -15,7 +15,19 @@
 #include <linux/stat.h>
 #include <linux/slab.h>
 #include <linux/device.h>
+#ifdef CONFIG_MACH_LGE
+#include <soc/qcom/lge/board_lge.h>
+#endif
 #include "mdss_hdmi_edid.h"
+
+#ifdef DEV_DBG
+#undef DEV_DBG
+#define DEV_DBG(fmt, args...)   pr_err(fmt, ##args)
+#endif
+
+#ifdef CONFIG_SLIMPORT_COMMON
+extern int slimport_read_edid_block(int block, uint8_t *edid_buf);
+#endif
 
 #define DBC_START_OFFSET 4
 
@@ -471,10 +483,15 @@ static int hdmi_edid_read_block(struct hdmi_edid_ctrl *edid_ctrl, int block,
 {
 	const u8 *b = NULL;
 	u32 ndx, check_sum, print_len;
+#ifdef CONFIG_SLIMPORT_COMMON
+	int status;
+	int checksum_retry = 0;
+#else /* QCT Original */
 	int block_size;
 	int i, status;
 	int retry_cnt = 0, checksum_retry = 0;
 	struct hdmi_tx_ddc_data ddc_data;
+#endif
 	b = edid_buf;
 
 	if (!edid_ctrl) {
@@ -483,8 +500,16 @@ static int hdmi_edid_read_block(struct hdmi_edid_ctrl *edid_ctrl, int block,
 	}
 
 read_retry:
+#ifdef CONFIG_SLIMPORT_COMMON
+	status = 0;
+#else
 	block_size = 0x80;
 	status = 0;
+#endif
+
+#ifdef CONFIG_SLIMPORT_COMMON
+	status = slimport_read_edid_block(block, edid_buf);
+#else
 	do {
 		DEV_DBG("EDID: reading block(%d) with block-size=%d\n",
 			block, block_size);
@@ -514,7 +539,7 @@ read_retry:
 		if (retry_cnt++ >= MAX_EDID_READ_RETRY)
 			block_size /= 2;
 	} while (status && (block_size >= 16));
-
+#endif
 	if (status)
 		goto error;
 
@@ -1081,6 +1106,57 @@ static void hdmi_edid_add_sink_3d_format(struct hdmi_edid_sink_data *sink_data,
 		string, added ? "added" : "NOT added");
 } /* hdmi_edid_add_sink_3d_format */
 
+#ifdef CONFIG_SLIMPORT_COMMON
+extern unchar sp_get_rx_bw(void);
+void limit_supported_video_format(u32 *video_format)
+{
+	switch (sp_get_rx_bw()) {
+	case 0x0a:
+		if ((*video_format == HDMI_VFRMT_1920x1080p60_16_9) ||
+			(*video_format == HDMI_VFRMT_2880x480p60_4_3) ||
+			(*video_format == HDMI_VFRMT_2880x480p60_16_9) ||
+			(*video_format == HDMI_VFRMT_1280x720p120_16_9))
+			*video_format = HDMI_VFRMT_1280x720p60_16_9;
+		else if ((*video_format == HDMI_VFRMT_1920x1080p50_16_9) ||
+			(*video_format == HDMI_VFRMT_2880x576p50_4_3) ||
+			(*video_format == HDMI_VFRMT_2880x576p50_16_9) ||
+			(*video_format == HDMI_VFRMT_1280x720p100_16_9))
+			*video_format = HDMI_VFRMT_1280x720p50_16_9;
+		else if (*video_format == HDMI_VFRMT_1920x1080i100_16_9)
+			*video_format = HDMI_VFRMT_1920x1080i50_16_9;
+		else if (*video_format == HDMI_VFRMT_1920x1080i120_16_9)
+			*video_format = HDMI_VFRMT_1920x1080i60_16_9;
+		else if (*video_format == HDMI_VFRMT_1280x1024p60_5_4)
+			*video_format = HDMI_VFRMT_1024x768p60_4_3;
+		break;
+	case 0x06:
+		if (*video_format != HDMI_VFRMT_640x480p60_4_3)
+			*video_format = HDMI_VFRMT_640x480p60_4_3;
+		break;
+	case 0x14:
+		if ((*video_format == HDMI_VFRMT_1920x1200p60_16_10) ||
+			(*video_format == HDMI_VFRMT_2560x1600p60_16_9) ||
+			(*video_format == HDMI_VFRMT_3840x2160p30_16_9) ||
+			(*video_format == HDMI_VFRMT_3840x2160p25_16_9) ||
+			(*video_format == HDMI_VFRMT_3840x2160p24_16_9) ||
+			(*video_format == HDMI_VFRMT_4096x2160p24_16_9))
+			*video_format = HDMI_VFRMT_1920x1080p60_16_9;
+		break;
+#if defined (CONFIG_SLIMPORT_ANX7808) || defined (CONFIG_SLIMPORT_ANX7812)
+	case 0x19:
+		if ((*video_format == HDMI_VFRMT_2560x1600p60_16_9) ||
+			(*video_format == HDMI_VFRMT_3840x2160p30_16_9) ||
+			(*video_format == HDMI_VFRMT_3840x2160p25_16_9) ||
+			(*video_format == HDMI_VFRMT_3840x2160p24_16_9) ||
+			(*video_format == HDMI_VFRMT_4096x2160p24_16_9))
+			*video_format = HDMI_VFRMT_1920x1080p60_16_9;
+		break;
+#endif
+	default:
+		break;
+	}
+}
+#endif
 static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 	u32 video_format)
 {
@@ -1090,6 +1166,13 @@ static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 				video_format);
 	u32 supported = timing.supported;
 	struct hdmi_edid_sink_data *sink_data = &edid_ctrl->sink_data;
+#ifdef CONFIG_SLIMPORT_COMMON
+		if (lge_get_boot_mode() != LGE_BOOT_MODE_QEM_56K) {
+			limit_supported_video_format(&video_format);
+		}else{
+			DEV_ERR("%s: LGE_BOOT_MODE_QEM_56K\n", __func__);
+		}
+#endif
 
 	if (video_format >= HDMI_VFRMT_MAX) {
 		DEV_ERR("%s: video format: %s is not supported\n", __func__,

@@ -1195,3 +1195,12 @@ config VEXPRESS_CONFIG
 	help
 	  Platform configuration infrastructure for the ARM Ltd.
 	  Versatile Express.
+
+config MFD_P1_DSV
+     bool "LION_DSV Power Management chip"
+     depends on I2C
+     select MFD_CORE
+     select REGMAP_I2C
+     help
+       if you say yes here you get support for the P1_DSV series of
+       Power Management chips.

@@ -188,4 +188,10 @@ source "drivers/soc/Kconfig"
 
 source "drivers/firmware/Kconfig"
 
+source "drivers/broadcast/Kconfig"
+
+
+source "drivers/felica/Kconfig"
+
+source "drivers/cryptodev-linux/Kconfig"
 endmenu

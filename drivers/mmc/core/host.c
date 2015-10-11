@@ -153,6 +153,12 @@ static int mmc_host_resume(struct device *dev)
 			pr_err("%s: %s: failed: ret: %d\n", mmc_hostname(host),
 			       __func__, ret);
 	}
+#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
+	else if (!strcmp(mmc_hostname(host), "mmc2")){
+		pr_err("%s: %s: pm_runtime_suspended is true\n", mmc_hostname(host),
+			__func__);
+	}
+#endif
 	host->dev_status = DEV_RESUMED;
 	return ret;
 }
@@ -884,6 +890,12 @@ int mmc_add_host(struct mmc_host *host)
 		return err;
 
 	device_enable_async_suspend(&host->class_dev);
+#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
+	if (!strcmp(mmc_hostname(host), "mmc2")){
+	    device_disable_async_suspend(&host->class_dev);
+	    pr_err("%s: %s: device_disable_async_suspend\n", mmc_hostname(host),__func__);
+	}
+#endif
 	led_trigger_register_simple(dev_name(&host->class_dev), &host->led);
 
 #ifdef CONFIG_DEBUG_FS

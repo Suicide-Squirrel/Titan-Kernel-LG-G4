@@ -1259,6 +1259,15 @@ unsigned int __read_mostly sysctl_sched_init_task_load_pct = 15;
 unsigned int __read_mostly sysctl_sched_min_runtime = 0; /* 0 ms */
 u64 __read_mostly sched_min_runtime = 0; /* 0 ms */
 
+/* LG Cancun Project */
+static inline unsigned int task_load_migration(struct task_struct *p)
+{
+	if (sched_use_pelt)
+		return p->se.avg.runnable_avg_sum_scaled;
+
+	return p->ravg.demand_for_migration;
+}
+
 static inline unsigned int task_load(struct task_struct *p)
 {
 	if (sched_use_pelt)
@@ -1358,6 +1367,10 @@ int __read_mostly sysctl_sched_upmigrate_min_nice = 15;
  * boost is responsible for disabling it as well.
  */
 unsigned int sysctl_sched_boost;
+
+/* LG Cancun Project*/
+unsigned int sysctl_sched_cancun = 1;
+
 
 static inline int available_cpu_capacity(int cpu)
 {
@@ -1567,7 +1580,7 @@ static inline u64 cpu_load_sync(int cpu, int sync)
 	return scale_load_to_cpu(load, cpu);
 }
 
-static int
+static __attribute__ ((aligned(4096))) int
 spill_threshold_crossed(struct task_struct *p, struct rq *rq, int cpu,
 			int sync)
 {
@@ -1711,7 +1724,13 @@ static int task_will_fit(struct task_struct *p, int cpu)
 		if (nice > sched_upmigrate_min_nice || upmigrate_discouraged(p))
 			return 1;
 
-		load = scale_load_to_cpu(task_load(p), cpu);
+		/*LG Cancun Project */
+		if(sysctl_sched_cancun){
+			load = scale_load_to_cpu(task_load_migration(p), cpu);
+		}
+		else{
+			load = scale_load_to_cpu(task_load(p), cpu);
+		}
 
 		if (prev_rq->capacity > rq->capacity)
 			upmigrate = sched_downmigrate;
@@ -1731,7 +1750,8 @@ static int eligible_cpu(struct task_struct *p, int cpu, int sync)
 		return 1;
 
 	if (rq->capacity != max_capacity)
-		return !spill_threshold_crossed(p, rq, cpu, sync);
+		return !spill_threshold_crossed(p, rq, cpu, sync) &&
+		       !sched_cpu_high_irqload(cpu);
 
 	return 0;
 }

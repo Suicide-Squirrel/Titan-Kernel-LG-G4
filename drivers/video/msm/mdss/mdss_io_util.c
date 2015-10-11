@@ -16,6 +16,11 @@
 #include <linux/delay.h>
 #include <linux/mdss_io_util.h>
 
+#ifdef CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL
+#include <soc/qcom/lge/board_lge.h>
+#define LGD_SIC_INCELL_CMD_PANEL 3
+#endif
+
 #define MAX_I2C_CMDS  16
 void dss_reg_w(struct dss_io_data *io, u32 offset, u32 value, u32 debug)
 {
@@ -213,6 +218,14 @@ int msm_dss_enable_vreg(struct dss_vreg *in_vreg, int num_vreg, int enable)
 	int i = 0, rc = 0;
 	if (enable) {
 		for (i = 0; i < num_vreg; i++) {
+#if defined(CONFIG_MACH_MSM8992_P1_CN) || defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
+			if (lge_get_panel() != LGD_SIC_INCELL_CMD_PANEL) {
+				if(!strcmp(in_vreg[i].vreg_name, "vdd_l19")) {
+					pr_info("%s :If Global & CN doesn't use sic, doesn't register ldo19\n", __func__);
+					continue;
+				}
+			}
+#endif
 			rc = PTR_RET(in_vreg[i].vreg);
 			if (rc) {
 				DEV_ERR("%pS->%s: %s regulator error. rc=%d\n",

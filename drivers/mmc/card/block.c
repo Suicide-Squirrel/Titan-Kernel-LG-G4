@@ -45,8 +45,14 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
+#include <linux/mmc/slot-gpio.h>
+#include <linux/mmc/ffu.h>
 
 #include <asm/uaccess.h>
+
+#if defined(CONFIG_LGE_MMC_DYNAMIC_LOG)
+#include <linux/mmc/debug_log.h>
+#endif
 
 #include "queue.h"
 
@@ -127,8 +133,9 @@ struct mmc_blk_data {
 #define MMC_BLK_WRITE		BIT(1)
 #define MMC_BLK_DISCARD		BIT(2)
 #define MMC_BLK_SECDISCARD	BIT(3)
+#if defined(CONFIG_LGE_MMC_RESET_IF_HANG)
 #define MMC_BLK_FLUSH		BIT(4)
-
+#endif
 
 	/*
 	 * Only set in main mmc_blk_data associated
@@ -734,6 +741,38 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
 
+	if(cmd.opcode == MMC_FFU_DOWNLOAD_OP) {
+		err = mmc_ffu_download(card, &cmd, idata->buf,
+				idata->buf_bytes);
+		goto cmd_rel_host;
+	}
+	if(cmd.opcode == MMC_FFU_INSTALL_OP) {
+		err = mmc_ffu_install(card);
+		goto cmd_rel_host;
+	}
+	if(cmd.opcode == MMC_FFU_MID_OP) {
+		printk(KERN_INFO "[LGE][FFU][cid : %u]\n", card->cid.manfid);
+		if (copy_to_user((void __user *)(unsigned long) idata->ic.data_ptr,
+						&card->cid.manfid, sizeof(unsigned int))) {
+			err = -EFAULT;
+		}
+		else{
+			err = 0;
+		}
+		goto cmd_rel_host;
+	}
+	if(cmd.opcode == MMC_FFU_PNM_OP) {
+		printk(KERN_INFO "[LGE][FFU][pnm : %s]\n", card->cid.prod_name);
+		if (copy_to_user((void __user *)(unsigned long) idata->ic.data_ptr,
+						&card->cid.prod_name, idata->ic.blksz)) {
+			err = -EFAULT;
+		}
+		else {
+			err = 0;
+		}
+		goto cmd_rel_host;
+	}
+
 	err = mmc_blk_part_switch(card, md);
 	if (err)
 		goto cmd_rel_host;
@@ -1222,8 +1261,13 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 			break;
 
 		prev_cmd_status_valid = false;
+		#ifdef CONFIG_MACH_LGE
+		pr_err("[LGE][MMC]%s: error %d sending status command, %sing, cd-gpio:%d\n",
+		       req->rq_disk->disk_name, err, retry ? "retry" : "abort", mmc_gpio_get_cd(card->host));
+		#else
 		pr_err("%s: error %d sending status command, %sing\n",
 		       req->rq_disk->disk_name, err, retry ? "retry" : "abort");
+		#endif
 	}
 
 	/* We couldn't get a response from the card.  Give up. */
@@ -1318,6 +1362,20 @@ static int mmc_blk_reset(struct mmc_blk_data *md, struct mmc_host *host,
 
 	md->reset_done |= type;
 	err = mmc_hw_reset(host);
+/* LGE_CHANGE_S
+ * Author : D3-5T-FS@lge.com
+ * Change : eMMC can recover itself, but if it fails during re-init, recover routine does not activated. (eMMC is not accessible)
+ */
+#if defined (CONFIG_LGE_MMC_RESET_IF_HANG)
+    /* in case that eMMC failed to re-initialize, retry five times and crash if it is eMMC. */
+    if (err == -ETIMEDOUT && host->caps & MMC_CAP_NONREMOVABLE) /* Only for eMMC (NONREMOVABLE) */
+    {
+        err = mmc_hw_reset(host);
+        pr_info("%s:%s: retry mmc_blk_reset() %d\n",
+                    mmc_hostname(host), __func__, err);
+    }
+#endif
+
 	if (err && err != -EOPNOTSUPP) {
 		/* We failed to reset so we need to abort the request */
 		pr_err("%s: %s: failed to reset %d\n", mmc_hostname(host),
@@ -1468,6 +1526,12 @@ static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 	int ret = 0;
 
 	ret = mmc_flush_cache(card);
+    /* LGE_CHANGE_S
+     * Author : D3-5T-FS@lge.com
+     * Change : eMMC can recover itself, but if it fails during re-init/flush, recover routine does not activated. (eMMC is not accessible)
+     * 			try emmc_reset and panic if it continously fails.
+     */
+#if defined (CONFIG_LGE_MMC_RESET_IF_HANG)
 	if (ret == -ENODEV) {
 		pr_err("%s: %s: restart mmc card",
 				req->rq_disk->disk_name, __func__);
@@ -1477,6 +1541,7 @@ static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 		else
 			mmc_blk_reset_success(md, MMC_BLK_FLUSH);
 	}
+#endif
 
 	if (ret == -ETIMEDOUT) {
 		pr_info("%s: %s: requeue flush request after timeout",
@@ -1491,7 +1556,6 @@ static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 				req->rq_disk->disk_name, __func__);
 		ret = -EIO;
 	}
-
 	blk_end_request_all(req, ret);
 exit:
 	return ret ? 0 : 1;
@@ -1536,6 +1600,16 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	struct mmc_blk_request *brq = &mq_mrq->brq;
 	struct request *req = mq_mrq->req;
 	int ecc_err = 0, gen_err = 0;
+
+#ifdef CONFIG_MACH_LGE
+	/* LGE_CHANGE
+	 * When uSD is not inserted, return proper error-value.
+	 * 2014-09-01, Z2G4-BSP-FileSys@lge.com
+	 */
+	if(mmc_card_sd(card) && !mmc_gpio_get_cd(card->host)) {
+		return MMC_BLK_NOMEDIUM;
+	}
+#endif
 
 	/*
 	 * sbc.error indicates a problem with the set block count
@@ -2658,6 +2732,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			}
 			break;
 		case MMC_BLK_CMD_ERR:
+			pr_debug("%s: [MMC_BLK_CMD_ERR:] %s\n", mmc_hostname(card->host),
+					__func__);
 			ret = mmc_blk_cmd_err(md, card, brq, req, ret);
 			if (!mmc_blk_reset(md, card->host, type)) {
 				if (!ret) {
@@ -2679,6 +2755,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				break;
 			/* Fall through */
 		case MMC_BLK_ABORT:
+			pr_debug("%s: [MMC_BLK_ABORT:] %s\n",
+					mmc_hostname(card->host), __func__);
 			if (!mmc_blk_reset(md, card->host, type) &&
 					(retry++ < (MMC_BLK_MAX_RETRIES + 1)))
 					break;
@@ -2686,6 +2764,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 		case MMC_BLK_DATA_ERR: {
 			int err;
 
+			pr_debug("%s: [MMC_BLK_DATA_ERR:] %s\n",
+					mmc_hostname(card->host), __func__);
 			err = mmc_blk_reset(md, card->host, type);
 			if (!err)
 				break;

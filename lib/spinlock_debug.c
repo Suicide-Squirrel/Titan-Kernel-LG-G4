@@ -60,11 +60,13 @@ static void spin_dump(raw_spinlock_t *lock, const char *msg)
 		msg, raw_smp_processor_id(),
 		current->comm, task_pid_nr(current));
 	printk(KERN_EMERG " lock: %pS, .magic: %08x, .owner: %s/%d, "
-			".owner_cpu: %d\n",
+			".owner_cpu: %d, "
+			".raw_lock.owner: 0x%x, .raw_lock.next: 0x%x\n",
 		lock, lock->magic,
 		owner ? owner->comm : "<none>",
 		owner ? task_pid_nr(owner) : -1,
-		lock->owner_cpu);
+		lock->owner_cpu,
+		lock->raw_lock.owner, lock->raw_lock.next);
 #ifdef CONFIG_DEBUG_SPINLOCK_BITE_ON_BUG
 	msm_trigger_wdog_bite();
 #elif defined(CONFIG_DEBUG_SPINLOCK_PANIC_ON_BUG)

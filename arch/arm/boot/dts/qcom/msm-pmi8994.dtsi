@@ -196,7 +196,6 @@
 			qcom,parallel-usb-min-current-ma = <1400>;
 			qcom,parallel-usb-9v-min-current-ma = <900>;
 			qcom,parallel-allowed-lowering-ma = <500>;
-			qcom,autoadjust-vfloat;
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
@@ -305,7 +304,6 @@
 			qcom,cycle-counter-low-soc = <15>;
 			qcom,cycle-counter-high-soc = <85>;
 			qcom,capacity-learning-on;
-			qcom,fg-cc-cv-threshold-mv = <4340>;
 
 			qcom,fg-soc@4000 {
 				status = "okay";
@@ -614,7 +612,8 @@
 			qcom,ramp_up_step = "6P7_US";
 			qcom,ramp_dn_step = "6P7_US";
 			qcom,vph-pwr-droop-enabled;
-			qcom,vph-pwr-droop-threshold = <3000>;
+			/* LGE Change 3000 =>2900 */
+			qcom,vph-pwr-droop-threshold = <2900>;
 			qcom,vph-pwr-droop-debounce-time = <10>;
 			qcom,headroom-sense-ch0-enabled;
 			qcom,headroom-sense-ch1-enabled;

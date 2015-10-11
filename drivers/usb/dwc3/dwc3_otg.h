@@ -22,6 +22,10 @@
 #include <linux/usb/otg.h>
 #include "power.h"
 
+#ifdef CONFIG_LGE_PM_USB_ID
+#include <soc/qcom/lge/board_lge.h>
+#endif
+
 #define DWC3_IDEV_CHG_MAX 1500
 #define DWC3_HVDCP_CHG_MAX 1800
 
@@ -31,6 +35,9 @@
  */
 extern int dcp_max_current;
 
+#ifdef CONFIG_LGE_PM_USB_ID
+#define DWC3_USB30_CHG_CURRENT 900
+#endif
 struct dwc3_charger;
 
 /**
@@ -94,6 +101,13 @@ struct dwc3_charger {
 	/* to notify OTG about charger detection completion, provided by OTG */
 	void	(*notify_detection_complete)(struct usb_otg *otg,
 						struct dwc3_charger *charger);
+#ifdef CONFIG_LGE_PM_USB_ID
+	void    (*read_cable_adc)(struct dwc3_charger *charger, bool start);
+	bool    adc_read_complete;
+#endif
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+	struct delayed_work	*drv_check_state_wq;
+#endif
 };
 
 /* for external charger driver */
@@ -126,4 +140,7 @@ struct dwc3_ext_xceiv {
 /* for external transceiver driver */
 extern int dwc3_set_ext_xceiv(struct usb_otg *otg,
 				struct dwc3_ext_xceiv *ext_xceiv);
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+extern void update_status(int code, int value);
+#endif
 #endif /* __LINUX_USB_DWC3_OTG_H */

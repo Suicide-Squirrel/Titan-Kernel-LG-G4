@@ -28,6 +28,10 @@
 #include "diag_mux.h"
 #include "diagmem.h"
 
+#ifdef CONFIG_LGE_DIAG_BYPASS
+int diag_bypass_enable = 1;
+#endif
+
 #define DIAG_USB_STRING_SZ	10
 
 struct diag_usb_info diag_usb[NUM_DIAG_USB_DEV] = {
@@ -231,6 +235,9 @@ static void diag_usb_notifier(void *priv, unsigned event,
 		spin_lock_irqsave(&usb_info->lock, flags);
 		usb_info->connected = 1;
 		spin_unlock_irqrestore(&usb_info->lock, flags);
+#ifdef CONFIG_LGE_DIAG_BYPASS
+        diag_bypass_enable = 0;
+#endif
 		pr_info("diag: USB channel %s connected\n", usb_info->name);
 		queue_work(usb_info->usb_wq,
 			   &usb_info->connect_work);
@@ -239,6 +246,9 @@ static void diag_usb_notifier(void *priv, unsigned event,
 		spin_lock_irqsave(&usb_info->lock, flags);
 		usb_info->connected = 0;
 		spin_unlock_irqrestore(&usb_info->lock, flags);
+#ifdef CONFIG_LGE_DIAG_BYPASS
+        diag_bypass_enable = 1;
+#endif
 		pr_info("diag: USB channel %s disconnected\n", usb_info->name);
 		queue_work(usb_info->usb_wq,
 			   &usb_info->disconnect_work);

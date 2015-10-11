@@ -26,6 +26,10 @@ struct address_space;
 
 #define USE_SPLIT_PTLOCKS	(NR_CPUS >= CONFIG_SPLIT_PTLOCK_CPUS)
 
+#ifdef CONFIG_PAGE_USAGE
+#define TASK_COMM_LEN	16
+#endif
+
 /*
  * Each physical page in the system has a struct page associated with
  * it to keep track of whatever it is we are using the page for at the
@@ -186,6 +190,12 @@ struct page {
 	gfp_t gfp_mask;
 	struct stack_trace trace;
 	unsigned long trace_entries[8];
+#endif
+#ifdef CONFIG_PAGE_USAGE
+	pid_t task_tgid;
+	char task_comm[TASK_COMM_LEN];
+	__u8 task_type;
+	__u8 zone_stat;
 #endif
 }
 /*

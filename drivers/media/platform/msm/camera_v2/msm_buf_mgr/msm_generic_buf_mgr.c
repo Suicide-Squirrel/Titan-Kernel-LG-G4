@@ -102,6 +102,8 @@ static int32_t msm_buf_mngr_buf_done(struct msm_buf_mngr_device *buf_mngr_dev,
 		if ((bufs->session_id == buf_info->session_id) &&
 			(bufs->stream_id == buf_info->stream_id) &&
 			(bufs->vb2_buf->v4l2_buf.index == buf_info->index)) {
+/* LGE_CHANGE_S, Check if vb2_buf is in the queued list */
+#if 0 //QCT original
 			bufs->vb2_buf->v4l2_buf.sequence  = buf_info->frame_id;
 			bufs->vb2_buf->v4l2_buf.timestamp = buf_info->timestamp;
 			bufs->vb2_buf->v4l2_buf.reserved = buf_info->reserved;
@@ -109,6 +111,20 @@ static int32_t msm_buf_mngr_buf_done(struct msm_buf_mngr_device *buf_mngr_dev,
 					(bufs->vb2_buf,
 						buf_info->session_id,
 						buf_info->stream_id);
+#else
+			ret = buf_mngr_dev->vb2_ops.buf_done
+					(bufs->vb2_buf,
+						buf_info->session_id,
+						buf_info->stream_id);
+			if(!ret) {
+				bufs->vb2_buf->v4l2_buf.sequence  = buf_info->frame_id;
+				bufs->vb2_buf->v4l2_buf.timestamp = buf_info->timestamp;
+				bufs->vb2_buf->v4l2_buf.reserved = buf_info->reserved;
+			} else {
+				pr_info("%s: failed to buf_done idx=%d state(%d)\n",__func__,bufs->vb2_buf->v4l2_buf.index, bufs->vb2_buf->state);
+			}
+#endif
+/* LGE_CHANGE_E, Check if vb2_buf is in the queued list */
 			list_del_init(&bufs->entry);
 			kfree(bufs);
 			break;

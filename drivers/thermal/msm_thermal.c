@@ -47,6 +47,10 @@
 #include <soc/qcom/msm-core.h>
 #include <linux/cpumask.h>
 
+#ifdef CONFIG_LGE_HANDLE_PANIC
+#include <soc/qcom/lge/lge_handle_panic.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #define TRACE_MSM_THERMAL
 #include <trace/trace_thermal.h>
@@ -78,9 +82,16 @@
 		_val |= 2;				\
 } while (0)
 
+#ifdef CONFIG_LGE_PM
+#define IS_IN_BIG_CLUSTER(cpu) ((cpu < 4) ? 0 : 1)
+#endif
+
 static struct msm_thermal_data msm_thermal_info;
 static struct delayed_work check_temp_work;
 static bool core_control_enabled;
+#ifdef CONFIG_LGE_PM
+static bool freq_control_enabled;
+#endif
 static uint32_t cpus_offlined;
 static cpumask_var_t cpus_previously_online;
 static DEFINE_MUTEX(core_control_mutex);
@@ -1136,8 +1147,20 @@ static int __ref init_cluster_freq_table(void)
 				cpu_set = cpumask_test_cpu(_cpu,
 						cpus_previously_online);
 #ifdef CONFIG_SMP
+				cpu_set = cpumask_test_cpu(_cpu,
+						cpus_previously_online);
 				cpu_up(_cpu);
 				cpu_down(_cpu);
+				/* Remove prev online bit if we are first to
+				   put it online */
+				if (!cpu_set) {
+					cpumask_clear_cpu(_cpu,
+						cpus_previously_online);
+					cpumask_scnprintf(buf, sizeof(buf),
+						cpus_previously_online);
+					pr_debug("Reset prev online to %s\n",
+						 buf);
+				}
 #endif
 				/* Remove prev online bit if we are first to
 				   put it online */
@@ -2271,6 +2294,11 @@ static void msm_thermal_bite(int tsens_id, long temp)
 
 	pr_err("TSENS:%d reached temperature:%ld. System reset\n",
 		tsens_id, temp);
+
+#ifdef CONFIG_LGE_HANDLE_PANIC
+	lge_set_restart_reason(LGE_RB_MAGIC | LGE_ERR_TZ | LGE_ERR_TZ_THERM_SEC_BITE);
+#endif
+
 	if (!is_scm_armv8()) {
 		scm_call_atomic1(SCM_SVC_BOOT, THERM_SECURE_BITE_CMD, 0);
 	} else {
@@ -2410,6 +2438,9 @@ static int __ref update_offline_cores(int val)
 	uint32_t cpu = 0;
 	int ret = 0;
 	uint32_t previous_cpus_offlined = 0;
+#ifdef CONFIG_LGE_PM_DEBUG
+	struct sensor_threshold *hi_thresh = NULL, *low_thresh = NULL;
+#endif
 
 	if (!core_control_enabled)
 		return 0;
@@ -2418,6 +2449,10 @@ static int __ref update_offline_cores(int val)
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 
 	for_each_possible_cpu(cpu) {
+#ifdef CONFIG_LGE_PM_DEBUG
+		hi_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_HIGH];
+		low_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_LOW];
+#endif
 		if (cpus_offlined & BIT(cpu)) {
 			if (!cpu_online(cpu))
 				continue;
@@ -2427,7 +2462,13 @@ static int __ref update_offline_cores(int val)
 				pr_err("Unable to offline CPU%d. err:%d\n",
 					cpu, ret);
 			else
+#ifdef CONFIG_LGE_PM_DEBUG
+				pr_info("Set Offline: CPU%d Temp: %ld\n",
+					cpu,
+					hi_thresh->temp);
+#else
 				pr_debug("Offlined CPU%d\n", cpu);
+#endif
 			trace_thermal_post_core_offline(cpu,
 				cpumask_test_cpu(cpu, cpu_online_mask));
 		} else if (online_core && (previous_cpus_offlined & BIT(cpu))) {
@@ -2445,7 +2486,13 @@ static int __ref update_offline_cores(int val)
 				pr_err("Unable to online CPU%d. err:%d\n",
 						cpu, ret);
 			else
+#ifdef CONFIG_LGE_PM_DEBUG
+				pr_info("Allow Online CPU%d Temp: %ld\n",
+					cpu,
+					low_thresh->temp);
+#else
 				pr_debug("Onlined CPU%d\n", cpu);
+#endif
 			trace_thermal_post_core_online(cpu,
 				cpumask_test_cpu(cpu, cpu_online_mask));
 		}
@@ -2966,10 +3013,10 @@ static struct notifier_block __refdata msm_thermal_cpu_notifier = {
 static int hotplug_notify(enum thermal_trip_type type, int temp, void *data)
 {
 	struct cpu_info *cpu_node = (struct cpu_info *)data;
-
+#ifndef CONFIG_LGE_PM
 	pr_info_ratelimited("%s reach temp threshold: %d\n",
 			       cpu_node->sensor_type, temp);
-
+#endif
 	if (!(msm_thermal_info.core_control_mask & BIT(cpu_node->cpu)))
 		return 0;
 	switch (type) {
@@ -3011,12 +3058,23 @@ static int hotplug_init_cpu_offlined(void)
 			mutex_unlock(&core_control_mutex);
 			return -EINVAL;
 		}
-
+#ifdef CONFIG_LGE_PM
+		if (IS_IN_BIG_CLUSTER(cpu)) {
+		if (temp >= msm_thermal_info.big_hotplug_temp_degC)
+			cpus[cpu].offline = 1;
+		else if (temp <= (msm_thermal_info.big_hotplug_temp_degC -
+			msm_thermal_info.big_hotplug_temp_hysteresis_degC))
+			cpus[cpu].offline = 0;
+		} else {
+#endif
 		if (temp >= msm_thermal_info.hotplug_temp_degC)
 			cpus[cpu].offline = 1;
 		else if (temp <= (msm_thermal_info.hotplug_temp_degC -
 			msm_thermal_info.hotplug_temp_hysteresis_degC))
 			cpus[cpu].offline = 0;
+#ifdef CONFIG_LGE_PM
+		}
+#endif
 	}
 	mutex_unlock(&core_control_mutex);
 
@@ -3049,11 +3107,23 @@ static void hotplug_init(void)
 
 		hi_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_HIGH];
 		low_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_LOW];
+#ifdef CONFIG_LGE_PM
+		if (IS_IN_BIG_CLUSTER(cpu)) {
+		hi_thresh->temp = msm_thermal_info.big_hotplug_temp_degC;
+		hi_thresh->trip = THERMAL_TRIP_CONFIGURABLE_HI;
+		low_thresh->temp = msm_thermal_info.big_hotplug_temp_degC -
+			msm_thermal_info.big_hotplug_temp_hysteresis_degC;
+		low_thresh->trip = THERMAL_TRIP_CONFIGURABLE_LOW;
+		} else {
+#endif
 		hi_thresh->temp = msm_thermal_info.hotplug_temp_degC;
 		hi_thresh->trip = THERMAL_TRIP_CONFIGURABLE_HI;
 		low_thresh->temp = msm_thermal_info.hotplug_temp_degC -
 				msm_thermal_info.hotplug_temp_hysteresis_degC;
 		low_thresh->trip = THERMAL_TRIP_CONFIGURABLE_LOW;
+#ifdef CONFIG_LGE_PM
+		}
+#endif
 		hi_thresh->notify = low_thresh->notify = hotplug_notify;
 		hi_thresh->data = low_thresh->data = (void *)&cpus[cpu];
 
@@ -3173,6 +3243,13 @@ static int freq_mitigation_notify(enum thermal_trip_type type,
 	if (!(msm_thermal_info.freq_mitig_control_mask &
 		BIT(cpu_node->cpu)))
 		return 0;
+
+#ifdef CONFIG_LGE_PM
+	if (!freq_control_enabled) {
+		pr_debug("freq mitigation is blocked");
+		return 0;
+	}
+#endif
 
 	switch (type) {
 	case THERMAL_TRIP_CONFIGURABLE_HI:
@@ -4068,19 +4145,13 @@ static void __ref disable_msm_thermal(void)
 	/* make sure check_temp is no longer running */
 	cancel_delayed_work_sync(&check_temp_work);
 
-	get_online_cpus();
 	for_each_possible_cpu(cpu) {
 		if (cpus[cpu].limited_max_freq == UINT_MAX &&
 			cpus[cpu].limited_min_freq == 0)
 			continue;
-		pr_info("Max frequency reset for CPU%d\n", cpu);
 		cpus[cpu].limited_max_freq = UINT_MAX;
 		cpus[cpu].limited_min_freq = 0;
-		if (!SYNC_CORE(cpu))
-			update_cpu_freq(cpu);
 	}
-	update_cluster_freq();
-	put_online_cpus();
 }
 
 static void interrupt_mode_init(void)
@@ -4098,6 +4169,11 @@ static void interrupt_mode_init(void)
 		thermal_monitor_init();
 		msm_thermal_add_cx_nodes();
 		msm_thermal_add_gfx_nodes();
+		if (freq_mitigation_task)
+			complete(&freq_mitigation_complete);
+		else
+			pr_err(
+			"Frequency mitigation task is not initialized\n");
 	}
 }
 
@@ -4124,6 +4200,49 @@ static struct kernel_param_ops module_ops = {
 
 module_param_cb(enabled, &module_ops, &enabled, 0644);
 MODULE_PARM_DESC(enabled, "enforce thermal limit on cpu");
+
+#ifdef CONFIG_LGE_PM
+static int reset_temp = 0;
+static int set_reset_temp(const char *val, struct kernel_param *kp)
+{
+	int ret;
+	int i;
+	static int origin_reset_temp = -1;
+	struct therm_threshold *thresh_ptr;
+
+	if (!therm_reset_enabled)
+		return 0;
+
+	ret = param_set_int(val, kp);
+	if (ret) {
+		pr_err("error setting value %d\n", ret);
+		return ret;
+	}
+	pr_info("Request set_reset_temp %d\n", reset_temp);
+	if (origin_reset_temp ==-1)
+		origin_reset_temp = msm_thermal_info.therm_reset_temp_degC;
+
+	if (reset_temp)
+		msm_thermal_info.therm_reset_temp_degC = reset_temp;
+	else
+		msm_thermal_info.therm_reset_temp_degC = origin_reset_temp;
+
+	thresh_ptr =thresh[MSM_THERM_RESET].thresh_list;
+
+	for (i = 0; i < max_tsens_num; i++) {
+		thresh_ptr[i].threshold[0].temp
+			= msm_thermal_info.therm_reset_temp_degC;
+		thresh_ptr[i].threshold[1].temp
+			= msm_thermal_info.therm_reset_temp_degC - 10;
+	}
+
+	therm_set_threshold(&thresh[MSM_THERM_RESET]);
+
+	return 0;
+}
+module_param_call(reset_temp, set_reset_temp,
+	param_get_int, &reset_temp, 0644);
+#endif
 
 static ssize_t show_cc_enabled(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -4178,6 +4297,39 @@ done_store_cc:
 	return count;
 }
 
+#ifdef CONFIG_LGE_PM
+static ssize_t show_fm_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", freq_control_enabled);
+}
+
+static ssize_t __ref store_fm_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+
+	ret = kstrtoint(buf, 10, &val);
+	if (ret) {
+		pr_err("Invalid input %s. err:%d\n", buf, ret);
+		goto done_store_fm;
+	}
+
+	if (freq_control_enabled == !!val)
+		goto done_store_fm;
+
+	freq_control_enabled = !!val;
+	if (freq_control_enabled)
+		pr_info("Freq-mitigation enabled\n");
+	else
+		pr_info("Freq-mitigation disabled\n");
+
+done_store_fm:
+	return count;
+}
+#endif
+
 static ssize_t show_cpus_offlined(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -4224,11 +4376,19 @@ done_cc:
 static __refdata struct kobj_attribute cc_enabled_attr =
 __ATTR(enabled, 0644, show_cc_enabled, store_cc_enabled);
 
+#ifdef CONFIG_LGE_PM
+static __refdata struct kobj_attribute fm_enabled_attr =
+__ATTR(freq_control_enabled, 0644, show_fm_enabled, store_fm_enabled);
+#endif
+
 static __refdata struct kobj_attribute cpus_offlined_attr =
 __ATTR(cpus_offlined, 0644, show_cpus_offlined, store_cpus_offlined);
 
 static __refdata struct attribute *cc_attrs[] = {
 	&cc_enabled_attr.attr,
+#ifdef CONFIG_LGE_PM
+	&fm_enabled_attr.attr,
+#endif
 	&cpus_offlined_attr.attr,
 	NULL,
 };
@@ -5439,6 +5599,19 @@ static int probe_cc(struct device_node *node, struct msm_thermal_data *data,
 	if (ret)
 		goto hotplug_node_fail;
 
+#ifdef CONFIG_LGE_PM
+	key = "qcom,big-hotplug-temp";
+	ret = of_property_read_u32(node, key, &data->big_hotplug_temp_degC);
+	if (ret)
+		goto hotplug_node_fail;
+
+	key = "qcom,big-hotplug-temp-hysteresis";
+	ret = of_property_read_u32(node, key,
+			&data->big_hotplug_temp_hysteresis_degC);
+	if (ret)
+		goto hotplug_node_fail;
+#endif
+
 	key = "qcom,cpu-sensors";
 	cpu_cnt = of_property_count_strings(node, key);
 	if (cpu_cnt < num_possible_cpus()) {
@@ -5705,6 +5878,9 @@ static int probe_freq_mitigation(struct device_node *node,
 		goto PROBE_FREQ_EXIT;
 
 	freq_mitigation_enabled = 1;
+#ifdef CONFIG_LGE_PM
+	freq_control_enabled = 1;
+#endif
 
 PROBE_FREQ_EXIT:
 	if (ret) {

@@ -516,6 +516,9 @@ int mmc_send_status(struct mmc_card *card, u32 *status)
 
 	return 0;
 }
+#ifdef CONFIG_MACH_LGE
+EXPORT_SYMBOL(mmc_send_status);
+#endif
 
 static int
 mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,

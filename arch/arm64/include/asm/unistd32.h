@@ -403,8 +403,26 @@ __SYSCALL(378, sys_kcmp)
 __SYSCALL(379, sys_finit_module)
 __SYSCALL(380, sys_sched_setattr)
 __SYSCALL(381, sys_sched_getattr)
+__SYSCALL(382, sys_ni_syscall)
+__SYSCALL(383, sys_ni_syscall)
+__SYSCALL(384, sys_ni_syscall)
+__SYSCALL(385, sys_ni_syscall)
+__SYSCALL(386, sys_ni_syscall)
+__SYSCALL(387, sys_ni_syscall)
+__SYSCALL(388, sys_ni_syscall)
+__SYSCALL(389, sys_ni_syscall)
+__SYSCALL(390, sys_ni_syscall)
+__SYSCALL(391, sys_ni_syscall)
+__SYSCALL(392, sys_ni_syscall)
+__SYSCALL(393, sys_ni_syscall)
+__SYSCALL(394, sys_ni_syscall)
+__SYSCALL(395, sys_ni_syscall)
+__SYSCALL(396, sys_ni_syscall)
+__SYSCALL(397, sys_ni_syscall)
+__SYSCALL(398, sys_set_media_property)
+__SYSCALL(399, sys_set_media_ext)
 
-#define __NR_compat_syscalls		382
+#define __NR_compat_syscalls		400
 
 /*
  * Compat syscall numbers used by the AArch64 kernel.

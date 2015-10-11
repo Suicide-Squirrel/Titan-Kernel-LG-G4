@@ -1369,7 +1369,7 @@ static int sched_wake_up_idle_show(struct seq_file *m, void *v)
 
 static ssize_t
 sched_wake_up_idle_write(struct file *file, const char __user *buf,
-	    size_t count, loff_t *offset)
+		size_t count, loff_t *offset)
 {
 	struct inode *inode = file_inode(file);
 	struct task_struct *p;
@@ -1406,14 +1406,14 @@ static int sched_wake_up_idle_open(struct inode *inode, struct file *filp)
 }
 
 static const struct file_operations proc_pid_sched_wake_up_idle_operations = {
-	.open		= sched_wake_up_idle_open,
-	.read		= seq_read,
-	.write		= sched_wake_up_idle_write,
-	.llseek		= seq_lseek,
-	.release	= single_release,
+	.open       = sched_wake_up_idle_open,
+	.read       = seq_read,
+	.write      = sched_wake_up_idle_write,
+	.llseek     = seq_lseek,
+	.release    = single_release,
 };
 
-#endif	/* CONFIG_SMP */
+#endif /* CONFIG_SMP */
 
 #ifdef CONFIG_SCHED_HMP
 

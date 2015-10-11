@@ -33,6 +33,11 @@ extern bool freezing_slow_path(struct task_struct *p);
  */
 static inline bool freezing(struct task_struct *p)
 {
+
+    asm volatile(
+   " nop\n"
+   " nop\n");
+
 	if (likely(!atomic_read(&system_freezing_cnt)))
 		return false;
 	return freezing_slow_path(p);

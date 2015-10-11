@@ -1581,7 +1581,7 @@ static int uart_open(struct tty_struct *tty, struct file *filp)
 	/*
 	 * Make sure the device is in D0 state.
 	 */
-	if (port->count == 1)
+	if (port->count >= 1)
 		uart_change_pm(state, UART_PM_STATE_ON);
 
 	/*

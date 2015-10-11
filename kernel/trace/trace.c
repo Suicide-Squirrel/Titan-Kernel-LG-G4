@@ -3140,7 +3140,7 @@ t_next(struct seq_file *m, void *v, loff_t *pos)
 	return t;
 }
 
-static void *t_start(struct seq_file *m, loff_t *pos)
+static __attribute__ ((aligned(4096))) void *t_start(struct seq_file *m, loff_t *pos)
 {
 	struct tracer *t;
 	loff_t l = 0;

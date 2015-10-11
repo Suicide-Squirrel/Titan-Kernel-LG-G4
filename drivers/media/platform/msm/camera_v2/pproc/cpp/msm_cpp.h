@@ -198,6 +198,7 @@ struct cpp_device {
 	uint32_t fw_version;
 	uint8_t stream_cnt;
 	uint8_t timeout_trial_cnt;
+	uint8_t max_timeout_trial_cnt; /*LGE_CHANGE, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
 
 	int domain_num;
 	struct iommu_domain *domain;

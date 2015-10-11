@@ -563,6 +563,124 @@ config MSM_BCL_PERIPHERAL_CTL
 	  provides routines to configure and monitor the BCL
 	  PMIC peripheral.
 
+config LGE_PM_CHARGER_CONTROLLER
+	bool "charger controller to change current of charger input current"
+	default n
+	help
+	Say Y to enable charger-controller support,
+	which change current of charger input.
+
+config LGE_PM_FACTORY_PSEUDO_BATTERY
+	tristate "Support LGE PM pseudo battery mode"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE PM pseudo battery mode
+
+config LGE_PM_FACTORY_TESTMODE
+	bool "Support factory testmode for AT Command"
+	default n
+	depends on LGE_PM_CHARGER_CONTROLLER
+	help
+	Say Y to enable factory testmode on charger-controller.
+
+config LGE_PM
+	tristate "MSM8992 LGE POWER Feature"
+	depends on SPMI
+	help
+	  Say Y here to enable support for pm8994/pmi8994 chip lge feature.
+	  Power Management, Battery charging, Battery Monitoring System
+	  with battery FET and fuel gauge.
+
+config LGE_PM_USB_ID
+	tristate "Support LGE PM USB ID feature"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE PM USB ID about cable detection, etc
+
+config LGE_PM_UNIFIED_WLC
+	tristate "wireless charger control driver"
+	default n
+	help
+	  wireless charger control driver
+
+config LGE_PM_UNIFIED_WLC_ALIGNMENT
+	tristate "wireless charger control driver"
+	depends on LGE_PM_UNIFIED_WLC
+	default n
+	help
+	  wireless charger control driver
+
+config LGE_PM_UNIFIED_WLC_ALIGNMENT_IDT9025A
+	tristate "wireless charger control driver"
+	depends on LGE_PM_UNIFIED_WLC
+	default n
+	help
+	  wireless charger control driver
+
+config LGE_PM_BATTERY_ID_CHECKER
+    tristate "Virtual Device for LGE Battery ID Checker"
+    depends on LGE_PM
+    default n
+    help
+      Say Y to enable LGE Battery ID Checker. Manufacturer have their own
+      systematic identification of cell types, and protect the system from
+      problems as using non-standard or unexpected types. so cross-
+      reference battery identification are useful to identify.
+
+config LGE_PM_QC20_SCENARIO
+    tristate "LGE charging senario of QC2.0 feature"
+    depends on LGE_PM
+    default n
+    help
+      Say Y to enable LGE charging senario of QC2.0 feature.
+      The device control the current of USB & BAT by event of framework
+      on QC 2.0 charger.
+
+config LGE_PM_LLK_MODE
+    tristate "implementation power requirements of retail mode"
+    default n
+    help
+      power requirements for retail mode
+
+config LGE_PM_SMPL_COUNTER
+    tristate "Support LGE SMPL COUNTER feature"
+    default n
+    depends on MACH_LGE
+    help
+      Say y to enable smpl_cnt module, that count when
+      booted by SMPL.
+
+config LGE_PM_VZW_REQ
+	tristate "Implemention power requirements of Version"
+	default n
+	help
+	  power requirements for Verizon Wireless
+
+config BATTERY_MAX17048
+    tristate "Maxim MAX17048 fuel gauge external driver"
+    depends on I2C
+    default n
+    help
+      MAX17048 is fuel-gauge systems for lithium-ion (Li+) batteries
+      in handheld and portable equipment. The MAX17048 is configured
+      to operate with a single lithium cell
+
+config LGE_PM_CHARGE_INFO
+    tristate "add chaarging information log"
+    default n
+    depends on QPNP_SMBCHARGER
+    help
+      add charging information log
+
+config LGE_PM_CHARGING_TEMP_SCENARIO
+    tristate "LGE charging scenario feature"
+    default n
+    depends on LGE_PM
+    help
+      lge charging scenario feature
+
 source "drivers/power/reset/Kconfig"
 
 endif # POWER_SUPPLY

@@ -1074,6 +1074,7 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 	mmc_send_if_cond(host, host->ocr_avail);
 
 	ret = mmc_send_io_op_cond(host, 0, &ocr);
+
 	if (ret)
 		goto out;
 
@@ -1124,8 +1125,14 @@ int mmc_attach_sdio(struct mmc_host *host)
 	WARN_ON(!host->claimed);
 
 	err = mmc_send_io_op_cond(host, 0, &ocr);
-	if (err)
+	if (err) {
+#if defined( CONFIG_BCMDHD )
+		if (host->caps & MMC_CAP_NONREMOVABLE) {
+			host->rescan_entered = 0;
+		}
+#endif
 		return err;
+	}
 
 	mmc_attach_bus(host, &mmc_sdio_ops);
 	if (host->ocr_avail_sdio)

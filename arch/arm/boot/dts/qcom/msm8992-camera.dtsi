@@ -194,6 +194,7 @@
 		interrupt-names = "ispif";
 		qcom,num-isps = <0x2>;
 		vdd-supply = <&gdsc_camss_top>;
+		vdd_vfe-supply = <&gdsc_vfe>;	//LGE_CHANGE
 		clocks = <&clock_mmss clk_camss_ispif_ahb_clk>,
 			<&clock_mmss clk_csi0_clk_src>,
 			<&clock_mmss clk_camss_csi0_clk>,
@@ -228,6 +229,7 @@
 			"csi3_pix_clk", "csi3_rdi_clk",
 			"vfe0_clk_src", "camss_vfe_vfe0_clk", "camss_csi_vfe0_clk",
 			"vfe1_clk_src", "camss_vfe_vfe1_clk", "camss_csi_vfe1_clk";
+		/*LGCHANGE_S,QCT Patch camif error 15.04.02*/
 		qcom,clock-rates = "-1",
 			"266670000", "0", "0", "0",
 			"266670000", "0", "0", "0",

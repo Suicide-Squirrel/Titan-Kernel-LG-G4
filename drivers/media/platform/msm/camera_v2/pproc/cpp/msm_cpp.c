@@ -313,8 +313,8 @@ static void cpp_timer_callback(unsigned long data);
 
 uint8_t induce_error;
 static int msm_cpp_enable_debugfs(struct cpp_device *cpp_dev);
-
-static void msm_cpp_write(u32 data, void __iomem *cpp_base)
+/* LGE_CHANGE, camera stability task, Changed to inline function for RTB logging */
+static inline void msm_cpp_write(u32 data, void __iomem *cpp_base)
 {
 	writel_relaxed((data), cpp_base + MSM_CPP_MICRO_FIFO_RX_DATA);
 }
@@ -1541,6 +1541,10 @@ NOTIFY_FRAME_DONE:
 		v4l2_evt.id = processed_frame->inst_id;
 		v4l2_evt.type = V4L2_EVENT_CPP_FRAME_DONE;
 		v4l2_event_queue(cpp_dev->msm_sd.sd.devnode, &v4l2_evt);
+		/*QCT_PATCH S, fix the kernel panic in dual camera mode, 2015-03-07, freeso.kim@lge.com*/
+		#if 0
+		#endif
+		/*QCT_PATCH E, fix the kernel panic in dual camera mode, 2015-03-07, freeso.kim@lge.com*/
 	}
 	return rc;
 }
@@ -1549,6 +1553,7 @@ NOTIFY_FRAME_DONE:
 static int msm_cpp_dump_frame_cmd(struct msm_cpp_frame_info_t *frame_info)
 {
 	int i, i1, i2;
+	struct cpp_device *cpp_dev = cpp_timer.data.cpp_dev; /*LGE_CHANGE, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
 	CPP_DBG("-- start: cpp frame cmd for identity=0x%x, frame_id=%d --\n",
 		frame_info->identity, frame_info->frame_id);
 
@@ -1580,9 +1585,13 @@ static int msm_cpp_dump_frame_cmd(struct msm_cpp_frame_info_t *frame_info)
 
 static void msm_cpp_do_timeout_work(struct work_struct *work)
 {
-	uint32_t i = 0;
+/*LGE_CHANGE_S, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
+//	uint32_t i = 0;
+	uint32_t j = 0, i = 0, i1 = 0, i2 = 0;
+/*LGE_CHANGE_E, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
 	int32_t queue_len = 0;
 	struct msm_device_queue *queue = NULL;
+	struct msm_cpp_frame_info_t *processed_frame[MAX_CPP_PROCESSING_FRAME]; /*LGE_CHANGE, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
 
 	pr_info("cpp_timer_callback called. (jiffies=%lu)\n",
 		jiffies);
@@ -1616,6 +1625,8 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 	queue = &cpp_timer.data.cpp_dev->processing_q;
 	queue_len = queue->len;
 	mutex_lock(&cpp_timer.data.cpp_dev->mutex);
+/*LGE_CHANGE_S, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
+#if 0
 	for (i = 0; i < MAX_CPP_PROCESSING_FRAME; i++)
 		msm_cpp_dump_frame_cmd(cpp_timer.data.processed_frame[i]);
 
@@ -1627,6 +1638,65 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 	for (i = 0; i < MAX_CPP_PROCESSING_FRAME; i++)
 		cpp_timer.data.processed_frame[i] = NULL;
 	cpp_timer.data.cpp_dev->timeout_trial_cnt = 0;
+#else
+	if (cpp_timer.data.cpp_dev->timeout_trial_cnt >=
+		cpp_timer.data.cpp_dev->max_timeout_trial_cnt) {
+		pr_info("Max trial reached\n");
+		while (queue_len) {
+			msm_cpp_notify_frame_done(cpp_timer.data.cpp_dev, 1);
+			queue_len--;
+		}
+		atomic_set(&cpp_timer.used, 0);
+		for (i = 0; i < MAX_CPP_PROCESSING_FRAME; i++)
+			cpp_timer.data.processed_frame[i] = NULL;
+		cpp_timer.data.cpp_dev->timeout_trial_cnt = 0;
+		mutex_unlock(&cpp_timer.data.cpp_dev->mutex);
+		pr_info("exit\n");
+		return;
+	}
+
+	atomic_set(&cpp_timer.used, 1);
+	pr_info("Starting timer to fire in %d ms. (jiffies=%lu)\n",
+		CPP_CMD_TIMEOUT_MS, jiffies);
+	mod_timer(&cpp_timer.cpp_timer,
+		jiffies + msecs_to_jiffies(CPP_CMD_TIMEOUT_MS));
+
+	for (i = 0; i < MAX_CPP_PROCESSING_FRAME; i++)
+		processed_frame[i] = cpp_timer.data.processed_frame[i];
+
+	for (i = 0; i < queue_len; i++) {
+		pr_info("Rescheduling for identity=0x%x, frame_id=%03d\n",
+			processed_frame[i]->identity, processed_frame[i]->frame_id);
+
+		msm_cpp_write(0x6, cpp_timer.data.cpp_dev->base);
+		/* send top level and plane level */
+		for (j = 0; j < cpp_timer.data.cpp_dev->stripe_base; j++) {
+			if (j % MSM_CPP_RX_FIFO_LEVEL == 0)
+				msm_cpp_poll_rx_empty(cpp_timer.data.cpp_dev->base);
+			msm_cpp_write(processed_frame[i]->cpp_cmd_msg[j],
+				cpp_timer.data.cpp_dev->base);
+		}
+		/* send stripes */
+		i1 = cpp_timer.data.cpp_dev->stripe_base +
+			cpp_timer.data.cpp_dev->stripe_size *
+			processed_frame[i]->first_stripe_index;
+		i2 = cpp_timer.data.cpp_dev->stripe_size *
+			(processed_frame[i]->last_stripe_index -
+			processed_frame[i]->first_stripe_index + 1);
+		for (j = 0; j < i2; j++) {
+			if (j % MSM_CPP_RX_FIFO_LEVEL == 0)
+				msm_cpp_poll_rx_empty(cpp_timer.data.cpp_dev->base);
+			msm_cpp_write(processed_frame[i]->cpp_cmd_msg[j+i1],
+				cpp_timer.data.cpp_dev->base);
+		}
+		/* send trailer */
+		msm_cpp_write(0xabcdefaa, cpp_timer.data.cpp_dev->base);
+		pr_info("After frame:%d write\n", i+1);
+	}
+
+	cpp_timer.data.cpp_dev->timeout_trial_cnt++;
+#endif
+/*LGE_CHANGE_E, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
 	mutex_unlock(&cpp_timer.data.cpp_dev->mutex);
 
 	pr_info("exit\n");
@@ -1665,9 +1735,11 @@ static int msm_cpp_send_frame_to_hardware(struct cpp_device *cpp_dev,
 		if (queue_len == 1) {
 			atomic_set(&cpp_timer.used, 1);
 			/* install timer for cpp timeout */
+#if 0 	/* LGE_CHANGE, CST, moved setup_timer to initial func */
 			CPP_DBG("Installing cpp_timer\n");
 			setup_timer(&cpp_timer.cpp_timer,
 				cpp_timer_callback, (unsigned long)&cpp_timer);
+#endif
 		}
 		CPP_DBG("Starting timer to fire in %d ms. (jiffies=%lu)\n",
 			CPP_CMD_TIMEOUT_MS, jiffies);
@@ -3369,7 +3441,13 @@ static int cpp_probe(struct platform_device *pdev)
 	cpp_dev->iommu_state = CPP_IOMMU_STATE_DETACHED;
 	cpp_timer.data.cpp_dev = cpp_dev;
 	atomic_set(&cpp_timer.used, 0);
+	/* LGE_CHANGE, CST, moved setup_timer to initial func */
+	CPP_DBG("Installing cpp_timer\n");
+	setup_timer(&cpp_timer.cpp_timer,
+		cpp_timer_callback, (unsigned long)&cpp_timer);
+
 	cpp_dev->fw_name_bin = NULL;
+	cpp_dev->max_timeout_trial_cnt = MSM_CPP_MAX_TIMEOUT_TRIAL; /*LGE_CHANGE, QCT patch for cpp timeout - Case01986974, 2015-05-06, ejoon.kim@lge.com*/
 	if (rc == 0)
 		CPP_DBG("SUCCESS.");
 	else

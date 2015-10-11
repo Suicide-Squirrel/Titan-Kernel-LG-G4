@@ -441,7 +441,7 @@ enum qpnp_regulator_action {
 	QPNP_REGULATOR_ACTION_MODE,
 };
 
-static void qpnp_vreg_show_state(struct regulator_dev *rdev,
+static __attribute__ ((aligned(4096))) void qpnp_vreg_show_state(struct regulator_dev *rdev,
 				   enum qpnp_regulator_action action);
 
 #define DEBUG_PRINT_BUFFER_SIZE 64

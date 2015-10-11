@@ -35,6 +35,19 @@
 #define fh_to_private(__fh) \
 	container_of(__fh, struct camera_v4l2_private, fh)
 
+#if defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
+#define CAM_PREVIEW_TUNE_ON 1
+#define CAM_PREVIEW_TUNE_OFF 0
+extern int pp_set_cam_preview_tune_status(int flag);
+#endif
+#ifdef CONFIG_LGE_PARTIAL_UPDATE
+extern void mdss_mdp_set_disable_partail_update(int flags);
+extern void mdss_mdp_clear_disable_partail_update(int flags);
+
+static DEFINE_MUTEX(v4l2_sync_lock); /*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
+
+#endif
+
 struct camera_v4l2_private {
 	struct v4l2_fh fh;
 	unsigned int stream_id;
@@ -539,6 +552,8 @@ static int camera_v4l2_open(struct file *filep)
 	unsigned int opn_idx, idx;
 	BUG_ON(!pvdev);
 
+	mutex_lock(&v4l2_sync_lock);/*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
+	
 	rc = camera_v4l2_fh_open(filep);
 	if (rc < 0) {
 		pr_err("%s : camera_v4l2_fh_open failed Line %d rc %d\n",
@@ -560,6 +575,7 @@ static int camera_v4l2_open(struct file *filep)
 		pm_stay_awake(&pvdev->vdev->dev);
 
 		/* create a new session when first opened */
+		pr_err("%s: msm_create_session id=%d\n", __func__, pvdev->vdev->num); /*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
 		rc = msm_create_session(pvdev->vdev->num, pvdev->vdev);
 		if (rc < 0) {
 			pr_err("%s : session creation failed Line %d rc %d\n",
@@ -592,7 +608,12 @@ static int camera_v4l2_open(struct file *filep)
 					__func__, __LINE__, rc);
 			goto post_fail;
 		}
+
+#if defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
+		pp_set_cam_preview_tune_status(CAM_PREVIEW_TUNE_ON);
+#endif /* LGE_CAM_PREVIEW_TUNE */
 	} else {
+		pr_err("%s: msm_create_command_ack_q id=%d\n", __func__, pvdev->vdev->num); /*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
 		rc = msm_create_command_ack_q(pvdev->vdev->num,
 			find_first_zero_bit((const unsigned long *)&opn_idx,
 				MSM_CAMERA_STREAM_CNT_BITS));
@@ -605,6 +626,12 @@ static int camera_v4l2_open(struct file *filep)
 	idx |= (1 << find_first_zero_bit((const unsigned long *)&opn_idx,
 				MSM_CAMERA_STREAM_CNT_BITS));
 	atomic_cmpxchg(&pvdev->opened, opn_idx, idx);
+
+#ifdef CONFIG_LGE_PARTIAL_UPDATE
+	mdss_mdp_set_disable_partail_update(0x2);
+#endif
+
+	mutex_unlock(&v4l2_sync_lock);/*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
 	return rc;
 
 post_fail:
@@ -617,6 +644,7 @@ session_fail:
 vb2_q_fail:
 	camera_v4l2_fh_release(filep);
 fh_open_fail:
+	mutex_unlock(&v4l2_sync_lock);/*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
 	return rc;
 }
 
@@ -644,8 +672,10 @@ static int camera_v4l2_close(struct file *filep)
 	unsigned int opn_idx, mask;
 	BUG_ON(!pvdev);
 
+	mutex_lock(&v4l2_sync_lock);/*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
+	
 	opn_idx = atomic_read(&pvdev->opened);
-	pr_debug("%s: close stream_id=%d\n", __func__, sp->stream_id);
+	pr_err("%s: close stream_id=%d\n", __func__, sp->stream_id); /*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
 	mask = (1 << sp->stream_id);
 	opn_idx &= ~mask;
 	atomic_set(&pvdev->opened, opn_idx);
@@ -668,6 +698,13 @@ static int camera_v4l2_close(struct file *filep)
 		 * and application crashes */
 		msm_destroy_session(pvdev->vdev->num);
 		pm_relax(&pvdev->vdev->dev);
+
+#if defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
+		pp_set_cam_preview_tune_status(CAM_PREVIEW_TUNE_OFF);
+#endif /* LGE_CAM_PREVIEW_TUNE */
+#ifdef CONFIG_LGE_PARTIAL_UPDATE
+		mdss_mdp_clear_disable_partail_update(0x2);
+#endif
 	} else {
 		camera_pack_event(filep, MSM_CAMERA_SET_PARM,
 			MSM_CAMERA_PRIV_DEL_STREAM, -1, &event);
@@ -683,6 +720,7 @@ static int camera_v4l2_close(struct file *filep)
 	camera_v4l2_vb2_q_release(filep);
 	camera_v4l2_fh_release(filep);
 
+	mutex_unlock(&v4l2_sync_lock);/*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
 	return rc;
 }
 

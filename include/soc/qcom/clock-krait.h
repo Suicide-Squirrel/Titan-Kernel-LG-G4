@@ -105,4 +105,9 @@ extern struct kpss_core_clk krait2_clk;
 extern struct kpss_core_clk krait3_clk;
 extern struct kpss_core_clk l2_clk;
 
+void set_a53_speed_bin(int speed);
+void set_a57_speed_bin(int speed);
+void get_a53_speed_bin(int *speed);
+void get_a57_speed_bin(int *speed);
+
 #endif

@@ -1287,12 +1287,12 @@ void rndis_ipa_cleanup(void *private)
 	RNDIS_IPA_DEBUG("deregister Tx/Rx properties was successful\n");
 
 	retval = rndis_ipa_hdrs_destroy(rndis_ipa_ctx);
-	if (retval)
-		RNDIS_IPA_ERROR(
-			"Failed removing RNDIS headers from IPA core. Continue anyway\n");
-	else
+	if (retval) {
+		RNDIS_IPA_ERROR("Failed removing RNDIS headers from IPA core. Continue anyway\n");
+    }
+	else {
 		RNDIS_IPA_DEBUG("RNDIS headers were removed from IPA core\n");
-
+    }
 	rndis_ipa_debugfs_destroy(rndis_ipa_ctx);
 	RNDIS_IPA_DEBUG("debugfs remove was done\n");
 

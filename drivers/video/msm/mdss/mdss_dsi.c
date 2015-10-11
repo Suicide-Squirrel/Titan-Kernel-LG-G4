@@ -31,6 +31,23 @@
 
 #define XO_CLK_RATE	19200000
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+#include <linux/input/lge_touch_notify.h>
+#include <soc/qcom/lge/board_lge.h>
+int swipe_status;
+int lgd_control_deep_sleep;
+int lgd_rsp_lcd_on_off = 1;
+int proxy_sensor_status;
+int panel_not_connected;
+bool first_touch_power_on = false;
+int SIC_is_doze = 1;
+int jdi_deep_sleep = 0;
+#endif
+
+#if defined(CONFIG_MFD_P1_DSV) && defined(CONFIG_LGE_P1_DSV)
+#include <linux/mfd/p1_dsv.h>
+#endif
+
 static struct dsi_drv_cm_data shared_ctrl_data;
 
 static int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
@@ -182,6 +199,26 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		udelay(2000);
 	}
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	if (ctrl_pdata->ndx) {
+		for (i = DSI_MAX_PM - 1; i >= 0; i--) {
+			/*
+			 * Core power module will be disabled when the
+			 * clocks are disabled
+			 */
+			if (DSI_CORE_PM == i)
+				continue;
+			if (DSI_PANEL_PM == i)
+				continue;
+				ret = msm_dss_enable_vreg(
+				ctrl_pdata->power_data[i].vreg_config,
+				ctrl_pdata->power_data[i].num_vreg, 0);
+			if (ret)
+				pr_err("%s: failed to disable vregs for %s\n",
+					__func__, __mdss_dsi_pm_name(i));
+		}
+	}
+#else
 	for (i = DSI_MAX_PM - 1; i >= 0; i--) {
 		/*
 		 * Core power module will be disabled when the
@@ -196,6 +233,7 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 			pr_err("%s: failed to disable vregs for %s\n",
 				__func__, __mdss_dsi_pm_name(i));
 	}
+#endif
 
 end:
 	return ret;
@@ -214,7 +252,33 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	if (ctrl_pdata->ndx == 0) {
+		for (i = 0; i < DSI_MAX_PM; i++) {
+			/*
+			 * Core power module will be enabled when the
+			 * clocks are enabled
+			 */
+			if (DSI_CORE_PM == i)
+				continue;
+			if (DSI_PANEL_PM == i) {
+				if (first_touch_power_on == true)
+					continue;
+				else
+					first_touch_power_on = true;
+			}
+			ret = msm_dss_enable_vreg(
+				ctrl_pdata->power_data[i].vreg_config,
+				ctrl_pdata->power_data[i].num_vreg, 1);
+			if (ret) {
+				pr_err("%s: failed to enable vregs for %s\n",
+					__func__, __mdss_dsi_pm_name(i));
+				goto error;
+			}
+		}
 
+	}
+#else
 	for (i = 0; i < DSI_MAX_PM; i++) {
 		/*
 		 * Core power module will be enabled when the
@@ -231,6 +295,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 			goto error;
 		}
 	}
+#endif
 	if (ctrl_pdata->panel_bias_vreg) {
 		pr_debug("%s: Enable panel bias vreg. ndx = %d\n",
 		       __func__, ctrl_pdata->ndx);
@@ -287,7 +352,7 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 	}
 
 	pinfo = &pdata->panel_info;
-	pr_debug("%s: cur_power_state=%d req_power_state=%d\n", __func__,
+	pr_info("%s: cur_power_state=%d req_power_state=%d\n", __func__,
 		pinfo->panel_power_state, power_state);
 
 	if (pinfo->panel_power_state == power_state) {
@@ -351,6 +416,9 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 	struct device_node *of_node = NULL, *supply_node = NULL;
 	const char *pm_supply_name = NULL;
 	struct device_node *supply_root_node = NULL;
+#if defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
+	char *global_dual_tpio = "tpio";
+#endif
 
 	if (!dev || !mp) {
 		pr_err("%s: invalid input\n", __func__);
@@ -397,6 +465,15 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 				__func__, rc);
 			goto error;
 		}
+#if defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
+		if (lge_get_sim_type() == 2) {//Dual Sim
+			if (!strcmp(st,global_dual_tpio)) {
+				pr_info("%s: Global dual sim doesn't register tpio ldo power\n", __func__);
+				mp->num_vreg--;
+				continue;
+			}
+		}
+#endif
 		snprintf(mp->vreg_config[i].vreg_name,
 			ARRAY_SIZE((mp->vreg_config[i].vreg_name)), "%s", st);
 		/* vreg-min-voltage */
@@ -551,7 +628,7 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 	mutex_lock(&ctrl_pdata->mutex);
 	panel_info = &ctrl_pdata->panel_data.panel_info;
 
-	pr_debug("%s+: ctrl=%p ndx=%d power_state=%d\n",
+	pr_info("%s+: ctrl=%p ndx=%d power_state=%d\n",
 		__func__, ctrl_pdata, ctrl_pdata->ndx, power_state);
 
 	if (power_state == panel_info->panel_power_state) {
@@ -568,6 +645,7 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 	if (pdata->panel_info.type == MIPI_CMD_PANEL)
 		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
 
+	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_LINK_CLKS, 0);
 	if (!pdata->panel_info.ulps_suspend_enabled) {
 		/* disable DSI controller */
 		mdss_dsi_controller_cfg(0, pdata);
@@ -576,7 +654,7 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 		mdss_dsi_phy_disable(ctrl_pdata);
 	}
 
-	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_BUS_CLKS, 0);
 
 panel_power_ctrl:
 	ret = mdss_dsi_panel_power_ctrl(pdata, power_state);
@@ -592,7 +670,7 @@ panel_power_ctrl:
 
 end:
 	mutex_unlock(&ctrl_pdata->mutex);
-	pr_debug("%s-:\n", __func__);
+	pr_info("%s-:\n", __func__);
 
 	return ret;
 }
@@ -706,7 +784,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 				panel_data);
 
 	cur_power_state = pdata->panel_info.panel_power_state;
-	pr_debug("%s+: ctrl=%p ndx=%d cur_power_state=%d\n", __func__,
+	pr_info("%s+: ctrl=%p ndx=%d cur_power_state=%d\n", __func__,
 		ctrl_pdata, ctrl_pdata->ndx, cur_power_state);
 
 	pinfo = &pdata->panel_info;
@@ -724,6 +802,46 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		goto end;
 	}
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	/* LGD_R69007 only*/
+	if (ctrl_pdata->panel_data.panel_info.panel_type
+			== LGD_INCELL_CMD_PANEL) {
+		if (!ctrl_pdata->ndx) {
+			if (!swipe_status) {
+				if (ctrl_pdata->touch_driver_registered
+						&& (proxy_sensor_status
+						       == PROXY_FAR))
+					touch_notifier_call_chain(
+						LCD_EVENT_TOUCH_LPWG_OFF, NULL);
+			} else {
+				pr_info("LPWG OFF Skipped:%d\n", swipe_status);
+			}
+			mdss_dsi_lcd_reset(pdata, 0);
+			mdelay(2);
+			dw8768_lgd_dsv_setting(1);
+			mdelay(2);
+		}
+	} else if (ctrl_pdata->panel_data.panel_info.panel_type
+			== JDI_INCELL_CMD_PANEL) {
+		if (!ctrl_pdata->ndx) {
+			if (ctrl_pdata->touch_driver_registered) {
+				if(jdi_deep_sleep == 0)
+					touch_notifier_call_chain(
+						LCD_EVENT_TOUCH_LPWG_OFF, NULL);
+			}
+			jdi_deep_sleep = 0;
+		}
+	} else if (ctrl_pdata->panel_data.panel_info.panel_type
+			== LGD_SIC_INCELL_CMD_PANEL) {
+		if (ctrl_pdata->ndx) {
+			SIC_is_doze = 1;
+			mdss_dsi_lcd_reset(pdata, 0);
+			mdelay(2);
+			mdss_dsi_lcd_reset(pdata, 1);
+			mdelay(2);
+		}
+	}
+#endif
 	ret = mdss_dsi_panel_power_ctrl(pdata, MDSS_PANEL_POWER_ON);
 	if (ret) {
 		pr_err("%s:Panel power on failed. rc=%d\n", __func__, ret);
@@ -767,6 +885,13 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
 		mdss_dsi_panel_reset(pdata, 1);
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+		if (ctrl_pdata->panel_data.panel_info.panel_type
+				== LGD_INCELL_CMD_PANEL) {
+			if (ctrl_pdata->ndx)
+				mdss_dsi_lcd_reset(pdata, 1);
+		}
+#endif
 	}
 
 	if (mipi->init_delay)
@@ -785,7 +910,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 
 end:
-	pr_debug("%s-:\n", __func__);
+	pr_info("%s-:\n", __func__);
 	return 0;
 }
 
@@ -857,7 +982,7 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 				panel_data);
 	mipi  = &pdata->panel_info.mipi;
 
-	pr_debug("%s+: ctrl=%p ndx=%d cur_blank_state=%d\n", __func__,
+	pr_info("%s+: ctrl=%p ndx=%d cur_blank_state=%d\n", __func__,
 		ctrl_pdata, ctrl_pdata->ndx, pdata->panel_info.blank_state);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
@@ -890,7 +1015,7 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 
 error:
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
-	pr_debug("%s-:\n", __func__);
+	pr_info("%s-:\n", __func__);
 
 	return ret;
 }
@@ -900,7 +1025,6 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 	int ret = 0;
 	struct mipi_panel_info *mipi;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -910,7 +1034,7 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 				panel_data);
 	mipi = &pdata->panel_info.mipi;
 
-	pr_debug("%s+: ctrl=%p ndx=%d power_state=%d\n",
+	pr_info("%s+: ctrl=%p ndx=%d power_state=%d\n",
 		__func__, ctrl_pdata, ctrl_pdata->ndx, power_state);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
@@ -961,10 +1085,9 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		}
 		ctrl_pdata->ctrl_state &= ~CTRL_STATE_PANEL_INIT;
 	}
-
 error:
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
-	pr_debug("%s-:End\n", __func__);
+	pr_info("%s-:End\n", __func__);
 	return ret;
 }
 
@@ -1396,6 +1519,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	int power_state;
 	u32 mode;
 
+
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -1412,6 +1536,24 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		ctrl_pdata->refresh_clk_rate = true;
 		break;
 	case MDSS_EVENT_LINK_READY:
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+		if (ctrl_pdata->panel_data.panel_info.panel_type
+				== LGD_INCELL_CMD_PANEL && !ctrl_pdata->ndx) {
+			lgd_rsp_lcd_on_off = 1;
+			lgd_deep_sleep(ctrl_pdata,
+				       DEEP_SLEEP_TO_LPWG,
+				      DEEP_SLEEP_TO_ACTIVE);
+		} else if (ctrl_pdata->panel_data.panel_info.panel_type
+				== JDI_INCELL_CMD_PANEL && !ctrl_pdata->ndx) {
+			lgd_rsp_lcd_on_off = 1;
+			if (jdi_deep_sleep == 1) {
+				int param = 4;
+				touch_notifier_call_chain(
+				LCD_EVENT_TOUCH_SLEEP_STATUS,
+					(void *)&param);
+			}
+		}
+#endif
 		rc = mdss_dsi_on(pdata);
 		mdss_dsi_op_mode_config(pdata->panel_info.mipi.mode,
 							pdata);
@@ -1431,10 +1573,22 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		pdata->panel_info.esd_rdy = true;
 		break;
 	case MDSS_EVENT_BLANK:
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+		if ((ctrl_pdata->panel_data.panel_info.panel_type
+				== LGD_INCELL_CMD_PANEL) ||
+				(ctrl_pdata->panel_data.panel_info.panel_type
+				== JDI_INCELL_CMD_PANEL)) {
+			if (swipe_status) {
+				mode = ABNORMAL_SWIPE;
+			touch_notifier_call_chain(LCD_EVENT_TOUCH_SLEEP_STATUS,
+						(void *)&mode);
+			}
+		}
+#endif
 		power_state = (int) (unsigned long) arg;
 		if (ctrl_pdata->off_cmds.link_state == DSI_HS_MODE)
 			rc = mdss_dsi_blank(pdata, power_state);
-		break;
+				break;
 	case MDSS_EVENT_PANEL_OFF:
 		power_state = (int) (unsigned long) arg;
 		pdata->panel_info.esd_rdy = false;
@@ -1442,6 +1596,48 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		if (ctrl_pdata->off_cmds.link_state == DSI_LP_MODE)
 			rc = mdss_dsi_blank(pdata, power_state);
 		rc = mdss_dsi_off(pdata, power_state);
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+		if (ctrl_pdata->ndx) {
+			if (ctrl_pdata->panel_data.panel_info.panel_type
+					== LGD_INCELL_CMD_PANEL)
+				dw8768_lgd_dsv_setting(0);	/* LPWG mode */
+			if (ctrl_pdata->panel_data.panel_info.panel_type
+				!= LGD_SIC_INCELL_CMD_PANEL) {
+				if (ctrl_pdata->touch_driver_registered)
+					touch_notifier_call_chain(
+						LCD_EVENT_TOUCH_LPWG_ON, NULL);
+			}
+
+			if (ctrl_pdata->panel_data.panel_info.panel_type
+					== LGD_INCELL_CMD_PANEL) {
+				mdelay(20);
+				if (proxy_sensor_status == PROXY_NEAR) {
+					pr_info("%s: ACTIVE to DEEP\n",
+						       __func__);
+					lgd_deep_sleep(ctrl_pdata,
+						       LPWG_TO_DEEP_SLEEP,
+						      LPWG_TO_DEEP_SLEEP);
+				}
+				lgd_rsp_lcd_on_off = 0;
+			} else if (ctrl_pdata->panel_data.panel_info.panel_type
+				== JDI_INCELL_CMD_PANEL) {
+				msleep(50);
+				if (proxy_sensor_status == PROXY_NEAR) {
+					int param = 0;
+					pr_info("%s: ACTIVE to DEEP\n",
+						       __func__);
+					touch_notifier_call_chain(
+					LCD_EVENT_TOUCH_SLEEP_STATUS,
+						(void *)&param);
+					jdi_deep_sleep = 1;
+				}
+				lgd_rsp_lcd_on_off = 0;
+			}
+			else if (ctrl_pdata->panel_data.panel_info.panel_type
+				== LGD_SIC_INCELL_CMD_PANEL)
+				SIC_is_doze = 2;
+		}
+#endif
 		break;
 	case MDSS_EVENT_CONT_SPLASH_FINISH:
 		if (ctrl_pdata->off_cmds.link_state == DSI_LP_MODE)
@@ -1595,6 +1791,147 @@ end:
 	return dsi_pan_node;
 }
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+static int lcd_notifier_callback(struct notifier_block *this,
+					unsigned long event, void *data)
+{
+	int mode  = 0;
+	int param;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = container_of(this,
+		struct mdss_dsi_ctrl_pdata, notif);
+
+	switch (event) {
+	case LCD_EVENT_TOUCH_DRIVER_REGISTERED:
+		ctrl_pdata->touch_driver_registered = true;
+		pr_err("%s: TOUCH_EVENT_REGISTER_DONE received ndx: %d [%d]\n",
+				__func__, ctrl_pdata->ndx,
+				ctrl_pdata->touch_driver_registered);
+		break;
+
+	case LCD_EVENT_TOUCH_PROXY_STATUS:
+		if (ctrl_pdata->ndx) {
+			mode = *(int *)(unsigned long) data;
+			switch (mode) {
+			case PROXY_NEAR:
+				if (ctrl_pdata->panel_data.panel_info.panel_type
+					== LGD_SIC_INCELL_CMD_PANEL) {
+					if (!ctrl_pdata->ndx || SIC_is_doze == 1)
+						break;
+
+					mdss_dsi_lcd_reset(&(ctrl_pdata->panel_data), 0);
+					mdelay(2);
+					mdss_dsi_lcd_reset(&(ctrl_pdata->panel_data), 1);
+					mdelay(2);
+
+					if (ctrl_pdata->clk_off_cmds.cmd_cnt) {
+						pr_err("lge_log %s cmd cnt:%d\n", __func__, ctrl_pdata->clk_off_cmds.cmd_cnt);
+						mdss_dsi_stub_cmds_send(ctrl_pdata, &ctrl_pdata->clk_off_cmds);
+					}
+					dw8768_fast_discharge();
+					pr_err("%s: At PROXY_NEAR event clk off, ndx: %d\n", __func__, ctrl_pdata->ndx);
+				} else if (ctrl_pdata->panel_data.panel_info.panel_type
+					== LGD_INCELL_CMD_PANEL) {
+					proxy_sensor_status = PROXY_NEAR;
+					pr_err("%s: TOUCH_EVENT_PROXY_STATUS received : PROXY_NEAR\n",
+							__func__);
+					if (lgd_rsp_lcd_on_off == 0) {
+						pr_info("%s: LPWG to DEEP\n", __func__);
+						lgd_deep_sleep(ctrl_pdata,
+							LPWG_TO_DEEP_SLEEP,
+						       LPWG_TO_DEEP_SLEEP);
+					}
+				} else if (ctrl_pdata->panel_data.panel_info.panel_type
+					== JDI_INCELL_CMD_PANEL) {
+					proxy_sensor_status = PROXY_NEAR;
+					pr_err("%s: TOUCH_EVENT_PROXY_STATUS received : PROXY_NEAR\n",
+							__func__);
+					if (lgd_rsp_lcd_on_off == 0) {
+						param = 0;
+						pr_info("%s: LPWG to DEEP\n", __func__);
+						jdi_deep_sleep = 1;
+						touch_notifier_call_chain(
+						LCD_EVENT_TOUCH_SLEEP_STATUS,
+							(void *)&param);
+					}
+				}
+				break;
+
+			case PROXY_FAR:
+				if (ctrl_pdata->panel_data.panel_info.panel_type
+					== LGD_SIC_INCELL_CMD_PANEL) {
+					if (!ctrl_pdata->ndx || SIC_is_doze == 1)
+						break;
+
+					mdss_dsi_lcd_reset(&(ctrl_pdata->panel_data), 0);
+					mdelay(2);
+					mdss_dsi_lcd_reset(&(ctrl_pdata->panel_data), 1);
+					mdelay(2);
+
+					if (ctrl_pdata->clk_on_cmds.cmd_cnt) {
+						pr_err("lge_log %s cmd cnt:%d\n", __func__, ctrl_pdata->clk_on_cmds.cmd_cnt);
+						mdss_dsi_stub_cmds_send(ctrl_pdata, &ctrl_pdata->clk_on_cmds);
+					}
+					pr_err("%s: At PROXY_FAR event clk on, ndx: %d\n", __func__, ctrl_pdata->ndx);
+				} else if (ctrl_pdata->panel_data.panel_info.panel_type
+					== LGD_INCELL_CMD_PANEL) {
+					proxy_sensor_status = PROXY_FAR;
+					pr_err("%s: TOUCH_EVENT_PROXY_STATUS received : PROXY_FAR\n",
+							__func__);
+					if (lgd_rsp_lcd_on_off == 0) {
+						pr_info("%s: DEEP SLEEP to LPWG\n",
+							       __func__);
+						lgd_deep_sleep(ctrl_pdata,
+							DEEP_SLEEP_TO_LPWG,
+						       DEEP_SLEEP_TO_LPWG);
+					}
+				} else if (ctrl_pdata->panel_data.panel_info.panel_type
+					== JDI_INCELL_CMD_PANEL) {
+					proxy_sensor_status = PROXY_FAR;
+					pr_err("%s: TOUCH_EVENT_PROXY_STATUS received : PROXY_FAR\n",
+							__func__);
+					if (lgd_rsp_lcd_on_off == 0) {
+						param = 1;
+						pr_info("%s: DEEP SLEEP to LPWG\n",
+							       __func__);
+						jdi_deep_sleep = 0;
+						touch_notifier_call_chain(
+						LCD_EVENT_TOUCH_SLEEP_STATUS,
+							(void *)&param);
+					}
+
+				}
+				break;
+			default:
+				break;
+				}
+			}
+			break;
+	case LCD_EVENT_TOUCH_SWIPE_STATUS:
+		if (ctrl_pdata->ndx) {
+			mode = *(int *)(unsigned long) data;
+			switch (mode) {
+			case SWIPE_DONE:
+				swipe_status = 0;
+				pr_err("TOUCH_EVENT_SWIPE received : %d\n",
+						       SWIPE_DONE);
+				break;
+			case DO_SWIPE:
+				swipe_status = 1;
+				pr_err("TOUCH_EVENT_SWIPE received : %d\n",
+						       DO_SWIPE);
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+#endif
+
 static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 {
 	int rc = 0, i = 0;
@@ -1729,6 +2066,14 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		goto error_pan_node;
 	}
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	ctrl_pdata->touch_driver_registered = false;
+
+	ctrl_pdata->notif.notifier_call = lcd_notifier_callback;
+	if (touch_register_client(&ctrl_pdata->notif) != 0)
+		pr_err("Failed to register callback\n");
+
+#endif
 	ctrl_pdata->cmd_clk_ln_recovery_en =
 		of_property_read_bool(pdev->dev.of_node,
 			"qcom,dsi-clk-ln-recovery");
@@ -1787,6 +2132,155 @@ static int mdss_dsi_ctrl_remove(struct platform_device *pdev)
 	msm_dss_iounmap(&ctrl_pdata->ctrl_io);
 	return 0;
 }
+
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+static void mdss_dsi_ctrl_shutdown(struct platform_device *pdev)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = platform_get_drvdata(pdev);
+	struct mdss_panel_info *pinfo = &(ctrl_pdata->panel_data.panel_info);
+	int ret = 0;
+
+	if (!ctrl_pdata) {
+		pr_err("%s: no driver data\n", __func__);
+		return;
+	}
+
+	if (ctrl_pdata->ndx == DSI_CTRL_LEFT)
+		return;
+
+	if (pinfo->panel_type == LGD_SIC_INCELL_CMD_PANEL) {
+		struct dss_vreg *in_vreg;
+		int i, ldo_tpvci, ldo_vpnl;
+
+		in_vreg = ctrl_pdata->power_data[DSI_PANEL_PM].vreg_config;
+		ldo_tpvci = ldo_vpnl = -1;
+
+		for(i=0; i<ctrl_pdata->power_data[DSI_PANEL_PM].num_vreg; i++){
+			if(!strcmp(in_vreg[i].vreg_name, "tpvci"))
+				ldo_tpvci = i;
+			if(!strcmp(in_vreg[i].vreg_name, "vdd_l19"))
+				ldo_vpnl = i;
+		}
+
+#if defined(CONFIG_MACH_MSM8992_P1_CN) \
+|| defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
+		if (lge_get_sim_type() == 2) {
+			if (gpio_is_valid(ctrl_pdata->touch_io)) {
+				gpio_set_value((ctrl_pdata->touch_io), 0);
+				gpio_free(ctrl_pdata->touch_io);
+			}
+		} else {
+			pr_err("%s: sigle sim model doesn't use external touch io\n",
+					__func__);
+		}
+#endif
+
+		if (regulator_is_enabled(in_vreg[ldo_tpvci].vreg) && ldo_tpvci != -1) {
+			if (in_vreg[ldo_tpvci].pre_off_sleep)
+				msleep(in_vreg[ldo_tpvci].pre_off_sleep);
+			regulator_set_optimum_mode(in_vreg[ldo_tpvci].vreg,
+				in_vreg[ldo_tpvci].disable_load);
+			regulator_disable(in_vreg[ldo_tpvci].vreg);
+			if (in_vreg[ldo_tpvci].post_off_sleep)
+				msleep(in_vreg[ldo_tpvci].post_off_sleep);
+		}
+
+		dw8768_mode_change(0);
+		if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
+			gpio_set_value((ctrl_pdata->rst_gpio), 0);
+			gpio_free(ctrl_pdata->rst_gpio);
+		}
+
+		if (gpio_is_valid(ctrl_pdata->dsv_ena)) {
+			gpio_set_value((ctrl_pdata->dsv_ena), 0);
+			gpio_free(ctrl_pdata->dsv_ena);
+		}
+
+		if (regulator_is_enabled(in_vreg[ldo_vpnl].vreg) && ldo_vpnl != -1) {
+			if (in_vreg[ldo_vpnl].pre_off_sleep)
+				msleep(in_vreg[ldo_vpnl].pre_off_sleep);
+			regulator_set_optimum_mode(in_vreg[ldo_vpnl].vreg,
+				in_vreg[ldo_vpnl].disable_load);
+			regulator_disable(in_vreg[ldo_vpnl].vreg);
+			if (in_vreg[ldo_vpnl].post_off_sleep)
+				msleep(in_vreg[ldo_vpnl].post_off_sleep);
+		}
+
+		if (gpio_is_valid(ctrl_pdata->vddio_en)) {
+			gpio_set_value((ctrl_pdata->vddio_en), 0);
+			gpio_free(ctrl_pdata->vddio_en);
+		}
+	} else if (pinfo->panel_type == LGD_INCELL_CMD_PANEL) {
+
+		ret = msm_dss_enable_vreg(
+			ctrl_pdata->power_data[DSI_PANEL_PM].vreg_config,
+			ctrl_pdata->power_data[DSI_PANEL_PM].num_vreg, 0);
+		if (ret)
+			pr_err("%s: failed to disable vregs for PANEL_PM\n",
+					__func__);
+
+#if defined(CONFIG_MACH_MSM8992_P1_CN) \
+|| defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
+		if (lge_get_sim_type() == 2) {
+			if (gpio_is_valid(ctrl_pdata->touch_io)) {
+				gpio_set_value((ctrl_pdata->touch_io), 0);
+				gpio_free(ctrl_pdata->touch_io);
+			}
+		} else {
+			pr_err("%s: sigle sim model doesn't use external touch io\n",
+					__func__);
+		}
+#endif
+		if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
+			gpio_set_value((ctrl_pdata->rst_gpio), 0);
+			gpio_free(ctrl_pdata->rst_gpio);
+		}
+
+		mdelay(2);
+
+		dw8768_lgd_dsv_setting(2);
+
+		if (gpio_is_valid(ctrl_pdata->dsv_ena)) {
+			gpio_set_value((ctrl_pdata->dsv_ena), 0);
+			gpio_free(ctrl_pdata->dsv_ena);
+		}
+
+		mdelay(2);
+
+		if (gpio_is_valid(ctrl_pdata->vddio_en)) {
+			gpio_set_value((ctrl_pdata->vddio_en), 0);
+			gpio_free(ctrl_pdata->vddio_en);
+		}
+	} else if (pinfo->panel_type == JDI_INCELL_CMD_PANEL) {
+		if (gpio_is_valid(ctrl_pdata->dsv_ena)) {
+			gpio_set_value((ctrl_pdata->dsv_ena), 0);
+			gpio_free(ctrl_pdata->dsv_ena);
+		}
+
+		mdelay(1);
+
+		if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
+			gpio_set_value((ctrl_pdata->rst_gpio), 0);
+			gpio_free(ctrl_pdata->rst_gpio);
+		}
+
+		mdelay(1);
+
+		if (gpio_is_valid(ctrl_pdata->vddio_en)) {
+			gpio_set_value((ctrl_pdata->vddio_en), 0);
+			gpio_free(ctrl_pdata->vddio_en);
+		}
+
+		ret = msm_dss_enable_vreg(
+			ctrl_pdata->power_data[DSI_PANEL_PM].vreg_config,
+			ctrl_pdata->power_data[DSI_PANEL_PM].num_vreg, 0);
+		if (ret)
+			pr_err("%s: failed to disable vregs for PANEL_PM\n",
+						__func__);
+	}
+
+}
+#endif
 
 struct device dsi_dev;
 
@@ -2049,6 +2543,54 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		ctrl_pdata->mode_gpio = -EINVAL;
 	}
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+{
+	char *dsv_vendor = lge_get_dsv_vendor();
+
+	pr_info("%s: dsv_vendor = %s\n", __func__, dsv_vendor);
+
+	if (!strcmp(dsv_vendor, "TI"))
+		ctrl_pdata->dsv_manufacturer = DSV_TPS65132;
+	else if (!strcmp(dsv_vendor, "SM"))
+		ctrl_pdata->dsv_manufacturer = DSV_SM5107;
+	else if (!strcmp(dsv_vendor, "DW"))
+		ctrl_pdata->dsv_manufacturer = DSV_DW8768;
+
+	panel_not_connected = lge_get_lk_panel_status();
+	pr_debug("%s: lk panel init fail[%d]\n",
+			__func__, panel_not_connected);
+
+	ctrl_pdata->vddio_en = of_get_named_gpio(ctrl_pdev->dev.of_node,
+			 "qcom,platform-vddio_en-gpio", 0);
+
+	ctrl_pdata->dsv_ena = of_get_named_gpio(ctrl_pdev->dev.of_node,
+			 "qcom,platform-avdd-gpio", 0);
+#if defined(CONFIG_MACH_MSM8992_P1_CN) \
+|| defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
+	if (lge_get_sim_type() == 2) {
+		ctrl_pdata->touch_io = of_get_named_gpio(ctrl_pdev->dev.of_node,
+				"lge,platform-touch-io", 0);
+	}
+#endif
+	if (!gpio_is_valid(ctrl_pdata->dsv_ena))
+		pr_err("%s:%d, dsv_ena gpio(%d) not specified\n",
+				__func__, __LINE__, ctrl_pdata->dsv_ena);
+
+	if (ctrl_pdata->dsv_manufacturer == DSV_TPS65132) {
+		ctrl_pdata->dsv_enb = of_get_named_gpio(ctrl_pdev->dev.of_node,
+				"qcom,platform-avee-gpio", 0);
+
+		if (!gpio_is_valid(ctrl_pdata->dsv_enb))
+			pr_err("%s:%d, dsv_enb gpio(%d) not specified\n",
+				__func__, __LINE__, ctrl_pdata->dsv_enb);
+	}
+
+	pr_info("%s vddio_en = %d\n", __func__, ctrl_pdata->vddio_en);
+	pr_info("%s dsv_ena = %d, dsv_enb = %d, dsv_manufacturer = %d\n",
+			__func__, ctrl_pdata->dsv_ena,
+			ctrl_pdata->dsv_enb, ctrl_pdata->dsv_manufacturer);
+}
+#endif
 	ctrl_pdata->timing_db_mode = of_property_read_bool(
 		ctrl_pdev->dev.of_node, "qcom,timing-db-mode");
 
@@ -2188,7 +2730,11 @@ MODULE_DEVICE_TABLE(of, mdss_dsi_ctrl_dt_match);
 static struct platform_driver mdss_dsi_ctrl_driver = {
 	.probe = mdss_dsi_ctrl_probe,
 	.remove = mdss_dsi_ctrl_remove,
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	.shutdown = mdss_dsi_ctrl_shutdown,
+#else
 	.shutdown = NULL,
+#endif
 	.driver = {
 		.name = "mdss_dsi_ctrl",
 		.of_match_table = mdss_dsi_ctrl_dt_match,

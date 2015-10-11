@@ -854,4 +854,9 @@ asmlinkage long sys_process_vm_writev(pid_t pid,
 asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 			 unsigned long idx1, unsigned long idx2);
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
+
+/*FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION[S] */
+asmlinkage long sys_set_media_property(int value);
+asmlinkage long sys_set_media_ext(const char __user *mediaExtList);
+/*FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION[E] */
 #endif

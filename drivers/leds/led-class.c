@@ -85,10 +85,41 @@ static ssize_t led_max_brightness_show(struct device *dev,
 	return snprintf(buf, LED_BUFF_SIZE, "%u\n", led_cdev->max_brightness);
 }
 
+#ifdef CONFIG_LGE_PM
+static int lge_thm_status;
+static ssize_t thermald_status_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, LED_BUFF_SIZE, "%d\n", lge_thm_status);
+}
+
+static ssize_t thermald_status_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	unsigned long state = 0;
+	int rc = 1;
+
+	if (strncmp(buf, "0", 1) == 0) {
+		lge_thm_status = 0;
+	} else if (strncmp(buf, "1", 1) == 0) {
+		state = LED_FULL;
+		led_cdev->max_brightness = state;
+		led_set_brightness(led_cdev, led_cdev->brightness);
+		lge_thm_status = 1;
+	}
+	return rc;
+}
+#endif
+
+
 static struct device_attribute led_class_attrs[] = {
 	__ATTR(brightness, 0644, led_brightness_show, led_brightness_store),
 	__ATTR(max_brightness, 0644, led_max_brightness_show,
 			led_max_brightness_store),
+#ifdef CONFIG_LGE_PM
+	__ATTR(thermald_status, 0644, thermald_status_show, thermald_status_store),
+#endif
 #ifdef CONFIG_LEDS_TRIGGERS
 	__ATTR(trigger, 0644, led_trigger_show, led_trigger_store),
 #endif

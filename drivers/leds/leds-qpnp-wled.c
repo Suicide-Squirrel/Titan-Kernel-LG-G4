@@ -41,6 +41,9 @@
 #define QPNP_WLED_SWITCH_FREQ_REG(b)	(b + 0x4C)
 #define QPNP_WLED_OVP_REG(b)		(b + 0x4D)
 #define QPNP_WLED_ILIM_REG(b)		(b + 0x4E)
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+#define QPNP_WLED_EN_PSM(b)	        (b + 0x5A)
+#endif
 #define QPNP_WLED_SC_PRO_REG(b)		(b + 0x5E)
 #define QPNP_WLED_TEST_REG(b)		(b + 0xE2)
 
@@ -138,6 +141,12 @@
 #define QPNP_WLED_MODULE_RDY_SHIFT	7
 #define QPNP_WLED_MODULE_EN_MASK	0x7F
 #define QPNP_WLED_MODULE_EN_SHIFT	7
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+#define QPNP_WLED_PSM_EN	        1
+#define QPNP_WLED_PSM_DISABLE   	0
+#define QPNP_WLED_PSM_EN_MASK    		0x7F
+#define QPNP_WLED_PSM_EN_SHIFT 	  	7
+#endif
 #define QPNP_WLED_DISP_SEL_MASK		0x7F
 #define QPNP_WLED_DISP_SEL_SHIFT	7
 #define QPNP_WLED_EN_SC_MASK		0x7F
@@ -1273,6 +1282,21 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 				return rc;
 		}
 	}
+
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	/* Disable PSM for improve audible noise */
+	reg = 0x00;
+	rc = qpnp_wled_read_reg(wled, &reg,
+	          QPNP_WLED_EN_PSM(wled->ctrl_base));
+	if (rc < 0)
+	     return rc;
+	reg &= QPNP_WLED_PSM_EN_MASK;
+	reg |= (QPNP_WLED_PSM_DISABLE << QPNP_WLED_PSM_EN_SHIFT);
+	rc = qpnp_wled_write_reg(wled, &reg,
+	          QPNP_WLED_EN_PSM(wled->ctrl_base));
+	if (rc)
+	     return rc;
+#endif
 
 	return 0;
 }

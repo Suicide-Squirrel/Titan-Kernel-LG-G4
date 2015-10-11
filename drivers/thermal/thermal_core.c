@@ -884,6 +884,80 @@ temp_show(struct device *dev, struct device_attribute *attr, char *buf)
 	return sprintf(buf, "%ld\n", temperature);
 }
 
+#ifdef CONFIG_LGE_PM
+static ssize_t
+crit_temp_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct thermal_zone_device *tz = to_thermal_zone(dev);
+	long temperature;
+	int ret;
+
+	ret = tz->ops->get_crit_temp(tz, &temperature);
+
+	if (ret)
+		return ret;
+
+	return sprintf(buf, "%ld\n", temperature);
+}
+
+
+static ssize_t
+crit_temp_store(struct device *dev, struct device_attribute *attr,
+		     const char *buf, size_t count)
+{
+	struct thermal_zone_device *tz = to_thermal_zone(dev);
+	int ret;
+	long temperature;
+
+	if (!tz->ops->set_crit_temp)
+		return -EPERM;
+
+	if (kstrtol(buf, 10, &temperature))
+		return -EINVAL;
+
+	ret = tz->ops->set_crit_temp(tz,temperature);
+
+	return ret ? ret : count;
+}
+
+#define ENABLE_TEMP 200
+static int original_temp;
+static int enable;
+
+static ssize_t
+ctrl_crit_temp_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", enable);
+}
+
+static ssize_t
+ctrl_crit_temp_store(struct device *dev, struct device_attribute *attr,
+		     const char *buf, size_t count) {
+	struct thermal_zone_device *tz = to_thermal_zone(dev);
+	int current_temp;
+	int ret;
+
+	if (!tz->ops->set_crit_temp)
+		return -EPERM;
+
+	if (kstrtol(buf, 10, (long *)&enable))
+		return -EINVAL;
+
+	if(!original_temp)
+	   tz->ops->get_crit_temp(tz, (long *)&original_temp);
+
+	if (enable)
+		current_temp = ENABLE_TEMP;
+	else
+		current_temp = original_temp;
+
+	pr_err("change critical temperature : %d\n", current_temp);
+	ret = tz->ops->set_crit_temp(tz, (long)current_temp);
+
+	return ret ? ret : count;
+}
+#endif
+
 static ssize_t
 mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -1216,6 +1290,10 @@ static DEVICE_ATTR(temp, 0444, temp_show, NULL);
 static DEVICE_ATTR(mode, 0644, mode_show, mode_store);
 static DEVICE_ATTR(passive, S_IRUGO | S_IWUSR, passive_show, passive_store);
 static DEVICE_ATTR(policy, S_IRUGO | S_IWUSR, policy_show, policy_store);
+#ifdef CONFIG_LGE_PM
+static DEVICE_ATTR(crit_temp, S_IRUGO | S_IWUSR, crit_temp_show, crit_temp_store);
+static DEVICE_ATTR(ctrl_crit_temp, S_IRUGO | S_IWUSR, ctrl_crit_temp_show, ctrl_crit_temp_store);
+#endif
 
 /* sys I/F for cooling device */
 #define to_cooling_device(_dev)	\
@@ -1374,7 +1452,11 @@ temp_crit_show(struct device *dev, struct device_attribute *attr,
 	long temperature;
 	int ret;
 
+#ifdef CONFIG_LGE_PM
+	ret = tz->ops->get_crit_temp(tz,&temperature);
+#else
 	ret = tz->ops->get_trip_temp(tz, 0, &temperature);
+#endif
 	if (ret)
 		return ret;
 
@@ -1467,8 +1549,12 @@ thermal_add_hwmon_sysfs(struct thermal_zone_device *tz)
 		goto free_temp_mem;
 
 	if (tz->ops->get_crit_temp) {
+#ifndef CONFIG_LGE_PM
 		unsigned long temperature;
-		if (!tz->ops->get_crit_temp(tz, &temperature)) {
+
+		if (!tz->ops->get_crit_temp(tz, &temperature))
+#endif
+		{
 			snprintf(temp->temp_crit.name,
 				 sizeof(temp->temp_crit.name),
 				"temp%d_crit", hwmon->count);
@@ -2129,6 +2215,17 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 	if (result)
 		goto unregister;
 
+#ifdef CONFIG_LGE_PM
+	if (ops->get_crit_temp) {
+		result = device_create_file(&tz->device, &dev_attr_crit_temp);
+		if (result)
+			goto unregister;
+	}
+	result = device_create_file(&tz->device, &dev_attr_ctrl_crit_temp);
+	if (result)
+		goto unregister;
+#endif
+
 	for (count = 0; count < trips; count++) {
 		tz->ops->get_trip_type(tz, count, &trip_type);
 		if (trip_type == THERMAL_TRIP_PASSIVE)
@@ -2242,6 +2339,10 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 	if (tz->ops->get_mode)
 		device_remove_file(&tz->device, &dev_attr_mode);
 	device_remove_file(&tz->device, &dev_attr_policy);
+#ifdef CONFIG_LGE_PM
+	if (tz->ops->get_crit_temp)
+		device_remove_file(&tz->device, &dev_attr_crit_temp);
+#endif
 	remove_trip_attrs(tz);
 	tz->governor = NULL;
 

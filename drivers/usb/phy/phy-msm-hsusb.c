@@ -129,6 +129,10 @@ MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 #define USB_HSPHY_1P8_VOL_MAX			1800000 /* uV */
 #define USB_HSPHY_1P8_HPM_LOAD			19000	/* uA */
 
+#ifdef CONFIG_USB_G_LGE_ANDROID
+/* TXREFTUNE[3:0] from 1000 (+10%) to 0011 (Default)*/
+#define DEFAULT_HSPHY_INIT			(0x00D187A4)
+#endif
 struct msm_hsphy {
 	struct usb_phy		phy;
 	void __iomem		*base;
@@ -153,6 +157,9 @@ struct msm_hsphy {
 	bool			ext_vbus_id;
 	int			num_ports;
 	bool			cable_connected;
+#ifdef CONFIG_USB_G_LGE_ANDROID
+	bool		host;
+#endif
 };
 
 /* global reference counter between all HSPHY instances */
@@ -490,6 +497,20 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 		}
 
 		/* can turn off regulators if disconnected in device mode */
+#ifdef CONFIG_LGE_PM
+		if (phy->lpm_flags & PHY_RETENTIONED && !phy->cable_connected
+				&& phy->ext_vbus_id) {
+			msm_hsusb_ldo_enable(phy, 0);
+			phy->lpm_flags |= PHY_PWR_COLLAPSED;
+		}
+
+		/* Minimize VDD if charger is connected */
+		if ((phy->lpm_flags & PHY_RETENTIONED && !phy->cable_connected)
+			|| chg_connected) {
+			msm_hsusb_config_vdd(phy, 0);
+			phy->lpm_flags |= PHY_VDD_MINIMIZED;
+		}
+#else
 		if (phy->lpm_flags & PHY_RETENTIONED && !phy->cable_connected) {
 			if (phy->ext_vbus_id) {
 				msm_hsusb_ldo_enable(phy, 0);
@@ -497,7 +518,7 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 			}
 			msm_hsusb_config_vdd(phy, 0);
 		}
-
+#endif
 		count = atomic_dec_return(&hsphy_active_count);
 		if (count < 0) {
 			dev_WARN(uphy->dev, "hsphy_active_count=%d, something wrong?\n",
@@ -506,13 +527,26 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 		}
 	} else {
 		atomic_inc(&hsphy_active_count);
+#ifdef CONFIG_LGE_PM
+		if (phy->lpm_flags & PHY_VDD_MINIMIZED) {
+			msm_hsusb_config_vdd(phy, 1);
+			phy->lpm_flags &= ~PHY_VDD_MINIMIZED;
+		}
+
+		if (phy->lpm_flags & PHY_PWR_COLLAPSED) {
+			msm_hsusb_ldo_enable(phy, 1);
+			phy->lpm_flags &= ~PHY_PWR_COLLAPSED;
+		}
+
+		if (phy->lpm_flags & PHY_RETENTIONED) {
+#else
 		if (phy->lpm_flags & PHY_RETENTIONED && !phy->cable_connected) {
 			msm_hsusb_config_vdd(phy, 1);
 			if (phy->ext_vbus_id) {
 				msm_hsusb_ldo_enable(phy, 1);
 				phy->lpm_flags &= ~PHY_PWR_COLLAPSED;
 			}
-
+#endif
 			if (phy->csr) {
 				/* power on PHY */
 				msm_usb_write_readback(phy->csr,
@@ -613,6 +647,17 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 		 */
 		if (override_phy_init)
 			phy->hsphy_init_seq = override_phy_init;
+#ifdef CONFIG_USB_G_LGE_ANDROID
+		dev_info(uphy->dev, "OTG mode: %d\n", phy->host);
+		if( phy->host) {
+			msm_usb_write_readback(phy->base,
+					PARAMETER_OVERRIDE_X_REG(0),
+					0x03FFFFFF,
+					(override_phy_init?override_phy_init:DEFAULT_HSPHY_INIT) & 0x03FFFFFF);
+			dev_info(uphy->dev, "Set OTG tuning value\n");
+		}
+		else
+#endif
 		if (phy->hsphy_init_seq)
 			msm_usb_write_readback(phy->base,
 					PARAMETER_OVERRIDE_X_REG(0),
@@ -720,6 +765,21 @@ static int msm_hsphy_notify_disconnect(struct usb_phy *uphy,
 
 	return 0;
 }
+#ifdef CONFIG_USB_G_LGE_ANDROID
+static void msm_hsphy_notify_set_host(struct usb_phy *uphy, bool host)
+{
+	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
+	if(phy) {
+		phy->host = host;
+
+		dev_info(uphy->dev, "set OTG mode: %d\n", host);
+		msm_usb_write_readback(phy->base,
+				PARAMETER_OVERRIDE_X_REG(0),
+				0x03FFFFFF,
+				(host?DEFAULT_HSPHY_INIT:phy->hsphy_init_seq) & 0x03FFFFFF);
+	}
+}
+#endif
 
 static int msm_hsphy_probe(struct platform_device *pdev)
 {
@@ -879,6 +939,11 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 	phy->phy.notify_connect		= msm_hsphy_notify_connect;
 	phy->phy.notify_disconnect	= msm_hsphy_notify_disconnect;
 	phy->phy.reset			= msm_hsphy_reset;
+#ifdef CONFIG_USB_G_LGE_ANDROID
+	dev_err(dev, "set notify_set_hostmode\n");
+	phy->phy.notify_set_hostmode	= msm_hsphy_notify_set_host;
+	phy->host = false;
+#endif
 	/*FIXME: this conflicts with dwc3_otg */
 	/*phy->phy.type			= USB_PHY_TYPE_USB2; */
 

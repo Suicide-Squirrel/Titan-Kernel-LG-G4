@@ -17,6 +17,10 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 
+#if defined(CONFIG_LGE_MMC_DYNAMIC_LOG)
+#include <linux/mmc/debug_log.h>
+#endif
+
 struct mmc_gpio {
 	int ro_gpio;
 	int cd_gpio;
@@ -70,7 +74,16 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 		ctx->status = status;
 
 		/* Schedule a card detection after a debounce timeout */
+
+		#ifdef CONFIG_MACH_LGE
+		/* LGE_CHANGE
+		* Reduce debounce time to make it more sensitive
+		* 2014-09-01, Z2G4-BSP-FileSys@lge.com
+		*/
+		mmc_detect_change(host, 0);
+		#else
 		mmc_detect_change(host, msecs_to_jiffies(200));
+		#endif
 	}
 out:
 

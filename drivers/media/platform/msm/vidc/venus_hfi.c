@@ -3182,6 +3182,8 @@ static void venus_hfi_pm_hndlr(struct work_struct *work)
 	rc = venus_hfi_prepare_pc(device);
 	if (rc) {
 		dprintk(VIDC_ERR, "Failed to prepare for PC, rc : %d\n", rc);
+		venus_hfi_set_state(device, VENUS_STATE_DEINIT);
+		hfi_process_sys_error(device->callback, device->device_id);
 		return;
 	}
 
@@ -4154,7 +4156,8 @@ static void venus_hfi_unload_fw(void *dev)
 	}
 	if (device->resources.fw.cookie) {
 		cancel_delayed_work(&venus_hfi_pm_work);
-		flush_workqueue(device->venus_pm_workq);
+		if (device->state != VENUS_STATE_DEINIT)
+			flush_workqueue(device->venus_pm_workq);
 		subsystem_put(device->resources.fw.cookie);
 		venus_hfi_interface_queues_release(dev);
 		/* Halt the AXI to make sure there are no pending transactions.

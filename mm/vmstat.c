@@ -271,6 +271,15 @@ void __inc_zone_state(struct zone *zone, enum zone_stat_item item)
 void __inc_zone_page_state(struct page *page, enum zone_stat_item item)
 {
 	__inc_zone_state(page_zone(page), item);
+#ifdef CONFIG_PAGE_USAGE
+	if (page->zone_stat) {
+		page->task_tgid = current->tgid;
+		strlcpy(page->task_comm, current->comm, TASK_COMM_LEN);
+		if (current->flags & PF_KTHREAD)
+			page->task_type = 1;
+		page->zone_stat = item;
+	}
+#endif
 }
 EXPORT_SYMBOL(__inc_zone_page_state);
 
@@ -1329,6 +1338,138 @@ static struct notifier_block __cpuinitdata vmstat_notifier =
 	{ &vmstat_cpuup_callback, NULL, 0 };
 #endif
 
+#ifdef CONFIG_PAGE_USAGE
+struct zone_pfn {
+	const char *name;
+	unsigned long start_pfn;
+	unsigned long end_pfn;
+	unsigned long current_pfn;
+};
+
+static struct zone_pfn zone_pfn_info[__MAX_NR_ZONES];
+
+static int current_zone;
+
+static char read_buf[PAGE_SIZE * 2];
+static int read_buf_index;
+static int is_open;
+
+#define TASK_COMM_LEN	16
+#define PAGE_USE_INFO_LENGTH	(32 + TASK_COMM_LEN)
+
+static ssize_t pageusageinfo_proc_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+{
+	ssize_t ret;
+	unsigned long pfn;
+	int zone_name_len;
+	struct page *page;
+	int pos;
+
+	if (!is_open)
+		return -EBADF;
+
+	ret = 0;
+
+	if (PAGE_SIZE < read_buf_index) {
+		read_buf_index %= PAGE_SIZE;
+		memcpy(&read_buf[0], &read_buf[PAGE_SIZE], read_buf_index);
+	} else {
+		read_buf_index = 0;
+	}
+
+	while (current_zone < __MAX_NR_ZONES) {
+		if (zone_pfn_info[current_zone].current_pfn == zone_pfn_info[current_zone].start_pfn) {
+			zone_name_len = strlen(zone_pfn_info[current_zone].name);
+			if (zone_name_len) {
+				strlcpy(&read_buf[read_buf_index], zone_pfn_info[current_zone].name, zone_name_len + 1);
+				read_buf_index += zone_name_len;
+
+				read_buf[read_buf_index] = '\n';
+				++read_buf_index;
+			}
+		}
+
+		for (pfn = zone_pfn_info[current_zone].current_pfn; pfn < zone_pfn_info[current_zone].end_pfn; ++pfn) {
+			if (!pfn_valid(pfn))
+				continue;
+
+			page = pfn_to_page(pfn);
+
+			pos = snprintf(&read_buf[read_buf_index], sizeof(read_buf) - read_buf_index,
+					"%06lu:%08lx,%05d,%s,%01d,%02d ",
+					pfn,
+					page->flags,
+					page->task_tgid,
+					page->task_comm,
+					page->task_type,
+					page->zone_stat);
+
+			read_buf_index += pos;
+
+			if (PAGE_SIZE <= read_buf_index) {
+				zone_pfn_info[current_zone].current_pfn = pfn + 1;
+				ret = PAGE_SIZE;
+				goto read;
+			}
+		}
+
+		read_buf[read_buf_index] = '\n';
+		++read_buf_index;
+
+		zone_pfn_info[current_zone].current_pfn = zone_pfn_info[current_zone].end_pfn;
+		++current_zone;
+	}
+
+	ret = read_buf_index;
+
+read:
+	strlcpy(buf, read_buf, ret + 1);
+
+	*ppos += ret;
+
+	return ret;
+}
+
+int pageusageinfo_proc_open(struct inode *inode, struct file *file)
+{
+	struct zone *z;
+	int i;
+
+	if (is_open)
+		return -EMFILE;
+
+	is_open = 1;
+
+	i = 0;
+	for_each_zone(z) {
+		zone_pfn_info[i].name = z->name;
+		zone_pfn_info[i].start_pfn = z->zone_start_pfn;
+		zone_pfn_info[i].end_pfn = zone_pfn_info[i].start_pfn + z->spanned_pages;
+		zone_pfn_info[i].current_pfn = z->zone_start_pfn;
+		++i;
+	}
+
+	current_zone = 0;
+	read_buf_index = 0;
+
+	return 0;
+}
+
+int pageusageinfo_proc_release(struct inode *inode, struct file *file)
+{
+	if (is_open)
+		is_open = 0;
+
+	return 0;
+}
+
+static const struct file_operations proc_pageuseinfo_file_operations = {
+	.read = pageusageinfo_proc_read,
+	.open = pageusageinfo_proc_open,
+	.release = pageusageinfo_proc_release,
+};
+#endif
+
 static int __init setup_vmstat(void)
 {
 #ifdef CONFIG_SMP
@@ -1346,6 +1487,9 @@ static int __init setup_vmstat(void)
 	proc_create("pagetypeinfo", S_IRUGO, NULL, &pagetypeinfo_file_ops);
 	proc_create("vmstat", S_IRUGO, NULL, &proc_vmstat_file_operations);
 	proc_create("zoneinfo", S_IRUGO, NULL, &proc_zoneinfo_file_operations);
+#ifdef CONFIG_PAGE_USAGE
+	proc_create("pageusageinfo", S_IRUGO, NULL, &proc_pageuseinfo_file_operations);
+#endif
 #endif
 	return 0;
 }

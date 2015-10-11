@@ -29,6 +29,8 @@
 #include "mdss_debug.h"
 
 static void mdss_mdp_xlog_mixer_reg(struct mdss_mdp_ctl *ctl);
+static inline u32 get_panel_width(struct mdss_mdp_ctl *ctl);
+static inline int mdss_panel_get_htotal_ctl(struct mdss_mdp_ctl *ctl, bool consider_fbc);
 static inline u64 fudge_factor(u64 val, u32 numer, u32 denom)
 {
 	u64 result = (val * (u64)numer);
@@ -1953,6 +1955,25 @@ static int mdss_mdp_ctl_fbc_enable(int enable,
 	return 0;
 }
 
+static inline int mdss_panel_get_htotal_ctl(struct mdss_mdp_ctl *ctl, bool
+	consider_fbc)
+{
+	int adj_xres;
+	struct mdss_panel_info *pinfo = &ctl->panel_data->panel_info;
+
+	adj_xres = get_panel_xres(&ctl->panel_data->panel_info);
+	if (ctl->panel_data->next && is_pingpong_split(ctl->mfd))
+		adj_xres += get_panel_xres(&ctl->panel_data->next->panel_info);
+
+	if (consider_fbc && pinfo->fbc.enabled)
+		adj_xres = mult_frac(adj_xres,
+	pinfo->fbc.target_bpp, pinfo->bpp);
+
+	return adj_xres + pinfo->lcdc.h_back_porch +
+		pinfo->lcdc.h_front_porch +
+		pinfo->lcdc.h_pulse_width;
+}
+
 void mdss_mdp_get_interface_type(struct mdss_mdp_ctl *ctl, int *intf_type,
 		int *split_needed)
 {
@@ -2731,6 +2752,8 @@ int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl, int power_state)
 		off = __mdss_mdp_ctl_get_mixer_off(ctl->mixer_right);
 		mdss_mdp_ctl_write(ctl, off, 0);
 	}
+
+	ctl->power_state = power_state;
 
 	ctl->play_cnt = 0;
 	mdss_mdp_ctl_perf_update(ctl, 0);

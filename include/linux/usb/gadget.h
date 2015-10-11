@@ -145,6 +145,9 @@ struct usb_ep_ops {
 
 	int (*fifo_status) (struct usb_ep *ep);
 	void (*fifo_flush) (struct usb_ep *ep);
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+	void (*yield_request)(struct usb_ep *ep, struct usb_request *req);
+#endif
 };
 
 /**
@@ -190,6 +193,19 @@ struct usb_ep {
 };
 
 /*-------------------------------------------------------------------------*/
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+/*
+ * If some eps need to share the usb_requset,
+ * this function do that.
+ * Change original ep num of dwc3_request to parameter ep num.
+ */
+static inline void lge_usb_ep_yield_request(struct usb_ep *ep,
+				       struct usb_request *req)
+{
+	if (ep->ops->yield_request)
+		ep->ops->yield_request(ep, req);
+}
+#endif
 
 /**
  * usb_ep_enable - configure endpoint, making it usable

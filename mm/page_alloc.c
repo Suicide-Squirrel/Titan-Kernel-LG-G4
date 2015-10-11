@@ -619,6 +619,26 @@ static inline void __free_one_page(struct page *page,
 
 	list_add(&page->lru, &zone->free_area[order].free_list[migratetype]);
 out:
+#ifdef CONFIG_PAGE_USAGE
+	if (page) {
+		unsigned long pfn;
+		struct page *usage_page;
+
+		for (pfn = page_to_pfn(page); pfn < page_to_pfn(page) + (1UL << order); ++pfn) {
+			if (!pfn_valid(pfn))
+				break;
+
+			usage_page = pfn_to_page(pfn);
+			if (!usage_page)
+				break;
+
+			usage_page->task_tgid = 0;
+			memset(usage_page->task_comm, 0x0, TASK_COMM_LEN);
+			usage_page->task_type = 0;
+			usage_page->zone_stat = NR_FREE_PAGES;
+		}
+	}
+#endif
 	zone->free_area[order].nr_free++;
 }
 
@@ -793,6 +813,14 @@ bool is_cma_pageblock(struct page *page)
 {
 	return get_pageblock_migratetype(page) == MIGRATE_CMA;
 }
+
+#ifdef CONFIG_MACH_LGE
+/* LGE_UPDATE, 2013/11/18, G2-KK-FS@lge.com
+ * add the EXPORT_SYMBOL(is_cma_pageblock) because build is failed by tuxera exFAT
+ * this code is tuxera guide.
+ */
+EXPORT_SYMBOL(is_cma_pageblock);
+#endif
 
 /* Free whole pageblock and set it's migration type to MIGRATE_CMA. */
 void __init init_cma_reserved_pageblock(struct page *page)
@@ -1423,6 +1451,14 @@ void free_hot_cold_page(struct page *page, int cold)
 	}
 
 out:
+#ifdef CONFIG_PAGE_USAGE
+	if (page) {
+		page->task_tgid = 0;
+		memset(page->task_comm, 0x0, TASK_COMM_LEN);
+		page->task_type = 0;
+		page->zone_stat = NR_FREE_PAGES;
+	}
+#endif
 	local_irq_restore(flags);
 }
 
@@ -2700,6 +2736,10 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	unsigned int cpuset_mems_cookie;
 	int alloc_flags = ALLOC_WMARK_LOW|ALLOC_CPUSET;
 	struct mem_cgroup *memcg = NULL;
+#ifdef CONFIG_PAGE_USAGE
+	unsigned long pfn;
+	struct page *usage_page;
+#endif
 
 	gfp_mask &= gfp_allowed_mask;
 
@@ -2772,6 +2812,27 @@ out:
 	if (page)
 		set_page_owner(page, order, gfp_mask);
 
+#ifdef CONFIG_PAGE_USAGE
+	if (page) {
+		for (pfn = page_to_pfn(page); pfn < page_to_pfn(page) + (1UL << order); ++pfn) {
+			if (!pfn_valid(pfn))
+				break;
+
+			usage_page = pfn_to_page(pfn);
+			if (!usage_page)
+				break;
+
+			if (usage_page->zone_stat)
+				pr_err("Alloc page not freed\n");
+
+			usage_page->task_tgid = current->tgid;
+			strlcpy(usage_page->task_comm, current->comm, TASK_COMM_LEN);
+			if (current->flags & PF_KTHREAD)
+				usage_page->task_type = 1;
+			usage_page->zone_stat = NR_USE_PAGES;
+		}
+	}
+#endif
 	return page;
 }
 EXPORT_SYMBOL(__alloc_pages_nodemask);
@@ -2804,7 +2865,29 @@ EXPORT_SYMBOL(get_zeroed_page);
 
 void __free_pages(struct page *page, unsigned int order)
 {
+#ifdef CONFIG_PAGE_USAGE
+	unsigned long pfn;
+	struct page *usage_page;
+#endif
+
 	if (put_page_testzero(page)) {
+#ifdef CONFIG_PAGE_USAGE
+		if (page) {
+			for (pfn = page_to_pfn(page); pfn < page_to_pfn(page) + (1UL << order); ++pfn) {
+				if (!pfn_valid(pfn))
+					break;
+
+				usage_page = pfn_to_page(pfn);
+				if (!usage_page)
+					break;
+
+				usage_page->task_tgid = 0;
+				memset(usage_page->task_comm, 0x0, TASK_COMM_LEN);
+				usage_page->task_type = 0;
+				usage_page->zone_stat = NR_FREE_PAGES;
+			}
+		}
+#endif
 		if (order == 0)
 			free_hot_cold_page(page, 0);
 		else
@@ -4036,6 +4119,12 @@ void __meminit memmap_init_zone(unsigned long size, int nid, unsigned long zone,
 		page_mapcount_reset(page);
 		page_nid_reset_last(page);
 		SetPageReserved(page);
+#ifdef CONFIG_PAGE_USAGE
+		page->task_tgid = 0;
+		memset(page->task_comm, 0x0, TASK_COMM_LEN);
+		page->task_type = 0;
+		page->zone_stat = NR_USE_PAGES;
+#endif
 		/*
 		 * Mark the block movable so that blocks are reserved for
 		 * movable at startup. This will force kernel allocations

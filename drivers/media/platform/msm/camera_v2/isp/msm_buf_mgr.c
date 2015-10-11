@@ -526,7 +526,7 @@ static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
 
 			}
 		} else {
-			pr_err("%s: No Buffer session_id: %d stream_id: %d\n",
+			pr_debug("%s: No Buffer session_id: %d stream_id: %d\n",
 				__func__, bufq->session_id, bufq->stream_id);
 			rc = -EINVAL;
 		}
@@ -1324,6 +1324,7 @@ static int msm_isp_buf_mgr_debug(struct msm_isp_buf_mgr *buf_mgr)
 	}
 	pr_err("%s\n", print_buf);
 	kfree(print_buf);
+	buf_mgr->pagefault_debug = 1;
 	return rc;
 }
 

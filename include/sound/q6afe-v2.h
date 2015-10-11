@@ -145,6 +145,60 @@ struct aanc_data {
 	uint32_t aanc_tx_port_sample_rate;
 };
 
+#ifdef CONFIG_SND_TI_SPK_PROT_OPALUM
+/* be got spk temp data from ospl in ADSP */
+#define AFE_DATA_EVENT_STATUS 0xF0012B03
+
+#define RX_MODULE		 0x00A1AF00
+#define TX_MODULE		 0x00A1BF00
+#define EXCURSION_DATA	 0x00A1AF06
+#define TEMPERATURE_DATA 0x00A1AF07
+
+struct afe_custom_opalum_set_config_t {
+    struct apr_hdr hdr;
+    struct afe_port_cmd_set_param_v2 param;
+    struct afe_port_param_data_v2 data;
+} __packed;
+
+struct afe_custom_opalum_get_config_t {
+	struct apr_hdr                    hdr;
+	struct afe_port_cmd_get_param_v2  param;
+	struct afe_port_param_data_v2     data;
+} __packed;
+
+struct opalum_single_data_ctrl_t {
+    int32_t value;
+};
+struct opalum_dual_data_ctrl_t {
+    int32_t      data1;
+    int32_t      data2;
+    #ifdef CONFIG_SND_SOC_SPKINFO
+    int32_t      data3;
+    #endif
+};
+
+/* Payload struct for getting temperature calibration data */
+struct opalum_temp_calib_data_t {
+    int acc;
+    int count;
+};
+
+int opalum_afe_set_param(int command);
+int opalum_afe_get_param(int command);
+
+struct opalum_external_config_t {
+	u32			total_size;
+	u32			chunk_size;
+	int				done;
+    u32             config;
+	//const char* 	config;
+};
+
+int opalum_afe_send_config(int rx_tx, const char* cfg_strings);
+
+
+#endif  // CONFIG_SND_TI_SPK_PROT_OPALUM
+
 int afe_open(u16 port_id, union afe_port_config *afe_config, int rate);
 int afe_close(int port_id);
 int afe_loopback(u16 enable, u16 rx_port, u16 tx_port);

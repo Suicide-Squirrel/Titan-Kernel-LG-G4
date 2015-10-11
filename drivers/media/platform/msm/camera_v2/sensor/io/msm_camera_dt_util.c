@@ -166,6 +166,28 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 			}
 			break;
 
+/* LGE_CHANGE_S, caemra bringup */
+		case CAM_OISVDD:
+			for (j = 0; j < num_vreg; j++) {
+				if (!strcmp(cam_vreg[j].reg_name, "cam_oisvdd")) {
+					pr_err("%s:%d i %d j %d cam_oisvdd\n",
+						__func__, __LINE__, i, j);
+					power_setting[i].seq_val = j;
+					break;
+				}
+			}
+			break;
+		case CAM_OISDVDD:
+			for (j = 0; j < num_vreg; j++) {
+				if (!strcmp(cam_vreg[j].reg_name, "cam_oisdvdd")) {
+					pr_err("%s:%d i %d j %d cam_oisdvdd\n",
+						__func__, __LINE__, i, j);
+					power_setting[i].seq_val = j;
+					break;
+				}
+			}
+			break;
+/* LGE_CHANGE_E, camera bringup */
 		default:
 			pr_err("%s:%d invalid seq_val %d\n", __func__,
 				__LINE__, power_setting[i].seq_val);
@@ -224,6 +246,38 @@ int msm_sensor_get_sub_module_index(struct device_node *of_node,
 			goto ERROR;
 		}
 		sensor_info->subdev_id[SUB_MODULE_OIS] = val;
+		of_node_put(src_node);
+		src_node = NULL;
+	}
+
+	src_node = of_parse_phandle(of_node, "qcom,proxy-src", 0);
+	if (!src_node) {
+		CDBG("%s:%d src_node NULL\n", __func__, __LINE__);
+	} else {
+		rc = of_property_read_u32(src_node, "cell-index", &val);
+		CDBG("%s qcom,proxy cell index %d, rc %d\n", __func__,
+			val, rc);
+		if (rc < 0) {
+			pr_err("%s failed %d\n", __func__, __LINE__);
+			goto ERROR;
+		}
+		sensor_info->subdev_id[SUB_MODULE_PROXY] = val;
+		of_node_put(src_node);
+		src_node = NULL;
+	}
+
+	src_node = of_parse_phandle(of_node, "qcom,tcs-src", 0);
+	if (!src_node) {
+		pr_err("%s:%d src_node NULL\n", __func__, __LINE__);
+	} else {
+		rc = of_property_read_u32(src_node, "cell-index", &val);
+		pr_err("%s qcom,tcs cell index %d, rc %d\n", __func__,
+			val, rc);
+		if (rc < 0) {
+			pr_err("%s failed %d\n", __func__, __LINE__);
+			goto ERROR;
+		}
+		sensor_info->subdev_id[SUB_MODULE_TCS] = val;
 		of_node_put(src_node);
 		src_node = NULL;
 	}
@@ -541,6 +595,10 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 				ps[i].seq_val = SENSOR_GPIO_VAF;
 			else if (!strcmp(seq_name, "sensor_gpio_vio"))
 				ps[i].seq_val = SENSOR_GPIO_VIO;
+			else if (!strcmp(seq_name, "sensor_gpio_ldaf"))
+				ps[i].seq_val = SENSOR_GPIO_LDAF_EN;
+			else if (!strcmp(seq_name, "sensor_gpio_ois_reset"))
+				ps[i].seq_val = SENSOR_GPIO_OIS_RESET;//yt_test
 			else if (!strcmp(seq_name, "sensor_gpio_custom1"))
 				ps[i].seq_val = SENSOR_GPIO_CUSTOM1;
 			else if (!strcmp(seq_name, "sensor_gpio_custom2"))
@@ -649,6 +707,9 @@ ERROR2:
 	kfree(array);
 ERROR1:
 	kfree(ps);
+/* LGE_CHANGE_S, EEPROM bring-up*/
+	power_info->power_setting = NULL;
+/* LGE_CHANGE_E, EEPROM bring-up*/
 	power_setting_size = 0;
 	return rc;
 }
@@ -1043,6 +1104,47 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 	} else
 		rc = 0;
 
+	rc = of_property_read_u32(of_node, "qcom,gpio-ldaf-en", &val);
+		if (rc != -EINVAL) {
+			if (rc < 0) {
+				pr_err("%s:%d read qcom,gpio-ldaf-en failed rc %d\n",
+					__func__, __LINE__, rc);
+				goto ERROR;
+			} else if (val >= gpio_array_size) {
+				pr_err("%s:%d qcom,gpio-ldaf-en invalid %d\n",
+					__func__, __LINE__, val);
+				rc = -EINVAL;
+				goto ERROR;
+			}
+			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_LDAF_EN] =
+				gpio_array[val];
+			gconf->gpio_num_info->valid[SENSOR_GPIO_LDAF_EN] = 1;
+			CDBG("%s qcom,gpio-ldaf-en %d\n", __func__,
+				gconf->gpio_num_info->gpio_num[SENSOR_GPIO_LDAF_EN]);
+		} else {
+			rc = 0;
+		}
+//LGE imx234 bringup
+		rc = of_property_read_u32(of_node, "qcom,gpio-ois-reset", &val);
+			if (rc != -EINVAL) {
+				if (rc < 0) {
+					pr_err("%s:%d read qcom,gpio-ois-reset failed rc %d\n",
+						__func__, __LINE__, rc);
+					goto ERROR;
+				} else if (val >= gpio_array_size) {
+					pr_err("%s:%d qcom,gpio-ois-reset invalid %d\n",
+						__func__, __LINE__, val);
+					rc = -EINVAL;
+					goto ERROR;
+				}
+				gconf->gpio_num_info->gpio_num[SENSOR_GPIO_OIS_RESET] =
+					gpio_array[val];
+				gconf->gpio_num_info->valid[SENSOR_GPIO_OIS_RESET] = 1;
+				CDBG("%s qcom,gpio-ois-reset %d\n", __func__,
+					gconf->gpio_num_info->gpio_num[SENSOR_GPIO_OIS_RESET]);
+			} else {
+				rc = 0;
+			}
 	rc = of_property_read_u32(of_node, "qcom,gpio-custom1", &val);
 	if (rc != -EINVAL) {
 		if (rc < 0) {

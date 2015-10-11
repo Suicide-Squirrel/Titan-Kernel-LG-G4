@@ -1394,11 +1394,13 @@ static int msm_isp_axi_wait_for_cfg_done(struct vfe_device *vfe_dev,
 	for (i = 0; i < VFE_SRC_MAX; i++) {
 		if (src_mask & (1 << i)) {
 			if (vfe_dev->axi_data.stream_update[i] > 0) {
+/*LGE_CHANGE_S, add QCT_PATCH about stability after Post CS , 2015-03-31, yousung.kang@lge.com */				
 				pr_err("%s:Stream Update in progress. cnt %d\n",
 					__func__,
 					vfe_dev->axi_data.stream_update[i]);
 				spin_unlock_irqrestore(
 					&vfe_dev->shared_data_lock, flags);
+/*LGE_CHANGE_E, add QCT_PATCH about stability after Post CS , 2015-03-31, yousung.kang@lge.com */				
 				return -EINVAL;
 			}
 			vfe_dev->axi_data.stream_update[i] = regUpdateCnt;
@@ -1748,7 +1750,8 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 		wait_for_complete_for_this_stream = 0;
 
 		stream_info->state = STOP_PENDING;
-		pr_debug("%s, Stream 0x%x,\n", __func__, stream_info->stream_id);
+		pr_debug("%s, Stream 0x%x,\n", __func__,
+			stream_info->stream_id);		
 		if (stream_info->stream_src == CAMIF_RAW ||
 			stream_info->stream_src == IDEAL_RAW) {
 			/* We dont get reg update IRQ for raw snapshot
@@ -1800,10 +1803,10 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 				vfe_dev->hw_info->vfe_ops.core_ops.reg_update(
 					vfe_dev,
 					SRC_TO_INTF(stream_info->stream_src));
-				mutex_unlock(&vfe_dev->core_mutex);
+				mutex_unlock(&vfe_dev->core_mutex);    /*LGE_CHANGE, add QCT_PATCH about stability after Post CS , 2015-03-31, yousung.kang@lge.com */
 				rc = msm_isp_axi_wait_for_cfg_done(vfe_dev,
 					camif_update, src_mask, 1);
-				mutex_lock(&vfe_dev->core_mutex);
+				mutex_lock(&vfe_dev->core_mutex);     /*LGE_CHANGE, add QCT_PATCH about stability after Post CS , 2015-03-31, yousung.kang@lge.com */
 				if (rc < 0)
 					pr_err("cfg done failed\n");
 				rc = -EBUSY;
@@ -2137,6 +2140,7 @@ int msm_isp_update_axi_stream(struct vfe_device *vfe_dev, void *arg)
 				update_info->user_stream_id);
 			pr_debug("%s, Remove bufq for Stream 0x%x\n",
 				__func__, stream_info->stream_id);
+
 			if (stream_info->state == ACTIVE) {
 				stream_info->state = UPDATING;
 				mutex_unlock(&vfe_dev->core_mutex);
@@ -2204,8 +2208,9 @@ void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
 				continue;
 			}
 
-			ISP_DBG("%s: stream id %x frame id: 0x%x\n", __func__,
-				stream_info->stream_id, stream_info->frame_id);
+			ISP_DBG("%s: vfe_id %d stream id %x frame id: 0x%x\n", __func__,
+                          vfe_dev->pdev->id,
+                          stream_info->stream_id, stream_info->frame_id); /*LGE_CHANGE, change log level from pr_err , 2015-03-14, ejoon.kim@lge.com */
 			stream_info->frame_id++;
 
 			if (stream_info->stream_type == BURST_STREAM) {
@@ -2294,5 +2299,8 @@ void msm_isp_axi_disable_all_wm(struct vfe_device *vfe_dev)
 		for (j = 0; j < stream_info->num_planes; j++)
 			vfe_dev->hw_info->vfe_ops.axi_ops.enable_wm(vfe_dev,
 				stream_info->wm[j], 0);
+
+		vfe_dev->hw_info->vfe_ops.core_ops.reg_update(vfe_dev,
+			SRC_TO_INTF(stream_info->stream_src));
 	}
 }

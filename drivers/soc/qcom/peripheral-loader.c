@@ -731,6 +731,8 @@ int pil_boot(struct pil_desc *desc)
 	ret = desc->ops->auth_and_reset(desc);
 	if (ret) {
 		pil_err(desc, "Failed to bring out of reset\n");
+		/* 2012-10-09, seungkyu.joo@lge.com, reset code add for pil load fail during boot-up */
+		panic("pil image load fail");
 		goto err_deinit_image;
 	}
 	pil_info(desc, "Brought out of reset\n");

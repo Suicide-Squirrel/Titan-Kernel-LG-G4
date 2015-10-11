@@ -119,6 +119,9 @@ static inline struct thread_info *current_thread_info(void)
 #define TIF_32BIT		22	/* 32bit process */
 #define TIF_SWITCH_MM		23	/* deferred switch_mm */
 #define TIF_MM_RELEASED		24
+#ifdef CONFIG_PROCESS_RECLAIM
+#define TIF_MM_RECLAIMED		25	/* task MM has been reclaimed */
+#endif
 
 #define _TIF_SIGPENDING		(1 << TIF_SIGPENDING)
 #define _TIF_NEED_RESCHED	(1 << TIF_NEED_RESCHED)

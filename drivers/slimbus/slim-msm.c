@@ -946,7 +946,7 @@ init_pipes:
 	/* get the # of ports first */
 	dev->port_nums = msm_slim_data_port_assign(dev);
 	if (dev->port_nums && !dev->pipes) {
-		dev->pipes = kzalloc(sizeof(struct msm_slim_endp) *
+		dev->pipes = (struct msm_slim_endp*)kzalloc(sizeof(struct msm_slim_endp) *
 					dev->port_nums,
 					GFP_KERNEL);
 		if (IS_ERR_OR_NULL(dev->pipes)) {

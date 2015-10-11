@@ -54,6 +54,9 @@
 #include <linux/usb/composite.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/otg.h>
+#ifdef CONFIG_LGE_PM
+#include <soc/qcom/lge/board_lge.h>
+#endif
 
 #include "core.h"
 #include "gadget.h"
@@ -305,10 +308,10 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 			 * just completed (not the LINK TRB).
 			 */
 			if (((dep->busy_slot & DWC3_TRB_MASK) ==
-				DWC3_TRB_NUM- 1) &&
+				DWC3_TRB_NUM - 1) &&
 				usb_endpoint_xfer_isoc(dep->endpoint.desc))
 				dep->busy_slot++;
-		} while(++i < req->request.num_mapped_sgs);
+		} while (++i < req->request.num_mapped_sgs);
 		req->queued = false;
 
 		if (req->request.zero && req->ztrb) {
@@ -1871,6 +1874,9 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 	u32			reg;
 	u32			timeout = 500;
 	ktime_t start, diff;
+#ifdef CONFIG_LGE_PM
+	enum lge_boot_mode_type boot_mode;
+#endif
 
 	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 	if (is_on) {
@@ -1929,6 +1935,16 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 		udelay(1);
 	} while (1);
 
+#ifdef CONFIG_LGE_PM
+	boot_mode = lge_get_boot_mode();
+	if ((boot_mode == LGE_BOOT_MODE_QEM_130K ||
+		boot_mode == LGE_BOOT_MODE_PIF_130K) && is_on) {
+		reg = dwc3_readl(dwc->regs, DWC3_DCFG);
+		reg &= ~(DWC3_DCFG_SPEED_MASK);
+		reg |= DWC3_DCFG_FULLSPEED2;
+		dwc3_writel(dwc->regs, DWC3_DCFG, reg);
+	}
+#endif
 	dev_vdbg(dwc->dev, "gadget %s data soft-%s\n",
 			dwc->gadget_driver
 			? dwc->gadget_driver->function : "no-function",
@@ -2586,7 +2602,7 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 					event, status);
 			if (ret)
 				break;
-		}while (++i < req->request.num_mapped_sgs);
+		} while (++i < req->request.num_mapped_sgs);
 
 		if (req->ztrb) {
 			trb = req->ztrb;
@@ -2955,8 +2971,9 @@ void dwc3_gadget_usb3_phy_suspend(struct dwc3 *dwc, int suspend)
 static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 {
 	u32			reg;
+#ifndef CONFIG_LGE_PM
 	struct dwc3_otg		*dotg = dwc->dotg;
-
+#endif
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
 	/*
@@ -3000,8 +3017,10 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 
 	dwc3_gadget_usb3_phy_suspend(dwc, false);
 
+#ifndef CONFIG_LGE_PM
 	if (dotg && dotg->otg.phy)
 		usb_phy_set_power(dotg->otg.phy, 0);
+#endif
 
 	if (dwc->gadget.speed != USB_SPEED_UNKNOWN)
 		dwc3_disconnect_gadget(dwc);

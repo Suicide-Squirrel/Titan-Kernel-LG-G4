@@ -43,6 +43,9 @@
 #define DIAG_CTRL_MSG_SSID_RANGE_REPORT		24
 #define DIAG_CTRL_MSG_BUILD_MASK_REPORT		25
 #define DIAG_CTRL_MSG_DCI_HANDSHAKE_PKT		29
+#ifdef CONFIG_LGE_DIAG_SYNC_STATUS
+#define DIAG_CTRL_MSG_LGE_DIAG_ENABLE 100
+#endif
 
 /*
  * Feature Mask Definitions: Feature mask is used to sepcify Diag features

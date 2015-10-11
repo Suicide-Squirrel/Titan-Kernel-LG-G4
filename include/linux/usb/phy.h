@@ -125,6 +125,9 @@ struct usb_phy {
 
 	/* reset the PHY clocks */
 	int	(*reset)(struct usb_phy *x);
+#ifdef CONFIG_USB_G_LGE_ANDROID
+	void(*notify_set_hostmode)(struct usb_phy *x,bool host);
+#endif
 };
 
 /**
@@ -299,6 +302,13 @@ usb_phy_set_suspend(struct usb_phy *x, int suspend)
 	else
 		return 0;
 }
+#ifdef CONFIG_USB_G_LGE_ANDROID
+static inline void usb_phy_notify_set_hostmode(struct usb_phy *x,bool host)
+{
+	if (x && x->notify_set_hostmode)
+		x->notify_set_hostmode(x, host);
+}
+#endif
 
 static inline int
 usb_phy_notify_connect(struct usb_phy *x, enum usb_device_speed speed)

@@ -167,16 +167,49 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_USB_OTG,
 	POWER_SUPPLY_PROP_CHARGE_ENABLED,
 	POWER_SUPPLY_PROP_FLASH_CURRENT_MAX,
+#ifdef CONFIG_LGE_PM_FACTORY_PSEUDO_BATTERY
+	POWER_SUPPLY_PROP_PSEUDO_BATT,
+#endif
 	POWER_SUPPLY_PROP_UPDATE_NOW,
 	POWER_SUPPLY_PROP_ESR_COUNT,
 	POWER_SUPPLY_PROP_SAFETY_TIMER_ENABLE,
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_PROP_CHARGE_COUNTER_EXT,
 	/* Properties of type `const char *' */
+#ifdef CONFIG_LGE_PM_BATTERY_ID_CHECKER
+	POWER_SUPPLY_PROP_BATTERY_ID,
+	POWER_SUPPLY_PROP_BATTERY_ID_CHECKER,
+#endif
+#ifdef CONFIG_LGE_PM
+	POWER_SUPPLY_PROP_TEMP_ORG,
+#endif
+#ifdef CONFIG_LGE_PM_VZW_REQ
+	POWER_SUPPLY_PROP_VZW_CHG,
+#endif
+#ifdef CONFIG_LGE_PM_LLK_MODE
+	POWER_SUPPLY_PROP_STORE_DEMO_ENABLED,
+#endif
+#ifdef CONFIG_LGE_PM_UNIFIED_WLC
+	POWER_SUPPLY_PROP_WIRELESS_CHARGER_SWITCH,
+#endif
+#ifdef CONFIG_LGE_PM_UNIFIED_WLC_ALIGNMENT
+	POWER_SUPPLY_PROP_ALIGNMENT,
+#endif
 	POWER_SUPPLY_PROP_MODEL_NAME,
 	POWER_SUPPLY_PROP_MANUFACTURER,
 	POWER_SUPPLY_PROP_SERIAL_NUMBER,
 	POWER_SUPPLY_PROP_BATTERY_TYPE,
+};
+
+enum power_supply_event_type{
+	POWER_SUPPLY_PROP_UNKNOWN,
+#ifdef CONFIG_LGE_PM_UNIFIED_WLC
+	POWER_SUPPLY_PROP_WIRELESS_CHARGE_COMPLETED,
+	POWER_SUPPLY_PROP_WIRELESS_ONLINE,
+#endif
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+	POWER_SUPPLY_PROP_FLOATED_CHARGER,
+#endif
 };
 
 enum power_supply_type {
@@ -192,6 +225,9 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_WIRELESS,	/* Accessory Charger Adapters */
 	POWER_SUPPLY_TYPE_BMS,		/* Battery Monitor System */
 	POWER_SUPPLY_TYPE_USB_PARALLEL,		/* USB Parallel Path */
+#ifdef CONFIG_BATTERY_MAX17048
+	POWER_SUPPLY_TYPE_FUELGAUGE,
+#endif
 	POWER_SUPPLY_TYPE_WIPOWER,		/* Wipower */
 };
 
@@ -222,6 +258,14 @@ struct power_supply {
 	int (*set_property)(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    const union power_supply_propval *val);
+#ifdef CONFIG_LGE_PM_UNIFIED_WLC
+	int (*get_event_property)(struct power_supply *psy,
+				enum power_supply_event_type psp,
+				union power_supply_propval *val);
+	int (*set_event_property)(struct power_supply *psy,
+				enum power_supply_event_type psp,
+				const union power_supply_propval *val);
+#endif
 	int (*property_is_writeable)(struct power_supply *psy,
 				     enum power_supply_property psp);
 	void (*external_power_changed)(struct power_supply *psy);
@@ -252,6 +296,9 @@ struct power_supply {
 	struct led_trigger *charging_blink_full_solid_trig;
 	char *charging_blink_full_solid_trig_name;
 #endif
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+	int is_floated_charger;
+#endif
 };
 
 /*
@@ -274,6 +321,9 @@ struct power_supply_info {
 };
 
 #if defined(CONFIG_POWER_SUPPLY)
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+int power_supply_set_floated_charger(struct power_supply *psy, int is_float);
+#endif
 extern struct power_supply *power_supply_get_by_name(const char *name);
 extern void power_supply_changed(struct power_supply *psy);
 extern int power_supply_am_i_supplied(struct power_supply *psy);

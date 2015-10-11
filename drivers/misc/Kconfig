@@ -620,6 +620,26 @@ config QCOM_LIQUID_DOCK
 	  the docking station of various models of Qualcomm Technology's
 	  LiQUID Mobile Development Platforms.
 
+config LGE_IRRC
+	tristate "LGE_IRRC"
+	default n
+	help
+	  If you say yes here you get support for IrRC
+
+config LGE_EVENT_LOCK
+    bool "factory 250-99 key lock cmd"
+    default y
+	depends on MACH_LGE
+    help
+      Support for keylock cmd using evdev.
+      If you need feature for keylock cmd using evdev, use this.
+
+config LGE_APPSPORT
+	tristate "LGE Appsport support"
+	default n
+	help
+	  This option enable device driver support for LGE Appsport.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

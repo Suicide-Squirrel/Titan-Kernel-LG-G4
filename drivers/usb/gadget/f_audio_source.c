@@ -576,6 +576,35 @@ static void audio_disable(struct usb_function *f)
 	}
 }
 
+#ifdef CONFIG_USB_LGE_AUDIO_DOCK
+static void audio_pcm_playback_stop(struct audio_dev *audio);
+static void audio_pcm_playback_start(struct audio_dev *audio);
+
+static void audio_suspend(struct usb_function *f)
+{
+	struct audio_dev	*audio = audio_source_func_to_audio(f);
+
+	pr_debug("audio_suspend\n");
+	audio_pcm_playback_stop(audio);
+	if (audio->audio_ep_enabled) {
+		usb_ep_disable(audio->in_ep);
+		audio->audio_ep_enabled = false;
+	}
+}
+
+static void audio_resume(struct usb_function *f)
+{
+	struct audio_dev	*audio = audio_source_func_to_audio(f);
+
+	pr_debug("audio_resume\n");
+	if (!audio->audio_ep_enabled) {
+		usb_ep_enable(audio->in_ep);
+		audio->audio_ep_enabled = true;
+	}
+	audio_pcm_playback_start(audio);
+}
+#endif
+
 /*-------------------------------------------------------------------------*/
 
 static void audio_build_desc(struct audio_dev *audio)
@@ -820,6 +849,10 @@ static struct audio_dev _audio_dev = {
 		.set_alt = audio_set_alt,
 		.setup = audio_setup,
 		.disable = audio_disable,
+#ifdef CONFIG_USB_LGE_AUDIO_DOCK
+		.suspend = audio_suspend,
+		.resume = audio_resume,
+#endif
 	},
 	.lock = __SPIN_LOCK_UNLOCKED(_audio_dev.lock),
 	.idle_reqs = LIST_HEAD_INIT(_audio_dev.idle_reqs),

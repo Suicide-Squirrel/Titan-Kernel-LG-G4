@@ -50,6 +50,7 @@ struct msm_camera_cci_client {
 	uint32_t timeout;
 	uint16_t retries;
 	uint16_t id_map;
+	bool  cci_acquired;	//LGE_CHANGE, jaehan.jeong, 2014.11.25, To see if cci is acquired
 };
 
 enum msm_cci_cmd_type {

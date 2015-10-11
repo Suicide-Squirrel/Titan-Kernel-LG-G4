@@ -55,6 +55,12 @@
 #define MSM_CAMERA_SUBDEV_SENSOR_INIT  14
 #define MSM_CAMERA_SUBDEV_OIS          15
 #define MSM_CAMERA_SUBDEV_FLASH        16
+/* LGE_CHANGE_S, proxy, 2014-09-16, byungsoo.moon@lge.com */
+#define MSM_CAMERA_SUBDEV_PROXY        17
+/* LGE_CHANGE_E, proxy, 2014-09-16, byungsoo.moon@lge.com */
+/* LGE_CHANGE_S, tcs, 2015-01-14, booil.park@lge.com */
+#define MSM_CAMERA_SUBDEV_TCS        18
+/* LGE_CHANGE_E, tcs, 2015-01-14, booil.park@lge.com */
 
 #define MSM_MAX_CAMERA_SENSORS  5
 

@@ -32,6 +32,7 @@
 #include <soc/qcom/clock-pll.h>
 #include <soc/qcom/clock-local2.h>
 #include <soc/qcom/clock-alpha-pll.h>
+#include <soc/qcom/clock-krait.h>
 
 #include <dt-bindings/clock/msm-clocks-8994.h>
 #include <dt-bindings/clock/msm-clocks-8992.h>
@@ -65,6 +66,7 @@ static char *base_names[] = {
 static void *vbases[NUM_BASES];
 u32 cci_phys_base = 0xF9112000;
 static void sanity_check_clock_tree(u32 regval, struct mux_clk *mux);
+static struct mux_clk a53_hf_mux_v2;
 
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner, NULL);
 
@@ -326,6 +328,7 @@ static int cpudiv_get_div(struct div_clk *divclk)
 
 	return regval + 1;
 }
+
 
 static void __cpudiv_set_div(struct div_clk *divclk, int div)
 {
@@ -1944,6 +1947,28 @@ static void low_power_mux_init(void)
 	idle_notifier_register(&clock_cpu_8994_idle_nb);
 }
 
+static int a53_speed, a57_speed;
+
+void set_a53_speed_bin(int speed)
+{
+	a53_speed = speed;
+}
+
+void set_a57_speed_bin(int speed)
+{
+	a57_speed = speed;
+}
+
+void get_a53_speed_bin(int *speed)
+{
+	*speed = a53_speed;
+}
+
+void get_a57_speed_bin(int *speed)
+{
+	*speed = a57_speed;
+}
+
 static int cpu_clock_8994_driver_probe(struct platform_device *pdev)
 {
 	int ret, cpu;
@@ -1986,6 +2011,8 @@ static int cpu_clock_8994_driver_probe(struct platform_device *pdev)
 	snprintf(a53speedbinstr, ARRAY_SIZE(a53speedbinstr),
 			"qcom,a53-speedbin%d-v%d", a53speedbin, pvs_ver);
 
+	set_a53_speed_bin(a53speedbin);
+
 	ret = of_get_fmax_vdd_class(pdev, &a53_clk.c, a53speedbinstr);
 	if (ret) {
 		dev_err(&pdev->dev, "Can't get speed bin for a53. Falling back to zero.\n");
@@ -1999,12 +2026,21 @@ static int cpu_clock_8994_driver_probe(struct platform_device *pdev)
 
 	if (v2) {
 		a57speedbin = pte_efuse & 0x7;
+#ifdef CONFIG_LGE_PM_DEBUG
+		#define RAW_PTE_OFFSET 0x04
+		pte_efuse = readl_relaxed(vbases[EFUSE_BASE]+RAW_PTE_OFFSET);
+		dev_info(&pdev->dev, "using A57 speed bin %u(%llu) and pvs_ver %d\n",
+			 a57speedbin, pte_efuse, pvs_ver);
+#else
 		dev_info(&pdev->dev, "using A57 speed bin %u and pvs_ver %d\n",
 			 a57speedbin, pvs_ver);
+#endif
 	}
 
 	snprintf(a57speedbinstr, ARRAY_SIZE(a57speedbinstr),
 			"qcom,a57-speedbin%d-v%d", a57speedbin, pvs_ver);
+
+	set_a57_speed_bin(a57speedbin);
 
 	ret = of_get_fmax_vdd_class(pdev, &a57_clk.c, a57speedbinstr);
 	if (ret) {

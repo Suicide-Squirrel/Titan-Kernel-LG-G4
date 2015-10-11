@@ -1265,17 +1265,10 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 			goto error_ulps;
 		}
 	} else {
-		/*
-		 * Enable DSI clamps only if entering idle power collapse or
-		 * when ULPS during suspend is enabled.
-		 */
-		if ((pdata->panel_info.blank_state != MDSS_PANEL_BLANK_BLANK) ||
-			pdata->panel_info.ulps_suspend_enabled) {
-			rc = mdss_dsi_clamp_ctrl(ctrl, 1);
-			if (rc)
-				pr_err("%s: Failed to enable dsi clamps. rc=%d\n",
-					__func__, rc);
-		}
+		rc = mdss_dsi_clamp_ctrl(ctrl, 1);
+		if (rc)
+			pr_err("%s: Failed to enable dsi clamps. rc=%d\n",
+				__func__, rc);
 
 		/*
 		 * disable bus clocks irrespective of whether dsi phy was

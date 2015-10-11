@@ -41,8 +41,8 @@
 #define DBG(f, x...) \
 	pr_debug(DRIVER_NAME " [%s()]: " f, __func__,## x)
 
-#if defined(CONFIG_LEDS_CLASS) || (defined(CONFIG_LEDS_CLASS_MODULE) && \
-	defined(CONFIG_MMC_SDHCI_MODULE))
+#if (defined(CONFIG_LEDS_CLASS) || (defined(CONFIG_LEDS_CLASS_MODULE) && \
+	defined(CONFIG_MMC_SDHCI_MODULE))) && !defined(CONFIG_MACH_LGE)
 #define SDHCI_USE_LEDS_CLASS
 #endif
 
@@ -351,7 +351,7 @@ static void sdhci_reinit(struct sdhci_host *host)
 	}
 	sdhci_enable_card_detection(host);
 }
-
+#if !defined(SDHCI_USE_LEDS_CLASS) && !defined(CONFIG_MACH_LGE)
 static void sdhci_activate_led(struct sdhci_host *host)
 {
 	u8 ctrl;
@@ -360,7 +360,6 @@ static void sdhci_activate_led(struct sdhci_host *host)
 	ctrl |= SDHCI_CTRL_LED;
 	sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
 }
-
 static void sdhci_deactivate_led(struct sdhci_host *host)
 {
 	u8 ctrl;
@@ -369,7 +368,7 @@ static void sdhci_deactivate_led(struct sdhci_host *host)
 	ctrl &= ~SDHCI_CTRL_LED;
 	sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
 }
-
+#endif
 #ifdef SDHCI_USE_LEDS_CLASS
 static void sdhci_led_control(struct led_classdev *led,
 	enum led_brightness brightness)
@@ -1554,6 +1553,8 @@ static int sdhci_enable(struct mmc_host *mmc)
 	sdhci_set_pmqos_req_type(host, true);
 	pm_qos_update_request(&host->pm_qos_req_dma,
 		host->cpu_dma_latency_us[host->pm_qos_index]);
+	if (host->pm_qos_req_dma.type == PM_QOS_REQ_AFFINE_CORES)
+		irq_set_affinity(host->irq, &host->pm_qos_req_dma.cpus_affine);
 
 platform_bus_vote:
 	if (host->ops->platform_bus_voting)
@@ -1750,7 +1751,7 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	WARN_ON(host->mrq != NULL);
 
-#ifndef SDHCI_USE_LEDS_CLASS
+#if !defined(SDHCI_USE_LEDS_CLASS) && !defined(CONFIG_MACH_LGE)
 	sdhci_activate_led(host);
 #endif
 
@@ -2772,7 +2773,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 	host->data = NULL;
 	host->auto_cmd_err_sts = 0;
 
-#ifndef SDHCI_USE_LEDS_CLASS
+#if !defined(SDHCI_USE_LEDS_CLASS) && !defined(CONFIG_MACH_LGE)
 	sdhci_deactivate_led(host);
 #endif
 
@@ -2796,6 +2797,14 @@ static void sdhci_timeout_timer(unsigned long data)
 		if (!host->mrq->cmd->ignore_timeout) {
 			pr_err("%s: Timeout waiting for hardware interrupt.\n",
 			       mmc_hostname(host->mmc));
+#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
+			if (!strcmp(mmc_hostname(host->mmc), "mmc2") && host->mmc->ios.clock == 0) {
+				pr_err("Timeout waiting for hardware interrupt. nothing to do return\n");
+				mmiowb();
+				spin_unlock_irqrestore(&host->lock, flags);
+				return;
+			}
+#endif
 			if (host->data)
 				sdhci_show_adma_error(host);
 			else

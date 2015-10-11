@@ -138,12 +138,12 @@ void __weak arch_release_thread_info(struct thread_info *ti)
 }
 
 #ifndef CONFIG_ARCH_THREAD_INFO_ALLOCATOR
-
 /*
  * Allocate pages if THREAD_SIZE is >= PAGE_SIZE, otherwise use a
  * kmemcache based allocator.
  */
 # if THREAD_SIZE >= PAGE_SIZE
+#ifdef	DONT_USE_THREAD_INFO_MEMPOOL
 static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
 						  int node)
 {
@@ -157,6 +157,44 @@ static inline void free_thread_info(struct thread_info *ti)
 {
 	free_memcg_kmem_pages((unsigned long)ti, THREAD_SIZE_ORDER);
 }
+#else
+static mempool_t	*thread_info_pool;
+
+static void *mempool_alloc_pages_noswap(gfp_t gfp_mask, void *pool_data)
+{
+	int order = (int)(long)pool_data;
+	if (!(gfp_mask & __GFP_WAIT))
+		gfp_mask |= __GFP_NO_KSWAPD;
+	return alloc_pages(gfp_mask, order);
+}
+
+static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
+						  int node)
+{
+	struct page *page = mempool_alloc(thread_info_pool, THREADINFO_GFP_ACCOUNTED);
+
+	return page ? page_address(page) : NULL;
+}
+static inline void free_thread_info(struct thread_info *ti)
+{
+	mempool_free((void *)virt_to_page((unsigned long)ti), thread_info_pool);
+}
+
+static  __init int thread_info_pool_init(int init_reserved_alloc_nr)
+{
+	thread_info_pool = mempool_create_node(	init_reserved_alloc_nr,
+						mempool_alloc_pages_noswap, mempool_free_pages,
+						(void *)THREAD_SIZE_ORDER,
+						GFP_KERNEL, NUMA_NO_NODE);
+
+	return thread_info_pool ? true : false;
+}
+void __init thread_info_cache_init(void)
+{
+	thread_info_pool_init(768);
+	BUG_ON(thread_info_pool == NULL);
+}
+#endif
 # else
 static struct kmem_cache *thread_info_cache;
 
@@ -1802,7 +1840,6 @@ static int unshare_fs(unsigned long unshare_flags, struct fs_struct **new_fsp)
 
 	return 0;
 }
-
 /*
  * Unshare file descriptor table if it is being shared
  */

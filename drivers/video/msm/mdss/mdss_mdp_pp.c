@@ -23,6 +23,21 @@
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
 
+#if defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
+struct mdp_csc_cfg mdp_csc_convert_wideband = {
+	0,
+	{
+		0x0200, 0x0000, 0x02CD,
+		0x0200, 0xFF4F, 0xFE91,
+		0x0200, 0x038B, 0x0000,
+	},
+	{ 0x0, 0xFF80, 0xFF80,},
+	{ 0x0, 0x0, 0x0,},
+	{ 0x0, 0xFF, 0x0, 0xFF, 0x0, 0xFF,},
+	{ 0x0, 0xFF, 0x0, 0xFF, 0x0, 0xFF,},
+};
+#endif
+
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 	[MDSS_MDP_CSC_RGB2RGB] = {
 		0,
@@ -73,6 +88,45 @@ struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 	},
 };
+
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined(CONFIG_LGE_BROADCAST_ISDBT_JAPAN)
+struct mdp_csc_cfg dmb_csc_convert = {
+#if defined(CONFIG_MACH_MSM8992_P1_KR)
+	0,
+	{
+		0x0236, 0x0000, 0x0331,	/*283*/
+		0x025c, 0xff37, 0xfe60,	/*302*/
+		0x0276, 0x0409, 0x0000,	/*315*/
+	},
+	{ 0xfff0, 0xff80, 0xff80,},
+	{ 0x0, 0x0, 0x0,},
+	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+#elif defined(CONFIG_MACH_MSM8992_P1_KDDI_JP)
+	0,
+	{
+		0x0252, 0x0000, 0x0331,
+		0x0234, 0xff37, 0xfe60,
+		0x0272, 0x0409, 0x0000,
+	},
+	{ 0xfff0, 0xff80, 0xff80,},
+	{ 0x0, 0x0, 0x0,},
+	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+#else
+	0,
+	{
+		0x0254, 0x0000, 0x0331,
+		0x0254, 0xff37, 0xfe60,
+		0x0254, 0x0409, 0x0000,
+	},
+	{ 0xfff0, 0xff80, 0xff80,},
+	{ 0x0, 0x0, 0x0,},
+	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+#endif
+};
+#endif /* LGE_BROADCAST */
 
 /*
  * To program a linear LUT we need to make the slope to be 1/16 to enable
@@ -350,6 +404,22 @@ struct mdss_pp_res_type {
 
 static DEFINE_MUTEX(mdss_pp_mutex);
 static struct mdss_pp_res_type *mdss_pp_res;
+
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined(CONFIG_LGE_BROADCAST_ISDBT_JAPAN)
+static int dmb_status; // on - 1, off - 0
+int pp_set_dmb_status(int flag) {
+	dmb_status = flag;
+	return 0;
+}
+#endif /* LGE_BROADCAST */
+
+#if defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
+static int cam_preview_tune_status; // on - 1, off - 0
+int pp_set_cam_preview_tune_status(int flag) {
+	cam_preview_tune_status = flag;
+	return 0;
+}
+#endif /* LGE_CAM_PREVIEW_TUNE */
 
 static u32 pp_hist_read(char __iomem *v_addr,
 				struct pp_hist_col_info *hist_info);
@@ -886,8 +956,28 @@ static int pp_vig_pipe_setup(struct mdss_mdp_pipe *pipe, u32 *op)
 			 * is a previously configured pipe need to re-configure
 			 * CSC matrix
 			 */
-			mdss_mdp_csc_setup(MDSS_MDP_BLOCK_SSPP, pipe->num,
-					   MDSS_MDP_CSC_YUV2RGB);
+#if !defined(CONFIG_LGE_BROADCAST_TDMB) && !defined(CONFIG_LGE_BROADCAST_ISDBT_JAPAN)
+#if !defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
+			mdss_mdp_csc_setup(MDSS_MDP_BLOCK_SSPP, pipe->num, MDSS_MDP_CSC_YUV2RGB);
+#else
+			if(cam_preview_tune_status == 1) {
+				mdss_mdp_csc_setup_data(MDSS_MDP_BLOCK_SSPP, pipe->num, &mdp_csc_convert_wideband);
+			} else {
+				mdss_mdp_csc_setup(MDSS_MDP_BLOCK_SSPP, pipe->num, MDSS_MDP_CSC_YUV2RGB);
+			}
+#endif
+#else
+#if defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
+			if(cam_preview_tune_status == 1) {
+				mdss_mdp_csc_setup_data(MDSS_MDP_BLOCK_SSPP, pipe->num, &mdp_csc_convert_wideband);
+			} else
+#endif
+			if (dmb_status == 1) {
+				mdss_mdp_csc_setup_data(MDSS_MDP_BLOCK_SSPP, pipe->num, &dmb_csc_convert);
+			} else {
+				mdss_mdp_csc_setup(MDSS_MDP_BLOCK_SSPP, pipe->num, MDSS_MDP_CSC_YUV2RGB);
+			}
+#endif /* LGE_BROADCAST */
 		}
 	}
 
@@ -2153,6 +2243,7 @@ int mdss_mdp_pp_init(struct device *dev)
 			init_completion(&vig[i].pp_res.hist.first_kick);
 		}
 	}
+
 exit_err:
 	mutex_unlock(&mdss_pp_mutex);
 	return ret;

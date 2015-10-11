@@ -112,7 +112,7 @@ static inline unsigned ncm_bitrate(struct usb_gadget *g)
  * to NCM's dwNtbInMaxSize to save bus bandwidth
  */
 
-#define	MAX_TX_NONFIXED		(512 * 3)
+#define	MAX_TX_NONFIXED		(512 * 4)
 
 #define FORMATS_SUPPORTED	(USB_CDC_NCM_NTB16_SUPPORTED |	\
 				 USB_CDC_NCM_NTB32_SUPPORTED)
@@ -724,6 +724,10 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		value = w_length > sizeof ntb_parameters ?
 			sizeof ntb_parameters : w_length;
 		memcpy(req->buf, &ntb_parameters, value);
+#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+		((struct usb_cdc_ncm_ntb_parameters *)(req->buf))->dwNtbOutMaxSize =
+			cpu_to_le32(NTB_OUT_SIZE-1);
+#endif
 		VDBG(cdev, "Host asked NTB parameters\n");
 		break;
 
@@ -917,6 +921,9 @@ static int ncm_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 			 */
 			ncm->port.is_zlp_ok = !(
 				gadget_is_musbhdrc(cdev->gadget)
+#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+				|| gadget_is_dwc3(cdev->gadget)
+#endif
 				);
 			ncm->port.cdc_filter = DEFAULT_FILTER;
 			DBG(cdev, "activate ncm\n");
@@ -983,9 +990,13 @@ static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 		return NULL;
 	}
 
+	skb2 = skb_realloc_headroom(skb, ncb_len);
+
+	#if 0
 	skb2 = skb_copy_expand(skb, ncb_len,
 			       max_size - skb->len - ncb_len - crc_len,
 			       GFP_ATOMIC);
+#endif
 	dev_kfree_skb_any(skb);
 	if (!skb2)
 		return NULL;
@@ -1024,6 +1035,7 @@ static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 				skb->data + ncb_len,
 				skb->len - ncb_len);
 		put_unaligned_le32(crc, skb->data + skb->len);
+		pr_err("CRC is 1\n");
 		skb_put(skb, crc_len);
 	}
 
@@ -1033,9 +1045,11 @@ static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 	put_ncm(&tmp, opts->dgram_item_len, skb->len - ncb_len);
 	/* (d)wDatagramIndex[1] and  (d)wDatagramLength[1] already zeroed */
 
-	if (skb->len > MAX_TX_NONFIXED)
+	if (skb->len > MAX_TX_NONFIXED) {
+		pr_err("skb put in memset\n");
 		memset(skb_put(skb, max_size - skb->len),
 		       0, max_size - skb->len);
+	}
 
 	return skb;
 }
@@ -1439,3 +1453,82 @@ int ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 		kfree(ncm);
 	return status;
 }
+#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+static struct delayed_work start_work;
+
+static const struct file_operations ncm_fops = {
+	.owner = THIS_MODULE,
+};
+
+static struct miscdevice ncm_device = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "usb_ncm",
+	.fops = &ncm_fops,
+};
+
+static int ncm_ctrlrequest(struct usb_composite_dev *cdev,
+		const struct usb_ctrlrequest *ctrl)
+{
+	int value = -EOPNOTSUPP;
+	u8 b_requestType = ctrl->bRequestType;
+	u8 b_request = ctrl->bRequest;
+	u16 w_index = le16_to_cpu(ctrl->wIndex);
+	u16 w_value = le16_to_cpu(ctrl->wValue);
+	u16 w_length = le16_to_cpu(ctrl->wLength);
+
+	if (b_requestType == (USB_DIR_OUT | USB_TYPE_VENDOR)) {
+		if (ctrl->bRequest == 0xf0) {
+			pr_err("ncm_ctrlrequest %02x.%02x v%04x i%04x l%u\n",
+					b_requestType, b_request,
+					w_value, w_index, w_length);
+			value = 0;
+			schedule_delayed_work(&start_work,
+					msecs_to_jiffies(10));
+		}
+	}
+
+	if (value >= 0) {
+		cdev->req->zero = 0;
+		cdev->req->length = value;
+		value = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
+		if (value < 0)
+			ERROR(cdev, "%s setup response queue error\n",
+					__func__);
+	}
+
+	if (value == -EOPNOTSUPP)
+		VDBG(cdev,
+			"unknown class-specific req %02x.%02x v%04x i%04x l%u\n"
+			, ctrl->bRequestType, ctrl->bRequest
+			, w_value, w_index, w_length);
+	return value;
+}
+
+static void ncm_start_work(struct work_struct *data)
+{
+	char *envp[2] = { "NCM=START", NULL };
+	kobject_uevent_env(&ncm_device.this_device->kobj, KOBJ_CHANGE, envp);
+}
+
+static int ncm_init(void)
+{
+	int ret;
+
+	INIT_DELAYED_WORK(&start_work, ncm_start_work);
+
+	ret = misc_register(&ncm_device);
+	if (ret)
+		goto err;
+
+	return 0;
+
+err:
+	pr_err("USB ncm gadget driver failed to initialize\n");
+	return ret;
+}
+
+static void ncm_cleanup(void)
+{
+	misc_deregister(&ncm_device);
+}
+#endif

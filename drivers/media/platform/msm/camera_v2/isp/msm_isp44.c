@@ -251,7 +251,7 @@ static void msm_vfe44_init_hardware_reg(struct vfe_device *vfe_dev)
 	msm_camera_io_w_mb(0xFFFFFFFF, vfe_dev->vfe_base + 0x2C);
 	msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w_mb(0xFFFFFFFF, vfe_dev->vfe_base + 0x34);
-	msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x24);
+	msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x24);/*LGCHANGE,QCT Patch camif error*/
 
 }
 
@@ -374,6 +374,7 @@ static void msm_vfe44_process_error_status(struct vfe_device *vfe_dev)
 	if (error_status1 & (1 << 0)) {
 		pr_err("%s: camif error status: 0x%x\n",
 			__func__, vfe_dev->error_info.camif_status);
+		/*LGCHANGE,QCT Patch for camif error 15.03.24*/
 		msm_camera_io_dump_2(vfe_dev->vfe_base + 0x2f4, 0x30);
 	}
 	if (error_status1 & (1 << 1))
@@ -461,18 +462,20 @@ static void msm_vfe44_process_error_status(struct vfe_device *vfe_dev)
 static void msm_vfe44_read_irq_status(struct vfe_device *vfe_dev,
 	uint32_t *irq_status0, uint32_t *irq_status1)
 {
+	/*LGCHANGE_S,QCT Patch for camif error 15.03.24*/
 	uint32_t irq_mask0 = 0, irq_mask1 = 0;
 	irq_mask0 = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
 	irq_mask1 = msm_camera_io_r(vfe_dev->vfe_base + 0x2C);
-
+    /*LGCHANGE_E,QCT Patch for camif error 15.03.24*/
 	*irq_status0 = msm_camera_io_r(vfe_dev->vfe_base + 0x38);
 	*irq_status1 = msm_camera_io_r(vfe_dev->vfe_base + 0x3C);
-
 	msm_camera_io_w(*irq_status0, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w(*irq_status1, vfe_dev->vfe_base + 0x34);
 	msm_camera_io_w_mb(1, vfe_dev->vfe_base + 0x24);
+	/*LGCHANGE_S,QCT Patch for camif error 15.03.24*/
 	*irq_status0 &= irq_mask0;
 	*irq_status1 &= irq_mask1;
+	/*LGCHANGE_E,QCT Patch for camif error 15.03.24*/
 	if (*irq_status0 & 0x10000000) {
 		pr_err_ratelimited("%s: Protection triggered\n", __func__);
 		*irq_status0 &= ~(0x10000000);
@@ -503,7 +506,7 @@ static void msm_vfe44_process_reg_update(struct vfe_device *vfe_dev,
 	for (i = VFE_PIX_0; i <= VFE_RAW_2; i++) {
 		if (shift_irq & BIT(i)) {
 			vfe_dev->axi_data.reg_update_requested &= ~BIT(i);
-			ISP_DBG("%s update_mask %x\n", __func__,
+			ISP_DBG("%s vfe_id %d update_mask %x\n", __func__, vfe_dev->pdev->id,
 				(uint32_t)BIT(i));
 			switch (i) {
 			case VFE_PIX_0:
@@ -553,7 +556,7 @@ static void msm_vfe44_process_epoch_irq(struct vfe_device *vfe_dev,
 
 	if (irq_status0 & BIT(2)) {
 		msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
-		ISP_DBG("%s: EPOCH0 IRQ\n", __func__);
+		ISP_DBG("%s: vfe_id %d EPOCH0 IRQ\n", __func__, vfe_dev->pdev->id);
 		msm_isp_update_framedrop_reg(vfe_dev, VFE_PIX_0);
 		msm_isp_update_stats_framedrop_reg(vfe_dev);
 		msm_isp_update_error_frame_count(vfe_dev);
@@ -1056,14 +1059,17 @@ static void msm_vfe44_update_camif_state(struct vfe_device *vfe_dev,
 		return;
 
 	if (update_state == ENABLE_CAMIF) {
+		/*LGCHANGE_S,QCT Patch for camif error 15.03.24*/
 		msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x30);
 		msm_camera_io_w_mb(0xFFFFFFFF, vfe_dev->vfe_base + 0x34);
 		msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x24);
-
+		/*LGCHANGE_E,QCT Patch for camif error 15.03.24*/
 		val = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
+		/*LGCHANGE_S,QCT Patch for camif error 15.03.24*/
+		/*val |= 0xF5;*/
 		val |= 0xF7;
 		msm_camera_io_w_mb(val, vfe_dev->vfe_base + 0x28);
-		msm_camera_io_w_mb(0x140000, vfe_dev->vfe_base + 0x318);
+		msm_camera_io_w_mb(0x140000, vfe_dev->vfe_base + 0x318); //LGCHANGE,QCT Patch(Preview half separated with Dual ISP fix case 01934126), 2015-03-12, soyoung77.park@lge.com
 
 		bus_en =
 			((vfe_dev->axi_data.
@@ -1077,7 +1083,7 @@ static void msm_vfe44_update_camif_state(struct vfe_device *vfe_dev,
 		msm_camera_io_w(val, vfe_dev->vfe_base + 0x2F8);
 		msm_camera_io_w_mb(0x4, vfe_dev->vfe_base + 0x2F4);
 		msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x2F4);
-
+		//msm_camera_io_w_mb(0x200, vfe_dev->vfe_base + 0x318); //LGCHANGE,QCT Patch(Preview half separated with Dual ISP fix case 01934126), 2015-03-12, soyoung77.park@lge.com
 		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 1;
 	} else if (update_state == DISABLE_CAMIF) {
 		msm_camera_io_w_mb(0x0, vfe_dev->vfe_base + 0x2F4);
@@ -1388,7 +1394,7 @@ static int msm_vfe44_axi_restart(struct vfe_device *vfe_dev,
 	msm_camera_io_w(0x7FFFFFFF, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w(0xFEFFFEFF, vfe_dev->vfe_base + 0x34);
 	msm_camera_io_w(0x1, vfe_dev->vfe_base + 0x24);
-	msm_camera_io_w_mb(0x140000, vfe_dev->vfe_base + 0x318);
+	msm_camera_io_w_mb(0x140000, vfe_dev->vfe_base + 0x318);  //LGCHANGE,QCT Patch(Preview half separated with Dual ISP fix case 01934126), 2015-03-12, soyoung77.park@lge.com
 
 	/* Start AXI */
 	msm_camera_io_w(0x0, vfe_dev->vfe_base + 0x2C0);

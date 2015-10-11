@@ -182,6 +182,10 @@ int msm_isp_update_bandwidth(enum msm_isp_hw_client client,
 				isp_bandwidth_mgr.client_info[i].ib;
 		}
 	}
+	/*LGE_CHANGE_S, ab / ib sync up with FC and PreCS by QCT to reduce power consumption, 2015-03-10, hyunuk.park@lge.com */
+	#if 0
+	#endif
+	/*LGE_CHANGE_E, ab / ib sync up with FC and PreCS by QCT to reduce power consumption, 2015-03-10, hyunuk.park@lge.com */
 	msm_bus_scale_client_update_request(isp_bandwidth_mgr.bus_client,
 		isp_bandwidth_mgr.bus_vector_active_idx);
 	/* Insert into circular buffer */
@@ -1034,6 +1038,9 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			pr_err("%s: VFE_CFG_MASK: Invalid length\n", __func__);
 			return -EINVAL;
 		}
+
+        mutex_lock(&vfe_dev->core_mutex); /* LGE_CHANGE, fixed split preview - Case01988342, 2015-05-27, ejoon.kim@lge.com*/
+
 		temp = msm_camera_io_r(vfe_dev->vfe_base +
 			reg_cfg_cmd->u.mask_info.reg_offset);
 
@@ -1041,6 +1048,9 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 		temp |= reg_cfg_cmd->u.mask_info.val;
 		msm_camera_io_w(temp, vfe_dev->vfe_base +
 			reg_cfg_cmd->u.mask_info.reg_offset);
+
+        mutex_unlock(&vfe_dev->core_mutex); /* LGE_CHANGE, fixed split preview - Case01988342, 2015-05-27, ejoon.kim@lge.com*/
+
 		break;
 	}
 	case VFE_WRITE_DMI_16BIT:
@@ -1833,35 +1843,25 @@ static int msm_vfe_iommu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token)
 {
 	struct vfe_device *vfe_dev = NULL;
-	int rc = -ENOSYS;
 
 	if (token) {
 		vfe_dev = (struct vfe_device *)token;
 		msm_isp_axi_disable_all_wm(vfe_dev);
 		msm_isp_stats_disable(vfe_dev);
-		/* VFE_SRC_MAX will call reg update on all stream src */
-		vfe_dev->hw_info->vfe_ops.core_ops.reg_update(vfe_dev,
-			VFE_SRC_MAX);
 		if (!vfe_dev->buf_mgr || !vfe_dev->buf_mgr->ops) {
 			pr_err("%s:%d] buf_mgr %p\n", __func__,
 				__LINE__, vfe_dev->buf_mgr);
 			goto end;
 		}
-		if (!vfe_dev->buf_mgr->pagefault_debug) {
-			vfe_dev->buf_mgr->pagefault_debug = 1;
+		if (!vfe_dev->buf_mgr->pagefault_debug)
 			msm_isp_enqueue_tasklet_cmd(vfe_dev, 0, 0, 1);
-		} else {
-			/* Page fault previously handled, avoid flooding logs*/
-			rc = 0;
-			goto end;
-		}
 	} else {
 		ISP_DBG("%s:%d] no token received: %p\n",
 			__func__, __LINE__, token);
 		goto end;
 	}
 end:
-	return rc;
+	return -ENOSYS;
 }
 
 int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)

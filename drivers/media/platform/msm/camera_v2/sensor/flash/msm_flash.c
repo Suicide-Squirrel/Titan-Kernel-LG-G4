@@ -489,7 +489,8 @@ static int32_t msm_flash_low(
 		if (flash_ctrl->torch_trigger[i]) {
 			max_current = flash_ctrl->torch_max_current[i];
 			if (flash_data->flash_current[i] >= 0 &&
-				flash_data->flash_current[i] <
+			    /* LGE support MAX current*/
+				flash_data->flash_current[i] <=
 				max_current) {
 				curr = flash_data->flash_current[i];
 			} else {
@@ -525,7 +526,8 @@ static int32_t msm_flash_high(
 		if (flash_ctrl->flash_trigger[i]) {
 			max_current = flash_ctrl->flash_max_current[i];
 			if (flash_data->flash_current[i] >= 0 &&
-				flash_data->flash_current[i] <
+				/* LGE support MAX current*/
+				flash_data->flash_current[i] <=
 				max_current) {
 				curr = flash_data->flash_current[i];
 			} else {
@@ -571,7 +573,15 @@ static int32_t msm_flash_config(struct msm_flash_ctrl_t *flash_ctrl,
 	mutex_lock(flash_ctrl->flash_mutex);
 
 	CDBG("Enter %s type %d\n", __func__, flash_data->cfg_type);
-
+/* LGE_CHANGE_S, jaehan.jeong, 2014.11.25, To avoid kernel crash when func_tbl is null, [STARTS HERE] */
+	if (flash_data->cfg_type != CFG_FLASH_INIT
+		&& flash_ctrl->flash_state != MSM_CAMERA_FLASH_INIT) {
+		pr_err("%s:%d flash_state= %d cfg_type= %d, returned!!",__func__, __LINE__, flash_ctrl->flash_state
+			, flash_data->cfg_type);
+		mutex_unlock(flash_ctrl->flash_mutex);
+		return -EFAULT;
+	}
+/* LGE_CHANGE_E, jaehan.jeong, 2014.11.25, To avoid kernel crash when func_tbl is null,  [ENDS HERE] */
 	switch (flash_data->cfg_type) {
 	case CFG_FLASH_INIT:
 		rc = msm_flash_init(flash_ctrl, flash_data);
@@ -587,6 +597,8 @@ static int32_t msm_flash_config(struct msm_flash_ctrl_t *flash_ctrl,
 				flash_ctrl, flash_data);
 		break;
 	case CFG_FLASH_LOW:
+	/* LGE support Torch to record */
+	case CFG_FLASH_TORCH:
 		if (flash_ctrl->flash_state == MSM_CAMERA_FLASH_INIT)
 			rc = flash_ctrl->func_tbl->camera_flash_low(
 				flash_ctrl, flash_data);

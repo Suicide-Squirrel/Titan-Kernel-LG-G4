@@ -2119,7 +2119,11 @@ EXPORT_SYMBOL(qpnp_adc_tm_disable_chan_meas);
 int32_t qpnp_adc_tm_usbid_configure(struct qpnp_adc_tm_chip *chip,
 				struct qpnp_adc_tm_btm_param *param)
 {
+#ifdef CONFIG_LGE_PM_USB_ID
+	param->channel = LR_MUX10_USB_ID_LV;
+#else
 	param->channel = LR_MUX10_PU2_AMUX_USB_ID_LV;
+#endif
 	return qpnp_adc_tm_channel_measure(chip, param);
 }
 EXPORT_SYMBOL(qpnp_adc_tm_usbid_configure);

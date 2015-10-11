@@ -266,6 +266,10 @@ struct msm_mctl_post_proc_cmd {
 #define MSM_CAMERA_LED_HIGH 2
 #define MSM_CAMERA_LED_INIT 3
 #define MSM_CAMERA_LED_RELEASE 4
+/* LGE: For torch, Video recording */
+#define MSM_CAMERA_LED_TORCH 5
+
+
 
 #define MSM_CAMERA_STROBE_FLASH_NONE 0
 #define MSM_CAMERA_STROBE_FLASH_XENON 1
@@ -1599,6 +1603,10 @@ enum msm_camera_vreg_name_t {
 	CAM_VIO,
 	CAM_VANA,
 	CAM_VAF,
+/* LGE_CHANGE_S, Add OISVDD*/
+	CAM_OISVDD,
+	CAM_OISDVDD,
+/* LGE_CHANGE_E, Add OISVDD*/
 	CAM_VREG_MAX,
 };
 

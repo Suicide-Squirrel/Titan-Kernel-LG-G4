@@ -405,7 +405,7 @@ static int qpnp_pon_reset_config(struct qpnp_pon *pon,
 			"Unable to write to addr=%hx, rc(%d)\n",
 			rst_en_reg, rc);
 
-	dev_dbg(&pon->spmi->dev, "power off type = 0x%02X\n", type);
+	dev_info(&pon->spmi->dev, "power off type = 0x%02X\n", type);
 	return rc;
 }
 
@@ -640,6 +640,10 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 					cfg->key_code, pon_rt_sts);
 	key_status = pon_rt_sts & pon_rt_bit;
 
+#ifdef CONFIG_LGE_PM_DEBUG
+	pr_err("%s: code(%d), value(%d)\n",
+			__func__, cfg->key_code, key_status);
+#endif
 	/* simulate press event in case release event occured
 	 * without a press event
 	 */

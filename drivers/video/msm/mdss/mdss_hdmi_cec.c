@@ -571,7 +571,10 @@ static ssize_t hdmi_rda_cec_enable_compliance(struct device *dev,
 		DEV_ERR("%s: Invalid cec_ctrl\n", __func__);
 		return -EPERM;
 	}
-
+	if (!cec_ctrl->cec_engine_configed) {
+		pr_err("CEC engine is not configured !!!\n");
+		return -EPERM;
+	}
 	spin_lock_irqsave(&cec_ctrl->lock, flags);
 	ret = snprintf(buf, PAGE_SIZE, "%d\n",
 		cec_ctrl->compliance_response_enabled);

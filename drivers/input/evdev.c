@@ -89,6 +89,39 @@ static void __pass_event(struct evdev_client *client,
 	}
 }
 
+#if defined(CONFIG_LGE_EVENT_LOCK)
+bool is_event_locked;
+
+void evdev_set_event_lock(bool lock)
+{
+	is_event_locked = lock;
+}
+EXPORT_SYMBOL(evdev_set_event_lock);
+
+bool evdev_get_event_lock(void)
+{
+	return is_event_locked;
+}
+EXPORT_SYMBOL(evdev_get_event_lock);
+
+#define IS_EVENT(_event, _type, _code) \
+	((_event)->type == _type && (_event)->code == _code)
+
+static void __pass_event_locked(struct evdev_client *client,
+		struct input_event *event)
+{
+	static struct input_event last_event;
+
+	if (IS_EVENT(event, EV_SYN, SYN_REPORT))
+		if (IS_EVENT(&last_event, EV_KEY, KEY_POWER)) {
+			__pass_event(client, &last_event);
+			__pass_event(client, event);
+		}
+
+	last_event = *event;
+}
+#endif
+
 static void evdev_pass_values(struct evdev_client *client,
 			const struct input_value *vals, unsigned int count,
 			ktime_t mono, ktime_t real)
@@ -108,6 +141,12 @@ static void evdev_pass_values(struct evdev_client *client,
 		event.type = v->type;
 		event.code = v->code;
 		event.value = v->value;
+
+#if defined(CONFIG_LGE_EVENT_LOCK)
+		if (is_event_locked)
+			__pass_event_locked(client, &event);
+		else
+#endif
 		__pass_event(client, &event);
 		if (v->type == EV_SYN && v->code == SYN_REPORT)
 			wakeup = true;

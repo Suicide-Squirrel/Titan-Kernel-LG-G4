@@ -292,6 +292,15 @@ struct mdss_data_type {
 
 	u64 ab[MDSS_MAX_BUS_CLIENTS];
 	u64 ib[MDSS_MAX_BUS_CLIENTS];
+#ifdef CONFIG_LGE_VSYNC_SKIP
+	char enable_skip_vsync;
+	ulong skip_value;
+	ulong weight;
+	ulong bucket;
+	ulong skip_count;
+	int skip_ratio;
+	bool skip_first;
+#endif
 };
 extern struct mdss_data_type *mdss_res;
 

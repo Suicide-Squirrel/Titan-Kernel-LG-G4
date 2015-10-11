@@ -19,6 +19,9 @@
 #include <linux/power_supply.h>
 #include <linux/thermal.h>
 #include "power_supply.h"
+#ifdef CONFIG_LGE_PM_CHARGER_CONTROLLER
+#include "charger-controller.h"
+#endif
 
 /* exported for the APM Power driver, APM emulation */
 struct class *power_supply_class;
@@ -51,6 +54,21 @@ static bool __power_supply_is_supplied_by(struct power_supply *supplier,
 
 	return false;
 }
+
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+int power_supply_set_floated_charger(struct power_supply *psy,
+				int is_float)
+{
+	const union power_supply_propval ret = {is_float,};
+
+	if (psy->set_event_property)
+		return psy->set_event_property(psy, POWER_SUPPLY_PROP_FLOATED_CHARGER,
+								&ret);
+
+	return -ENXIO;
+}
+EXPORT_SYMBOL_GPL(power_supply_set_floated_charger);
+#endif
 
 /**
  * power_supply_set_voltage_limit - set current limit
@@ -310,7 +328,9 @@ void power_supply_changed(struct power_supply *psy)
 	unsigned long flags;
 
 	dev_dbg(psy->dev, "%s\n", __func__);
-
+#ifdef CONFIG_LGE_PM_CHARGER_CONTROLLER
+	notify_charger_controller(psy, 1);
+#endif
 	spin_lock_irqsave(&psy->changed_lock, flags);
 	psy->changed = true;
 	pm_stay_awake(psy->dev);

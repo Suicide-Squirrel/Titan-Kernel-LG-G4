@@ -104,7 +104,6 @@
 		qcom,mdss-has-source-split;
 		qcom,mdss-has-dst-split;
 		qcom,mdss-highest-bank-bit = <0x3>;
-		qcom,mdss-has-bwc;
 
 		clocks = <&clock_mmss clk_mdss_ahb_clk>,
 			 <&clock_mmss clk_mdss_axi_clk>,
@@ -465,7 +464,7 @@
 		clock-names = "mdp_core_clk", "iface_clk",
 				"core_clk", "alt_iface_clk", "extp_clk";
 
-		qcom,hdmi-tx-hpd = <&pm8994_mpps 4 0>;
+		/delete-property/ qcom,hdmi-tx-hpd;
 		qcom,mdss-fb-map = <&mdss_fb1>;
 		hdmi_audio: qcom,msm-hdmi-audio-rx {
 			compatible = "qcom,msm-hdmi-audio-codec-rx";

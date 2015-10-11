@@ -17,6 +17,8 @@
 
 #define RESOLUTION_NAME_STR_LEN 30
 
+static struct msm_hdmi_mode_timing_info
+	hdmi_supported_video_mode_lut[HDMI_VFRMT_MAX];
 static char res_buf[RESOLUTION_NAME_STR_LEN];
 
 static struct msm_hdmi_mode_timing_info hdmi_resv_timings[
@@ -205,23 +207,22 @@ int hdmi_get_supported_mode(struct msm_hdmi_mode_timing_info *info,
 
 const char *msm_hdmi_mode_2string(u32 mode)
 {
-	static struct msm_hdmi_mode_timing_info ri = {0};
+	static struct msm_hdmi_mode_timing_info *ri;
 	char *aspect_ratio;
 
-	if (mode >= HDMI_VFRMT_MAX)
+	if (mode >= HDMI_VFRMT_MAX){
 		return "???";
+	}
 
-	if (hdmi_get_supported_mode(&ri, NULL, mode))
-		return "???";
-
+	ri = &hdmi_supported_video_mode_lut[mode];
 	memset(res_buf, 0, sizeof(res_buf));
 
-	if (!ri.supported) {
+	if (!ri->supported) {
 		snprintf(res_buf, RESOLUTION_NAME_STR_LEN, "%d", mode);
 		return res_buf;
 	}
 
-	switch (ri.ar) {
+	switch (ri->ar) {
 	case HDMI_RES_AR_4_3:
 		aspect_ratio = "4/3";
 		break;
@@ -239,8 +240,8 @@ const char *msm_hdmi_mode_2string(u32 mode)
 	};
 
 	snprintf(res_buf, RESOLUTION_NAME_STR_LEN, "%dx%d %s%dHz %s",
-		ri.active_h, ri.active_v, ri.interlaced ? "i" : "p",
-		ri.refresh_rate / 1000, aspect_ratio);
+		ri->active_h, ri->active_v, ri->interlaced ? "i" : "p",
+		ri->refresh_rate / 1000, aspect_ratio);
 
 	return res_buf;
 }
@@ -314,6 +315,25 @@ exit:
 
 	return vic;
 } /* hdmi_get_video_id_code */
+
+/* Table indicating the video format supported by the HDMI TX Core */
+/* Valid pclk rates (Mhz): 25.2, 27, 27.03, 74.25, 148.5, 268.5, 297 */
+void hdmi_setup_video_mode_lut(void)
+{
+	MSM_HDMI_MODES_INIT_TIMINGS(hdmi_supported_video_mode_lut);
+
+	/* Add all supported CEA modes to the lut */
+	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
+		hdmi_supported_video_mode_lut, MSM_HDMI_MODES_CEA);
+
+	/* Add all supported extended hdmi modes to the lut */
+	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
+		hdmi_supported_video_mode_lut, MSM_HDMI_MODES_XTND);
+
+	/* Add any other specific DVI timings (DVI modes, etc.) */
+	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
+		hdmi_supported_video_mode_lut, MSM_HDMI_MODES_DVI);
+} /* hdmi_setup_video_mode_lut */
 
 static const char *hdmi_get_single_video_3d_fmt_2string(u32 format)
 {

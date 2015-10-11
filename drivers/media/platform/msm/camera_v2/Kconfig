@@ -9,6 +9,24 @@ config MSM_CAMERA_SENSOR
           data for camera support. The driver support V4L2
           subdev APIs.
 
+config LG_OIS
+	bool "Qualcomm MSM camera ois support"
+	depends on MSMB_CAMERA
+	---help---
+	Enable support for ois for msm camera.
+
+config LG_PROXY
+        bool "Qualcomm MSM camera proxy support"
+        depends on MSMB_CAMERA
+        ---help---
+        Enable support for proxy sensor for msm camera.
+
+config LG_TCS
+        bool "Qualcomm MSM camera TCS support"
+        depends on MSMB_CAMERA
+        ---help---
+        Enable support for true color sensor for msm camera.
+
 config MSM_CPP
         bool "Qualcomm MSM Camera Post Processing Engine support"
         depends on MSMB_CAMERA
@@ -130,6 +148,25 @@ config IMX132
 		2 mipi lanes, preview config = 1920 x 1080 at 30 fps,
 		snapshot config = 1920 x 1080 at 30 fps,
 		Video HDR support.
+
+config IMX234
+	bool "Sensor IMX234 16MP MIPI (Bayer 16M)"
+	depends on MSMB_CAMERA
+	---help---
+		Sony 16 MP Bayer Sensor with auto focus, uses
+
+config IMX208
+	bool "Sensor IMX208 2.1MP MIPI (Bayer 2.1M)"
+	depends on MSMB_CAMERA
+	---help---
+	  SONY 2.1M BAYER MIPI Sensor without Autofocus
+
+config T4KA3
+	bool "Sensor T4KA3 (Bayer 8M)"
+	depends on MSMB_CAMERA
+	---help---
+		Toshiba 8 MP Bayer Sensor with a fixed focus
+		4 mipi lanes full resolution @30fps and
 
 config OV9724
 	bool "Sensor OV9724 (BAYER 2M)"
@@ -275,3 +312,11 @@ config MSM_FD
 	 depends on MSMB_CAMERA
 	 ---help---
 	    Enables support for the MSM FD face detection engine.
+config LGE_DUAL_LED
+	bool "LGE dual led support"
+
+config LGE_CAMERA_RTB_DEBUG
+	bool "LGE Camera RTB debugging "
+	---help---
+	override all readl/writel functions with inline prefix so that
+	the caller in RTB refers to the correct one.

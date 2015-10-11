@@ -37,3 +37,6 @@ config PAGE_POISONING
 config PAGE_GUARD
 	bool
 	select WANT_PAGE_DEBUG_FLAGS
+
+config PAGE_USAGE
+	bool "Debug page usage"

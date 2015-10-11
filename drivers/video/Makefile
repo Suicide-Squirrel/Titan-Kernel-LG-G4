@@ -172,6 +172,8 @@ obj-$(CONFIG_FB_SIMPLE)           += simplefb.o
 # the test framebuffer is last
 obj-$(CONFIG_FB_VIRTUAL)          += vfb.o
 
+obj-y    += slimport/
+
 #video output switch sysfs driver
 obj-$(CONFIG_VIDEO_OUTPUT_CONTROL) += output.o
 obj-$(CONFIG_VIDEOMODE_HELPERS) += display_timing.o videomode.o

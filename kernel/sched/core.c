@@ -1266,8 +1266,12 @@ static inline u64 scale_exec_time(u64 delta, struct rq *rq)
 
 	if (unlikely(cur_freq > max_possible_freq ||
 		     (cur_freq == rq->max_freq &&
-		      rq->max_freq < rq->max_possible_freq)))
-		cur_freq = rq->max_possible_freq;
+		      rq->max_freq < rq->max_possible_freq))){
+		if(sysctl_sched_cancun)
+			cur_freq = rq->max_freq; /* LG Cancun Project*/
+		else
+			cur_freq = rq->max_possible_freq;
+	}
 
 	/* round up div64 */
 	delta = div64_u64(delta * cur_freq + max_possible_freq - 1,
@@ -1680,6 +1684,18 @@ static void update_history(struct rq *rq, struct task_struct *p,
 		demand = avg;
 	else
 		demand = max(avg, runtime);
+
+	/* LG Cancun Project */
+	if(sysctl_sched_cancun){
+		if(rq->efficiency < max_possible_efficiency){
+			demand = max(avg, runtime);
+			p->ravg.demand_for_migration = avg;
+		}
+		else{
+			demand = min(avg, runtime);
+			p->ravg.demand_for_migration = demand;
+		}
+	}
 
 	p->ravg.demand = demand;
 

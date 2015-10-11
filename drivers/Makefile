@@ -168,3 +168,15 @@ obj-$(CONFIG_ESOC)		+= esoc/
 obj-$(CONFIG_BIF)		+= bif/
 obj-$(CONFIG_SENSORS)		+= sensors/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
+
+#TDMB
+obj-$(CONFIG_LGE_BROADCAST_TDMB) += broadcast/
+
+# LGE_BROADCAST_ISDBT_JAPAN
+obj-$(CONFIG_LGE_BROADCAST_ISDBT_JAPAN) += broadcast/
+
+
+#FeliCa
+obj-$(CONFIG_LGE_FELICA)        += felica/
+
+obj-$(CONFIG_CRYPTODEV)	+=	cryptodev-linux/

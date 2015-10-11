@@ -991,8 +991,6 @@ int mdss_dsi_reg_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		return 0;
 	}
 
-	mutex_lock(&ctrl_pdata->cmd_mutex);
-
 	pr_debug("%s: Checking Register status\n", __func__);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
@@ -1018,8 +1016,6 @@ int mdss_dsi_reg_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 	pr_debug("%s: Read register done with ret: %d\n", __func__, ret);
-
-	mutex_unlock(&ctrl_pdata->cmd_mutex);
 
 	return ret;
 }
@@ -1158,8 +1154,6 @@ int mdss_dsi_bta_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		return 0;
 	}
 
-	mutex_lock(&ctrl_pdata->cmd_mutex);
-
 	pr_debug("%s: Checking BTA status\n", __func__);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
@@ -1179,8 +1173,6 @@ int mdss_dsi_bta_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 	pr_debug("%s: BTA done with ret: %d\n", __func__, ret);
-
-	mutex_unlock(&ctrl_pdata->cmd_mutex);
 
 	return ret;
 }
@@ -2099,6 +2091,13 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	/* make sure dsi_cmd_mdp is idle */
 	mdss_dsi_cmd_mdp_busy(ctrl);
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	if (!from_mdp) {
+		mdss_dsi_clk_ctrl(ctrl, DSI_BUS_CLKS, 1);
+		ctrl_rev = MIPI_INP(ctrl->ctrl_base);
+		mdss_dsi_clk_ctrl(ctrl, DSI_BUS_CLKS, 0);
+	} else
+#endif
 	ctrl_rev = MIPI_INP(ctrl->ctrl_base);
 
 	/* For DSI versions less than 1.3.0, CMD DMA TPG is not supported */

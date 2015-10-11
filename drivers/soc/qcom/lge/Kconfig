@@ -1,0 +1,257 @@
+config MACH_LGE
+	bool
+
+menu "LGE Board Selection"
+
+config MACH_MSM8992_P1
+	bool "MSM8992 P1"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1 device.
+
+config MACH_MSM8992_P1_ATT_US
+	bool "MSM8992 P1_ATT_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_ATT_US device.
+
+config MACH_MSM8992_P1_GLOBAL_COM
+	bool "MSM8992 P1_GLOBAL_COM"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_GLOBAL_COM device.
+
+config MACH_MSM8992_P1_CN
+	bool "MSM8992 P1_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_CN device.
+
+config MACH_MSM8992_P1_CMO_CN
+	bool "MSM8992 P1_CMO_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_CMO_CN device.
+
+config MACH_MSM8992_P1_CTO_CN
+	bool "MSM8992 P1_CTO_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_CTO_CN device.
+
+config MACH_MSM8992_P1_KR
+	bool "MSM8992 P1_KR"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_KR device.
+
+config MACH_MSM8992_P1_LGU_KR
+    bool "MSM8992 P1_LGU_KR"
+    depends on MACH_MSM8992_P1_KR
+    help
+      Support for the Qualcomm MSM8992 P1_LGU_KR device.
+
+config MACH_MSM8992_P1_SKT_KR
+    bool "MSM8992 P1_SKT_KR"
+    depends on MACH_MSM8992_P1_KR
+    help
+      Support for the Qualcomm MSM8992 P1_SKT_KR device.
+
+config MACH_MSM8992_P1_KT_KR
+    bool "MSM8992 P1_KT_KR"
+    depends on MACH_MSM8992_P1_KR
+    help
+      Support for the Qualcomm MSM8992 P1_KT_KR device.
+
+config MACH_MSM8992_P1_SPR_US
+	bool "MSM8992 P1_SPR_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_SPR_US device.
+
+config MACH_MSM8992_P1_VZW
+	bool "MSM8992 P1_VZW"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_VZW device.
+
+config MACH_MSM8992_P1_TMO_US
+	bool "MSM8992 P1_TMO_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_TMO_US device.
+
+config MACH_MSM8992_P1_USC_US
+	bool "MSM8992 P1_USC_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_USC_US device.
+
+config MACH_MSM8992_P1_KDDI_JP
+	bool "MSM8992 P1_KDDI_JP"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_KDDI_JP device.
+
+config MACH_MSM8992_P1_CA
+	bool "MSM8992 P1_CA"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_CA device.
+
+config MACH_MSM8992_P1_BELL_CA
+	bool "MSM8992 P1_BELL_CA"
+	depends on MACH_MSM8992_P1_CA
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_BELL_CA device.
+
+config MACH_MSM8992_P1_RGS_CA
+	bool "MSM8992 P1_RGS_CA"
+	depends on MACH_MSM8992_P1_CA
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_RGS_CA device.
+
+config MACH_MSM8992_P1_TLS_CA
+	bool "MSM8992 P1_TLS_CA"
+	depends on MACH_MSM8992_P1_CA
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_TLS_CA device.
+
+config MACH_MSM8992_P1_VTR_CA
+	bool "MSM8992 P1_VTR_CA"
+	depends on MACH_MSM8992_P1_CA
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_VTR_CA device.
+endmenu
+
+menu "LGE Specific Patches"
+
+config LGE_BOOTLOADER_LOG
+	tristate "Support LGE bootloader log"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE bootloader log
+
+config LGE_EARJACK_DEBUGGER
+	bool "Earjack UART debugger support"
+	default n
+	depends on MACH_LGE
+	help
+	  Support earjack type UART debugger cable
+
+config LGE_BOOTLOADER_TIME_CHECKER
+    tristate "Supprt bootloader(LK, SBL) time"
+    default n
+    depends on MACH_LGE
+    help
+      Check LK, SBL booting time at
+      sys/module/lge_bootloader_time_checker/parameters/lk_time
+      sys/module/lge_bootloader_time_checker/parameters/sbl_time
+
+config LGE_HANDLE_PANIC
+	tristate "Support LGE Crash Handler"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE Crash Handler
+
+config LGE_PM_DEBUG
+	tristate "Support LGE PM Debug Feature"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE PM Debug Feature
+
+config LGE_MISC_CHECKER
+    tristate "Support LGE misc checker"
+    default n
+    depends on MACH_LGE
+    help
+      Read/Write ftm items in misc.
+
+config LGE_PROBE_TIME_PROFILING
+	bool "Support kernel driver probe time profiling"
+	default n
+	depends on MACH_LGE
+	help
+	  Support kernel driver probe time profiling.
+
+config PRE_SELF_DIAGNOSIS
+	tristate "Support LGE self diagnosis for factory"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE self diagnosis
+
+config CHECK_CPU
+    tristate "Support LGE check cpu for factory"
+    default n
+    depends on MACH_LGE
+    help
+      LGE factory check cpu
+
+config CHECK_EMMC
+    tristate "Support LGE check emmc for factory"
+    default n
+    depends on MACH_LGE
+    help
+      LGE factory check emmc
+
+config CHECK_RAM
+    tristate "Support LGE check ram for factory"
+    default n
+    depends on MACH_LGE
+    help
+      LGE factory check ram
+
+config CHECK_MATCHED
+    tristate "Support LGE check matched for factory"
+    default n
+    depends on MACH_LGE
+    help
+      LGE factory check matched
+
+config LGE_QSDL_SUPPORT
+    tristate "Support for Quality Statistics Data Logging"
+    default n
+    depends on MACH_LGE
+    help
+       QSDL is a feature which notify infomation for quality statistics
+       data logging of device.
+
+endmenu
+
+menu "LGE QFPROM Values"
+
+config LGE_QFPROM_INTERFACE
+	bool "Support qfprom interface"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE QFPROM DRIVER.
+
+config LGE_QFPROM_SECHASH
+	string "Support qfprom sec hash"
+	default 0x0
+	depends on LGE_QFPROM_INTERFACE
+	help
+	  LGE QFPROM DRIVER-SEC partition's hash value.
+endmenu

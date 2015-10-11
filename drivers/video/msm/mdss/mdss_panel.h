@@ -47,6 +47,16 @@ struct panel_id {
 #define LVDS_PANEL		11	/* LVDS */
 #define EDP_PANEL		12	/* LVDS */
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+enum lcd_panel_type {
+	JDI_INCELL_CMD_PANEL,
+	JDI_INCELL_VIDEO_PANEL,
+	LGD_INCELL_CMD_PANEL,
+	LGD_SIC_INCELL_CMD_PANEL,
+	UNKOWN_PANEL
+};
+#endif
+
 static inline const char *mdss_panel2str(u32 panel)
 {
 	static const char const *names[] = {
@@ -402,6 +412,14 @@ struct mdss_panel_info {
 	int pwm_pmic_gpio;
 	int pwm_lpg_chan;
 	int pwm_period;
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	int blmap_size;
+	int *blmap;
+#if defined(CONFIG_LGE_BLMAP_STORE_MODE)
+    int bl_store_mode;
+    int *blmap_store_mode;
+#endif
+#endif
 	bool dynamic_fps;
 	bool ulps_feature_enabled;
 	bool ulps_suspend_enabled;
@@ -421,6 +439,10 @@ struct mdss_panel_info {
 	u32 min_fps;
 	u32 max_fps;
 
+#if defined(CONFIG_LGE_PARTIAL_UPDATE)
+	u32 max_left;
+	u32 min_right;
+#endif
 	u32 cont_splash_enabled;
 	bool esd_rdy;
 	bool partial_update_supported; /* value from dts if pu is supported */
@@ -432,12 +454,14 @@ struct mdss_panel_info {
 	int blank_state;
 
 	uint32_t panel_dead;
-	u32 panel_force_dead;
 	u32 panel_orientation;
 	bool dynamic_switch_pending;
 	bool is_lpm_mode;
 	bool is_split_display;
 
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+	int panel_type;
+#endif
 	bool is_prim_panel;
 
 	char panel_name[MDSS_MAX_PANEL_LEN];

@@ -342,6 +342,10 @@ void kgsl_pwrctrl_set_thermal_cycle(struct kgsl_pwrctrl *pwr,
  * default value.  Do not change the bus if a constraint keeps the new
  * level at the current level.  Set the new GPU frequency.
  */
+
+int gpu_power_level;
+int gpu_max_power_level;
+
 void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 				unsigned int new_level)
 {
@@ -383,6 +387,8 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	 */
 	pwr->active_pwrlevel = new_level;
 	pwr->previous_pwrlevel = old_level;
+	gpu_power_level = pwr->pwrlevels[pwr->active_pwrlevel].gpu_freq;
+	gpu_max_power_level = pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq;;
 
 	/*
 	 * If the bus is running faster than its default level and the GPU
