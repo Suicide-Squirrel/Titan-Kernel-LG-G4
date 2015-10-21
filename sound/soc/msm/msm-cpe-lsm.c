@@ -321,8 +321,11 @@ static int msm_cpe_lab_thread(void *data)
 	struct wcd_cpe_core *core = (struct wcd_cpe_core *)lab->core_handle;
 	struct snd_pcm_substream *substream = lab->substream;
 	struct cpe_priv *cpe = cpe_get_private_data(substream);
+	struct cpe_lsm_data *lsm_d = NULL;
 	struct wcd_cpe_lsm_ops *lsm_ops;
+	struct wcd_cpe_afe_ops *afe_ops;
 	struct wcd_cpe_data_pcm_buf *cur_buf, *next_buf;
+	struct cpe_lsm_session *session = NULL;
 	int rc = 0;
 	u32 done_len = 0;
 	u32 buf_count = 1;
@@ -342,6 +345,9 @@ static int msm_cpe_lab_thread(void *data)
 
 	lsm_ops = &cpe->lsm_ops;
 	memset(lab->pcm_buf[0].mem, 0, lab->pcm_size);
+	afe_ops = &cpe->afe_ops;
+	lsm_d = cpe_get_lsm_data(substream);
+	session = lsm_d->lsm_session;
 
 	if (lsm_ops->lsm_lab_data_channel_read == NULL ||
 		lsm_ops->lsm_lab_data_channel_read_status == NULL) {
@@ -356,23 +362,35 @@ static int msm_cpe_lab_thread(void *data)
 		goto done;
 	}
 
-	if (!kthread_should_stop()) {
-		lsm_ops->lsm_lab_data_channel_open(cpe->core_handle, session);
+	lsm_ops->lsm_lab_data_channel_open(cpe->core_handle, session);
 
-		rc = lsm_ops->lsm_lab_data_channel_read(core, lab->lsm_s,
+	rc = lsm_ops->lsm_lab_data_channel_read(core, lab->lsm_s,
 					lab->pcm_buf[0].phys,
 					lab->pcm_buf[0].mem,
 					hw_params->buf_sz);
-		if (rc) {
-			pr_err("%s:Slim read error %d\n", __func__, rc);
-			goto done;
-		}
+	if (rc) {
+		pr_err("%s:Slim read error %d\n", __func__, rc);
+		lab->thread_status = MSM_LSM_LAB_THREAD_ERROR;
+		goto done;
+	}
 
-		cur_buf = &lab->pcm_buf[0];
-		next_buf = &lab->pcm_buf[1];
-	} else {
-		pr_debug("%s: LAB stopped before starting read\n",
-			 __func__);
+	cur_buf = &lab->pcm_buf[0];
+	next_buf = &lab->pcm_buf[1];
+
+	/* Start lab on CPE after first buffer is queued */
+	rc = lsm_ops->lsm_cdc_start_lab(core);
+	if (rc) {
+		pr_err("%s: start lab failed\n", __func__);
+		lab->thread_status = MSM_LSM_LAB_THREAD_ERROR;
+		goto done;
+	}
+
+	rc = afe_ops->afe_port_start(cpe->core_handle,
+				     &session->afe_out_port_cfg);
+	if (rc) {
+		pr_err("%s: AFE out port start failed, err = %d\n",
+			__func__, rc);
+		lab->thread_status = MSM_LSM_LAB_THREAD_ERROR;
 		goto done;
 	}
 
