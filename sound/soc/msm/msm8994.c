@@ -93,9 +93,9 @@ struct msm8994_asoc_mach_data {
 
 #ifdef CONFIG_SND_USE_QUAT_MI2S
 #define MSM_QUAT_MI2S_MASTER
-#ifndef CONFIG_SND_SOC_TAS2552
+#ifdef CONFIG_MACH_MSM8992_P1_TMO_US
 #define MSM_QUAT_MI2S_MCLK
-#endif  /*CONFIG_SND_SOC_TAS2552*/
+#endif 
 
 static struct afe_clk_cfg quat_mi2s_clk = {
 	AFE_API_VERSION_I2S_CONFIG,
