@@ -634,16 +634,6 @@
 			 <&clock_gcc clk_gcc_blsp1_ahb_clk>;
 	};
 
-	bluesleep {
-		compatible = "qcom,bluesleep";
-		bt_reset = <&msm_gpio 25 0>;
-		bt_host_wake = <&msm_gpio 95 0>;
-		bt_ext_wake = <&msm_gpio 105 0>;
-		interrupt-parent = <&msm_gpio>;
-		interrupts = <95 0>;
-		interrupt-names = "host_wake";
-	};
-
 	blsp2_uart2: uart@f995e000 { /* BLSP2 UART2 */
 		compatible = "qcom,msm-hsuart-v14";
 		reg = <0xf995e000 0x1000>,
