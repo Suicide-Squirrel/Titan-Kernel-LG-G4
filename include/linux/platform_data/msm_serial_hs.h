@@ -62,7 +62,7 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 				    unsigned int mctrl);
 //[P1_BRINGUP_S]
 //BT_S : [CONBT-966] Fix to Bluetooth sleep & uart driver
-#if defined(CONFIG_LGE_BLUESLEEP) || defined(CONFIG_LGE_BLUETOOTH_PM)
+#if defined(CONFIG_LGE_BLUESLEEP) || defined(CONFIG_LGE_BLUETOOTH_PM) || defined(CONFIG_BT_MSM_SLEEP)
 #define CLOCK_REQUEST_AVAILABLE 	0
 #define CLOCK_REQUEST_UNAVAILABLE 	1
 struct uart_port * msm_hs_get_bt_uport(unsigned int line);
