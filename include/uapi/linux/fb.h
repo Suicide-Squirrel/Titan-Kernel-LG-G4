@@ -296,7 +296,7 @@ struct fb_con2fbmap {
 #define VESA_VSYNC_SUSPEND      1
 #define VESA_HSYNC_SUSPEND      2
 #define VESA_POWERDOWN          3
-
+#define VESA_U1					4
 
 enum {
 	/* screen: unblanked, hsync: on,  vsync: on */
@@ -308,11 +308,16 @@ enum {
 	/* screen: blanked,   hsync: on,  vsync: off */
 	FB_BLANK_VSYNC_SUSPEND = VESA_VSYNC_SUSPEND + 1,
 
+	//FB_BLANK_U1 = VESA_VSYNC_SUSPEND + 1,
+
 	/* screen: blanked,   hsync: off, vsync: on */
 	FB_BLANK_HSYNC_SUSPEND = VESA_HSYNC_SUSPEND + 1,
 
 	/* screen: blanked,   hsync: off, vsync: off */
 	FB_BLANK_POWERDOWN     = VESA_POWERDOWN + 1
+
+	/* screen: unblanked, ext_screen: blanked,  hsync: on, vsync: on */
+	//FB_BLANK_U1 = VESA_U1 + 1,
 };
 
 #define FB_VBLANK_VBLANKING	0x001	/* currently in a vertical blank */

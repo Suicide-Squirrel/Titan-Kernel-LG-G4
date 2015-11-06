@@ -722,29 +722,33 @@ static struct sk_buff *__skb_clone(struct sk_buff *n, struct sk_buff *skb)
 {
 #define C(x) n->x = skb->x
 
-    n->next = n->prev = NULL;
-    n->sk = NULL;
-    __copy_skb_header(n, skb);
+	n->next = n->prev = NULL;
+	n->sk = NULL;
+	__copy_skb_header(n, skb);
 
-    C(len);
-    C(data_len);
-    C(mac_len);
-    n->hdr_len = skb->nohdr ? skb_headroom(skb) : skb->hdr_len;
-    n->cloned = 1;
-    n->nohdr = 0;
-    n->destructor = NULL;
-    C(tail);
-    C(end);
-    C(head);
-    C(head_frag);
-    C(data);
-    C(truesize);
-    atomic_set(&n->users, 1);
+	C(len);
+	C(data_len);
+	C(mac_len);
+	n->hdr_len = skb->nohdr ? skb_headroom(skb) : skb->hdr_len;
+	n->cloned = 1;
+	n->nohdr = 0;
+	n->destructor = NULL;
+	C(tail);
+	C(end);
+	C(head);
+	C(head_frag);
+	C(data);
+	C(truesize);
+	atomic_set(&n->users, 1);
 
-    atomic_inc(&(skb_shinfo(skb)->dataref));
-    skb->cloned = 1;
+	atomic_inc(&(skb_shinfo(skb)->dataref));
+	skb->cloned = 1;
 
-    return n;
+#ifdef CONFIG_IPV6_NDISC_NODETYPE
+	C(ndisc_nodetype);
+#endif
+
+	return n;
 #undef C
 }
 
@@ -2730,162 +2734,162 @@ EXPORT_SYMBOL_GPL(skb_pull_rcsum);
  */
 struct sk_buff *skb_segment(struct sk_buff *skb, netdev_features_t features)
 {
-    struct sk_buff *segs = NULL;
-    struct sk_buff *tail = NULL;
-    struct sk_buff *fskb = skb_shinfo(skb)->frag_list;
-    unsigned int mss = skb_shinfo(skb)->gso_size;
-    unsigned int doffset = skb->data - skb_mac_header(skb);
-    unsigned int offset = doffset;
-    unsigned int tnl_hlen = skb_tnl_header_len(skb);
-    unsigned int headroom;
-    unsigned int len;
-    __be16 proto;
-    bool csum;
-    int sg = !!(features & NETIF_F_SG);
-    int nfrags = skb_shinfo(skb)->nr_frags;
-    int err = -ENOMEM;
-    int i = 0;
-    int pos;
+	struct sk_buff *segs = NULL;
+	struct sk_buff *tail = NULL;
+	struct sk_buff *fskb = skb_shinfo(skb)->frag_list;
+	unsigned int mss = skb_shinfo(skb)->gso_size;
+	unsigned int doffset = skb->data - skb_mac_header(skb);
+	unsigned int offset = doffset;
+	unsigned int tnl_hlen = skb_tnl_header_len(skb);
+	unsigned int headroom;
+	unsigned int len;
+	__be16 proto;
+	bool csum;
+	int sg = !!(features & NETIF_F_SG);
+	int nfrags = skb_shinfo(skb)->nr_frags;
+	int err = -ENOMEM;
+	int i = 0;
+	int pos;
 
-    proto = skb_network_protocol(skb);
-    if (unlikely(!proto))
-        return ERR_PTR(-EINVAL);
+	proto = skb_network_protocol(skb);
+	if (unlikely(!proto))
+		return ERR_PTR(-EINVAL);
 
-    csum = !!can_checksum_protocol(features, proto);
-    __skb_push(skb, doffset);
-    headroom = skb_headroom(skb);
-    pos = skb_headlen(skb);
+	csum = !!can_checksum_protocol(features, proto);
+	__skb_push(skb, doffset);
+	headroom = skb_headroom(skb);
+	pos = skb_headlen(skb);
 
-    do {
-        struct sk_buff *nskb;
-        skb_frag_t *frag;
-        int hsize;
-        int size;
+	do {
+		struct sk_buff *nskb;
+		skb_frag_t *frag;
+		int hsize;
+		int size;
 
-        len = skb->len - offset;
-        if (len > mss)
-            len = mss;
+		len = skb->len - offset;
+		if (len > mss)
+			len = mss;
 
-        hsize = skb_headlen(skb) - offset;
-        if (hsize < 0)
-            hsize = 0;
-        if (hsize > len || !sg)
-            hsize = len;
+		hsize = skb_headlen(skb) - offset;
+		if (hsize < 0)
+			hsize = 0;
+		if (hsize > len || !sg)
+			hsize = len;
 
-        if (!hsize && i >= nfrags) {
-            BUG_ON(fskb->len != len);
+		if (!hsize && i >= nfrags) {
+			BUG_ON(fskb->len != len);
 
-            pos += len;
-            nskb = skb_clone(fskb, GFP_ATOMIC);
-            fskb = fskb->next;
+			pos += len;
+			nskb = skb_clone(fskb, GFP_ATOMIC);
+			fskb = fskb->next;
 
-            if (unlikely(!nskb))
-                goto err;
+			if (unlikely(!nskb))
+				goto err;
 
-            hsize = skb_end_offset(nskb);
-            if (skb_cow_head(nskb, doffset + headroom)) {
-                kfree_skb(nskb);
-                goto err;
-            }
+			hsize = skb_end_offset(nskb);
+			if (skb_cow_head(nskb, doffset + headroom)) {
+				kfree_skb(nskb);
+				goto err;
+			}
 
-            nskb->truesize += skb_end_offset(nskb) - hsize;
-            skb_release_head_state(nskb);
-            __skb_push(nskb, doffset);
-        } else {
-            nskb = __alloc_skb(hsize + doffset + headroom,
-                       GFP_ATOMIC, skb_alloc_rx_flag(skb),
-                       NUMA_NO_NODE);
+			nskb->truesize += skb_end_offset(nskb) - hsize;
+			skb_release_head_state(nskb);
+			__skb_push(nskb, doffset);
+		} else {
+			nskb = __alloc_skb(hsize + doffset + headroom,
+					   GFP_ATOMIC, skb_alloc_rx_flag(skb),
+					   NUMA_NO_NODE);
 
-            if (unlikely(!nskb))
-                goto err;
+			if (unlikely(!nskb))
+				goto err;
 
-            skb_reserve(nskb, headroom);
-            __skb_put(nskb, doffset);
-        }
+			skb_reserve(nskb, headroom);
+			__skb_put(nskb, doffset);
+		}
 
-        if (segs)
-            tail->next = nskb;
-        else
-            segs = nskb;
-        tail = nskb;
+		if (segs)
+			tail->next = nskb;
+		else
+			segs = nskb;
+		tail = nskb;
 
-        __copy_skb_header(nskb, skb);
-        nskb->mac_len = skb->mac_len;
+		__copy_skb_header(nskb, skb);
 
-        /* nskb and skb might have different headroom */
-        if (nskb->ip_summed == CHECKSUM_PARTIAL)
-            nskb->csum_start += skb_headroom(nskb) - headroom;
+		/* nskb and skb might have different headroom */
+		if (nskb->ip_summed == CHECKSUM_PARTIAL)
+			nskb->csum_start += skb_headroom(nskb) - headroom;
 
-        skb_reset_mac_header(nskb);
-        skb_set_network_header(nskb, skb->mac_len);
-        nskb->transport_header = (nskb->network_header +
-                      skb_network_header_len(skb));
+		skb_reset_mac_header(nskb);
+		skb_set_network_header(nskb, skb->mac_len);
+		nskb->transport_header = (nskb->network_header +
+					  skb_network_header_len(skb));
+		skb_reset_mac_len(nskb);
 
-        skb_copy_from_linear_data_offset(skb, -tnl_hlen,
-                         nskb->data - tnl_hlen,
-                         doffset + tnl_hlen);
+		skb_copy_from_linear_data_offset(skb, -tnl_hlen,
+						 nskb->data - tnl_hlen,
+						 doffset + tnl_hlen);
 
-        if (fskb != skb_shinfo(skb)->frag_list)
-            goto perform_csum_check;
+		if (fskb != skb_shinfo(skb)->frag_list)
+			goto perform_csum_check;
 
-        if (!sg) {
-            nskb->ip_summed = CHECKSUM_NONE;
-            nskb->csum = skb_copy_and_csum_bits(skb, offset,
-                                skb_put(nskb, len),
-                                len, 0);
-            continue;
-        }
+		if (!sg) {
+			nskb->ip_summed = CHECKSUM_NONE;
+			nskb->csum = skb_copy_and_csum_bits(skb, offset,
+							    skb_put(nskb, len),
+							    len, 0);
+			continue;
+		}
 
-        frag = skb_shinfo(nskb)->frags;
+		frag = skb_shinfo(nskb)->frags;
 
-        skb_copy_from_linear_data_offset(skb, offset,
-                         skb_put(nskb, hsize), hsize);
+		skb_copy_from_linear_data_offset(skb, offset,
+						 skb_put(nskb, hsize), hsize);
 
-        skb_shinfo(nskb)->tx_flags = skb_shinfo(skb)->tx_flags & SKBTX_SHARED_FRAG;
+		skb_shinfo(nskb)->tx_flags = skb_shinfo(skb)->tx_flags & SKBTX_SHARED_FRAG;
 
-        while (pos < offset + len && i < nfrags) {
-            if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
-                goto err;
-            *frag = skb_shinfo(skb)->frags[i];
-            __skb_frag_ref(frag);
-            size = skb_frag_size(frag);
+		while (pos < offset + len && i < nfrags) {
+			if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
+				goto err;
+			*frag = skb_shinfo(skb)->frags[i];
+			__skb_frag_ref(frag);
+			size = skb_frag_size(frag);
 
-            if (pos < offset) {
-                frag->page_offset += offset - pos;
-                skb_frag_size_sub(frag, offset - pos);
-            }
+			if (pos < offset) {
+				frag->page_offset += offset - pos;
+				skb_frag_size_sub(frag, offset - pos);
+			}
 
-            skb_shinfo(nskb)->nr_frags++;
+			skb_shinfo(nskb)->nr_frags++;
 
-            if (pos + size <= offset + len) {
-                i++;
-                pos += size;
-            } else {
-                skb_frag_size_sub(frag, pos + size - (offset + len));
-                goto skip_fraglist;
-            }
+			if (pos + size <= offset + len) {
+				i++;
+				pos += size;
+			} else {
+				skb_frag_size_sub(frag, pos + size - (offset + len));
+				goto skip_fraglist;
+			}
 
-            frag++;
-        }
+			frag++;
+		}
 
-        if (pos < offset + len) {
-            struct sk_buff *fskb2 = fskb;
+		if (pos < offset + len) {
+			struct sk_buff *fskb2 = fskb;
 
-            BUG_ON(pos + fskb->len != offset + len);
+			BUG_ON(pos + fskb->len != offset + len);
 
-            pos += fskb->len;
-            fskb = fskb->next;
+			pos += fskb->len;
+			fskb = fskb->next;
 
-            if (fskb2->next) {
-                fskb2 = skb_clone(fskb2, GFP_ATOMIC);
-                if (!fskb2)
-                    goto err;
-            } else
-                skb_get(fskb2);
+			if (fskb2->next) {
+				fskb2 = skb_clone(fskb2, GFP_ATOMIC);
+				if (!fskb2)
+					goto err;
+			} else
+				skb_get(fskb2);
 
-            SKB_FRAG_ASSERT(nskb);
-            skb_shinfo(nskb)->frag_list = fskb2;
-        }
+			SKB_FRAG_ASSERT(nskb);
+			skb_shinfo(nskb)->frag_list = fskb2;
+		}
 
 skip_fraglist:
         nskb->data_len = len - hsize;

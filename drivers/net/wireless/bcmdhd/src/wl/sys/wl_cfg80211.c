@@ -8511,9 +8511,10 @@ fail:
 #endif /* LINUX_VERSION < VERSION(3,4,0) || WL_COMPAT_WIRELESS */
 
 #ifdef WL_SCHED_SCAN
-#define PNO_TIME		120 // 30
-#define PNO_REPEAT		2 // 4
-#define PNO_FREQ_EXPO_MAX	3 // 2
+//LGE_Patch
+#define PNO_TIME		300 //120 // 30
+#define PNO_REPEAT		1 //2 // 4
+#define PNO_FREQ_EXPO_MAX	3 //3 // 2
 static bool
 is_ssid_in_list(struct cfg80211_ssid *ssid, struct cfg80211_ssid *ssid_list, int count)
 {

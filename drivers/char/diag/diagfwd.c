@@ -55,6 +55,10 @@
 #include "lg_dm_tty.h"
 #endif
 
+#ifdef CONFIG_LGE_ACG_CARRIER_CODE
+#include "diag_acg.h"
+#endif
+
 int diag_debug_buf_idx;
 unsigned char diag_debug_buf[1024];
 /* Number of entries in table of buffers */
@@ -429,13 +433,13 @@ int diag_process_smd_read_data(struct diag_smd_info *smd_info, void *buf,
 	if (write_length > 0) {
 		spin_lock_irqsave(&smd_info->in_busy_lock, flags);
 		*in_busy_ptr = 1;
+		spin_unlock_irqrestore(&smd_info->in_busy_lock, flags);
 		err = diag_mux_write(DIAG_LOCAL_PROC, write_buf, write_length,
 				     ctxt);
 		if (err) {
 			pr_err_ratelimited("diag: In %s, diag_device_write error: %d\n",
 					   __func__, err);
 		}
-		spin_unlock_irqrestore(&smd_info->in_busy_lock, flags);
 	}
 
 	return 0;
@@ -1095,7 +1099,7 @@ int diag_check_common_cmd(struct diag_pkt_header_t *header)
 	return 0;
 }
 
-#if defined(CONFIG_LGE_DIAG_USB_ACCESS_LOCK) && \
+#if defined(CONFIG_LGE_USB_DIAG_LOCK) && \
 	!defined(CONFIG_MACH_MSM8992_P1_SPR_US)
 extern int get_diag_enable(void);
 #define DIAG_ENABLE			1
@@ -1106,7 +1110,7 @@ extern int get_diag_enable(void);
 #define COMMAND_DLOAD_RESET		0x3A
 #define COMMAND_TEST_MODE		0xFA
 #define COMMAND_TEST_MODE_RESET		0x29
-#if defined(CONFIG_MACH_MSM8992_P1_VZW)
+#if defined(CONFIG_MACH_MSM8992_P1_VZW) || defined(CONFIG_MACH_MSM8992_PPLUS_VZW)
 #define COMMAND_VZW_AT_LOCK		0xF8
 #endif
 
@@ -1122,7 +1126,7 @@ int is_filtering_command(char *buf)
 		case COMMAND_DLOAD_RESET :
 		case COMMAND_TEST_MODE :
 		case COMMAND_TEST_MODE_RESET :
-#if defined(CONFIG_MACH_MSM8992_P1_VZW)
+#if defined(CONFIG_MACH_MSM8992_P1_VZW) || defined(CONFIG_MACH_MSM8992_PPLUS_VZW)
 		case COMMAND_VZW_AT_LOCK :
 #endif
 			return 1;
@@ -1144,8 +1148,12 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 	int mask_ret;
 	int status = 0;
 	int write_len = 0;
+#ifdef CONFIG_LGE_ACG_CARRIER_CODE
+	unsigned long int carrier_code = 0;
+	int result = 0;
+#endif
 
-#if defined(CONFIG_LGE_DIAG_USB_ACCESS_LOCK) && \
+#if defined(CONFIG_LGE_USB_DIAG_LOCK) && \
 	!defined(CONFIG_MACH_MSM8992_P1_SPR_US)
 	/* buf[0] : 0xA1(161) is a diag command for mdm port lock */
  if (!is_filtering_command(buf) && (get_diag_enable() == DIAG_DISABLE))
@@ -1280,6 +1288,17 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 		encode_rsp_and_send(5);
 		return 0;
 	}
+#ifdef CONFIG_LGE_ACG_CARRIER_CODE
+	else if  ((*buf == 0x26) && (*(buf+1) == 0x6d) && (*(buf+2) == 0x84))
+	{
+		carrier_code = get_carrier_code();
+	}
+	else if  ((*buf == 0x27) && (*(buf+1) == 0x6d) && (*(buf+2) == 0x84))
+	{
+		carrier_code = 10*(*(buf+4))+(*(buf+3));
+		result = set_carrier_code(carrier_code);
+	}
+#endif
 	/* Log on Demand Rsp */
 	else if (*buf == DIAG_CMD_LOG_ON_DMND) {
 		write_len = diag_cmd_log_on_demand(buf, len,
@@ -1437,10 +1456,16 @@ void diag_process_hdlc(void *data, unsigned len)
 	}
 
 #ifdef DIAG_DEBUG
+#ifdef CONFIG_LGE_USB_G_ANDROID
+	pr_debug("diag: hdlc.dest_idx = %d\n", hdlc.dest_idx);
+	print_hex_dump(KERN_DEBUG, "process: ", 16, 1, DUMP_PREFIX_ADDRESS,
+			(unsigned char *)driver->hdlc_buf, hdlc.dest_idx, 1);
+#else
 	pr_debug("diag: hdlc.dest_idx = %d", hdlc.dest_idx);
 	for (i = 0; i < hdlc.dest_idx; i++)
 		printk(KERN_DEBUG "\t%x", *(((unsigned char *)
 							driver->hdlc_buf)+i));
+#endif
 #endif /* DIAG DEBUG */
 	/* ignore 2 bytes for CRC, one for 7E and send */
 	if ((driver->smd_data[MODEM_DATA].ch) && (ret) && (type) &&
@@ -1659,20 +1684,11 @@ static int diagfwd_mux_write_done(unsigned char *buf, int len, int buf_ctxt,
         driver->rsp_buf_busy = 0;
 #endif
 
-    switch (type) {
-    case SMD_DATA_TYPE:
-        if (peripheral >= 0 && peripheral < NUM_SMD_DATA_CHANNELS) {
-            smd_info = &driver->smd_data[peripheral];
-            diag_smd_reset_buf(smd_info, num);
-            /*
-             * Flush any work that is currently pending on the data
-             * channels. This will ensure that the next read is not
-             * missed.
-             */
-            if (driver->logging_mode == MEMORY_DEVICE_MODE) {
-                flush_workqueue(smd_info->wq);
-                wake_up(&driver->smd_wait_q);
-            }
+	switch (type) {
+	case SMD_DATA_TYPE:
+		if (peripheral >= 0 && peripheral < NUM_SMD_DATA_CHANNELS) {
+			smd_info = &driver->smd_data[peripheral];
+			diag_smd_reset_buf(smd_info, num);
 
 #ifdef CONFIG_LGE_DM_APP
             if (driver->logging_mode == DM_APP_MODE) {

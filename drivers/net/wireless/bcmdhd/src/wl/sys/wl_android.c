@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.c 529325 2015-01-27 06:16:12Z $
+ * $Id: wl_android.c 556417 2015-05-13 11:46:42Z $
  */
 
 #include <linux/module.h>
@@ -164,6 +164,7 @@
 #define CMD_FULLROAMSCANPERIOD_GET "GETFULLROAMSCANPERIOD"
 #define CMD_COUNTRYREV_SET "SETCOUNTRYREV"
 #define CMD_COUNTRYREV_GET "GETCOUNTRYREV"
+#define CMD_SETROAMPROF "SETROAMPROF"
 #endif /* ROAM_API */
 
 #ifdef WES_SUPPORT
@@ -182,6 +183,7 @@
 #define CMD_SETSCANNPROBES "SETSCANNPROBES"
 #define CMD_GETDFSSCANMODE "GETDFSSCANMODE"
 #define CMD_SETDFSSCANMODE "SETDFSSCANMODE"
+#define CMD_SETJOINPREFER "SETJOINPREFER"
 
 #define CMD_SENDACTIONFRAME "SENDACTIONFRAME"
 #define CMD_REASSOC "REASSOC"
@@ -789,6 +791,56 @@ static int wl_android_get_country_rev(
 
 	return bytes_written;
 }
+
+int wl_android_set_roam_prof(
+	struct net_device *dev, char* command, int total_len)
+{
+	wl_roam_prof_band_t rp;
+	char smbuf[WLC_IOCTL_SMLEN];
+	char band;
+	int roam_trigger, roam_delta, rssi_boost_thresh, rssi_boost_delta;
+	int roam_nfscan, fullroamperiod, roam_scan_period;
+	int error;
+
+	memset(&rp, 0, sizeof(rp));
+
+	rp.ver = WL_MAX_ROAM_PROF_VER;
+	rp.len = sizeof(wl_roam_prof_t);
+
+	sscanf(command, CMD_SETROAMPROF " %c %d %d %d %d %d %d %d",
+		&band, &roam_trigger, &roam_delta, &rssi_boost_thresh, &rssi_boost_delta, &roam_nfscan, &fullroamperiod, &roam_scan_period);
+
+	//Temporary test log
+	DHD_ERROR(("set_roam_prof => band = %c, rssi_boost_thresh = %d, rssi_boost_delta =%d\n",
+	               band, rssi_boost_thresh, rssi_boost_delta));
+
+	if (band == 'a' || band == 'A')
+		rp.band = WLC_BAND_5G;
+	else if (band == 'b' || band == 'B')
+		rp.band = WLC_BAND_2G;
+	else
+		return BCME_BADARG;
+
+	rp.roam_prof[0].roam_flags = 0;
+	rp.roam_prof[0].roam_trigger = roam_trigger;
+	rp.roam_prof[0].rssi_lower = -128;
+	rp.roam_prof[0].roam_delta = roam_delta;
+	rp.roam_prof[0].rssi_boost_thresh = rssi_boost_thresh;
+	rp.roam_prof[0].rssi_boost_delta= rssi_boost_delta;
+	rp.roam_prof[0].nfscan = roam_nfscan;
+	rp.roam_prof[0].fullscan_period = fullroamperiod;
+	rp.roam_prof[0].init_scan_period = roam_scan_period;
+	rp.roam_prof[0].backoff_multiplier = 1;
+	rp.roam_prof[0].max_scan_period = 10;
+
+	error = wldev_iovar_setbuf(dev, "roam_prof", &rp, sizeof(rp),
+		smbuf, sizeof(smbuf), NULL);
+	if (error) {
+		DHD_ERROR(("Failed to set roam_prof, error = %d\n", error));
+	}
+	return error;
+}
+
 #endif /* ROAM_API */
 
 #ifdef WES_SUPPORT
@@ -1073,6 +1125,44 @@ int wl_android_set_scan_dfs_channel_mode(struct net_device *dev, char *command, 
 	return 0;
 }
 
+#define JOINPREFFER_BUF_SIZE 12
+
+static int
+wl_android_set_join_prefer(struct net_device *dev, char *command, int total_len)
+{
+	int error = BCME_OK;
+	char smbuf[WLC_IOCTL_SMLEN];
+	uint8 buf[JOINPREFFER_BUF_SIZE];
+	char *pcmd;
+	int total_len_left;
+	int i;
+	char hex[2];
+
+	pcmd = command + strlen(CMD_SETJOINPREFER) + 1;
+	total_len_left = strlen(pcmd);
+
+	memset(buf, 0, sizeof(buf));
+
+	if (total_len_left != JOINPREFFER_BUF_SIZE << 1) {
+		DHD_ERROR(("%s: Failed to get Parameter\n", __FUNCTION__));
+		return BCME_ERROR;
+	}
+
+	/* Store the MSB first, as required by join_pref */
+	for (i = 0; i < JOINPREFFER_BUF_SIZE; i++) {
+		hex[0] = *pcmd++;
+		hex[1] = *pcmd++;
+		buf[i] = (uint8)simple_strtoul(hex, NULL, 16);
+	}
+
+	prhex("join pref", (uint8 *)buf, JOINPREFFER_BUF_SIZE);
+	error = wldev_iovar_setbuf(dev, "join_pref", buf, JOINPREFFER_BUF_SIZE,
+		smbuf, sizeof(smbuf), NULL);
+	if (error) {
+		DHD_ERROR(("Failed to set join_pref, error = %d\n", error));
+	}
+	return error;
+}
 
 int wl_android_send_action_frame(struct net_device *dev, char *command, int total_len)
 {
@@ -3334,8 +3424,9 @@ int wl_android_set_lps(struct net_device *dev, const char *cmd)
 	if (str) {
 		lps_bssid_list = kzalloc(nbss * sizeof(wl_pfn_bssid_t), GFP_KERNEL);
 		if (lps_bssid_list == NULL) {
-			DHD_PNO(("memory alloc bssid list(%lu) failed\n",
-				nbss * sizeof(wl_pfn_bssid_t)));
+			//build error wonho.ki
+			//DHD_PNO(("memory alloc bssid list(%d) failed\n",
+			//nbss * sizeof(wl_pfn_bssid_t)));
 			return -ENOMEM;
 		}
 
@@ -3583,6 +3674,10 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		strlen(CMD_COUNTRYREV_GET)) == 0) {
 		bytes_written = wl_android_get_country_rev(net, command,
 		priv_cmd.total_len);
+	} else if (strnicmp(command, CMD_SETROAMPROF,
+		strlen(CMD_SETROAMPROF)) == 0) {
+		bytes_written = wl_android_set_roam_prof(net, command,
+		priv_cmd.total_len);
 	}
 #endif /* ROAM_API */
 #ifdef WES_SUPPORT
@@ -3637,6 +3732,9 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_SETDFSSCANMODE, strlen(CMD_SETDFSSCANMODE)) == 0) {
 		bytes_written = wl_android_set_scan_dfs_channel_mode(net, command,
 			priv_cmd.total_len);
+	}
+	else if (strnicmp(command, CMD_SETJOINPREFER, strlen(CMD_SETJOINPREFER)) == 0) {
+		bytes_written = wl_android_set_join_prefer(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_GETWESMODE, strlen(CMD_GETWESMODE)) == 0) {
 		bytes_written = wl_android_get_wes_mode(net, command, priv_cmd.total_len);

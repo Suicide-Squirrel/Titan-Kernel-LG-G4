@@ -37,3 +37,7 @@ hci_uart-$(CONFIG_BT_HCIUART_ATH3K)	+= hci_ath.o
 hci_uart-$(CONFIG_BT_HCIUART_3WIRE)	+= hci_h5.o
 hci_uart-$(CONFIG_BT_HCIUART_IBS)	+= hci_ibs.o
 hci_uart-objs				:= $(hci_uart-y)
+
+#BT_S : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2
+obj-y += broadcom/
+#BT_E : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2

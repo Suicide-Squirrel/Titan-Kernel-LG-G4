@@ -1602,7 +1602,9 @@ static ssize_t diagchar_write(struct file *file, const char __user *buf,
 	uint8_t retry_count = 0;
 	uint8_t max_retries = 3;
 #ifdef DIAG_DEBUG
+#ifndef CONFIG_LGE_USB_G_ANDROID
 	int length = 0, i;
+#endif
 #endif
 
 #ifdef CONFIG_LGE_DM_APP
@@ -1764,9 +1766,14 @@ static ssize_t diagchar_write(struct file *file, const char __user *buf,
 		buf = buf + 4;
 #ifdef DIAG_DEBUG
 		pr_debug("diag: user space data %d\n", payload_size);
+#ifdef CONFIG_LGE_USB_G_ANDROID
+		print_hex_dump(KERN_DEBUG, "user: ", 16, 1, DUMP_PREFIX_ADDRESS,
+				driver->user_space_data_buf + token_offset, payload_size, 1);
+#else
 		for (i = 0; i < payload_size; i++)
 			pr_debug("\t %x", *((driver->user_space_data_buf
 						+ token_offset)+i));
+#endif
 #endif
 		err = diag_process_userspace_remote(remote_proc,
 						    driver->user_space_data_buf
@@ -1852,9 +1859,14 @@ static ssize_t diagchar_write(struct file *file, const char __user *buf,
 
 #ifdef DIAG_DEBUG
 	printk(KERN_DEBUG "data is -->\n");
+#ifdef CONFIG_LGE_USB_G_ANDROID
+	print_hex_dump(KERN_DEBUG, "data: ", 16, 1, DUMP_PREFIX_ADDRESS,
+			(unsigned char *)buf_copy, payload_size, 1);
+#else
 	for (i = 0; i < payload_size; i++)
 		printk(KERN_DEBUG "\t %x \t", *(((unsigned char *)buf_copy)+i));
 #endif
+#endif /* DIAG DEBUG */
 	send.state = DIAG_STATE_START;
 	send.pkt = buf_copy;
 	send.last = (void *)(buf_copy + payload_size - 1);
@@ -1862,6 +1874,7 @@ static ssize_t diagchar_write(struct file *file, const char __user *buf,
 #ifdef DIAG_DEBUG
 	pr_debug("diag: Already used bytes in buffer %d, and"
 	" incoming payload size is %d\n", driver->used, payload_size);
+#ifndef CONFIG_LGE_USB_G_ANDROID
 	printk(KERN_DEBUG "hdlc encoded data is -->\n");
 	for (i = 0; i < payload_size + 8; i++) {
 		printk(KERN_DEBUG "\t %x \t", *(((unsigned char *)buf_hdlc)+i));
@@ -1869,13 +1882,13 @@ static ssize_t diagchar_write(struct file *file, const char __user *buf,
 			length++;
 	}
 #endif
+#endif /* DIAG DEBUG */
 	mutex_lock(&driver->diagchar_mutex);
 	if (!buf_hdlc)
 		buf_hdlc = diagmem_alloc(driver, HDLC_OUT_BUF_SIZE,
 						 POOL_TYPE_HDLC);
 	if (!buf_hdlc) {
 		ret = -ENOMEM;
-		driver->used = 0;
 		goto fail_free_copy;
 	}
 	if (HDLC_OUT_BUF_SIZE < (2*payload_size) + 3) {

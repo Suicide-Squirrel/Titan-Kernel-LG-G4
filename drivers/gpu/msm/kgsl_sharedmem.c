@@ -338,7 +338,7 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 		return VM_FAULT_SIGBUS;
 
 	pgoff = offset >> PAGE_SHIFT;
-#if 1  // OFFSET_SEARCH
+#ifdef CONFIG_LGE_KGSL_OFFSET_SEARCH
 	if (memdesc->offseted_sg == 0x0FF5E7ED) {
 #define SCALED_FACTOR   (_get_page_size / PAGE_SIZE)
 
@@ -702,7 +702,7 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 
 	len = size;
 
-#if 1  // OFFSET_SEARCH
+#ifdef CONFIG_LGE_KGSL_OFFSET_SEARCH
 	memdesc->offseted_sg = 0x0FF5E7ED;
 #endif
 

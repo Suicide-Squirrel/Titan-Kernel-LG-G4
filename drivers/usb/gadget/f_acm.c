@@ -187,7 +187,7 @@ static int acm_port_disconnect(struct f_acm *acm)
 /* notification endpoint uses smallish and infrequent fixed-size messages */
 
 #define GS_NOTIFY_INTERVAL_MS		32
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 #define GS_NOTIFY_MAXPACKET		16	/* For LG host driver */
 #define GS_DESC_NOTIFY_MAXPACKET	64	/* For acm_hs_notify_desc */
 #else
@@ -308,7 +308,7 @@ static struct usb_endpoint_descriptor acm_hs_notify_desc = {
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bEndpointAddress =	USB_DIR_IN,
 	.bmAttributes =		USB_ENDPOINT_XFER_INT,
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	.wMaxPacketSize =	cpu_to_le16(GS_DESC_NOTIFY_MAXPACKET),
 #else
 	.wMaxPacketSize =	cpu_to_le16(GS_NOTIFY_MAXPACKET),
@@ -545,11 +545,12 @@ static int acm_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 		if (acm->notify->driver_data) {
 			VDBG(cdev, "reset acm control interface %d\n", intf);
 			usb_ep_disable(acm->notify);
-		} else {
-			VDBG(cdev, "init acm ctrl interface %d\n", intf);
+		}
+
+		if (!acm->notify->desc)
 			if (config_ep_by_speed(cdev->gadget, f, acm->notify))
 				return -EINVAL;
-		}
+
 		usb_ep_enable(acm->notify);
 		acm->notify->driver_data = acm;
 
@@ -610,13 +611,13 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 	struct usb_ep			*ep = acm->notify;
 	struct usb_request		*req;
 	struct usb_cdc_notification	*notify;
-#ifndef CONFIG_USB_G_LGE_ANDROID
+#ifndef CONFIG_LGE_USB_G_ANDROID
 	const unsigned			len = sizeof(*notify) + length;
 #endif
 	void				*buf;
 	int				status;
 
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	unsigned char noti_buf[GS_NOTIFY_MAXPACKET];
 
 	memset(noti_buf, 0, GS_NOTIFY_MAXPACKET);
@@ -625,7 +626,7 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 	acm->notify_req = NULL;
 	acm->pending = false;
 
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	req->length = GS_NOTIFY_MAXPACKET;
 #else
 	req->length = len;
@@ -639,7 +640,7 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 	notify->wValue = cpu_to_le16(value);
 	notify->wIndex = cpu_to_le16(acm->ctrl_id);
 	notify->wLength = cpu_to_le16(length);
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	memcpy(noti_buf, data, length);
 	memcpy(buf, noti_buf, GS_NOTIFY_MAXPACKET);
 #else
@@ -807,7 +808,7 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 	 */
 
 	/* maybe allocate device-global string IDs, and patch descriptors */
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	if(acm_control_interface_desc.iInterface == 0){
 #endif
 		us = usb_gstrings_attach(cdev, acm_strings,
@@ -817,7 +818,7 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 		acm_control_interface_desc.iInterface = us[ACM_CTRL_IDX].id;
 		acm_data_interface_desc.iInterface = us[ACM_DATA_IDX].id;
 		acm_iad_descriptor.iFunction = us[ACM_IAD_IDX].id;
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	}
 #endif
 
@@ -913,7 +914,7 @@ fail:
 	return status;
 }
 
-#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+#ifdef CONFIG_LGE_USB_G_MULTIPLE_CONFIGURATION
 static int lge_acm_desc_change(struct usb_function *f, bool is_mac)
 {
 	struct usb_composite_dev *cdev = f->config->cdev;
@@ -997,7 +998,7 @@ static struct usb_function *acm_alloc_func(struct usb_function_instance *fi)
 	acm->port.func.set_alt = acm_set_alt;
 	acm->port.func.setup = acm_setup;
 	acm->port.func.disable = acm_disable;
-#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+#ifdef CONFIG_LGE_USB_G_MULTIPLE_CONFIGURATION
 	acm->port.func.desc_change = lge_acm_desc_change;
 #endif
 	acm->port_num = opts->port_num;

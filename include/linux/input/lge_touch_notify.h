@@ -15,6 +15,10 @@
 #define LCD_EVENT_TOUCH_PROXY_STATUS 0X04
 #define LCD_EVENT_TOUCH_SLEEP_STATUS 0X05
 #define LCD_EVENT_TOUCH_SWIPE_STATUS 0X06
+/* For PPlus */
+#define LCD_EVENT_HW_RESET			0x07
+#define LCD_EVENT_LCD_MODE			0x08
+
 struct touch_event {
 	void *data;
 };

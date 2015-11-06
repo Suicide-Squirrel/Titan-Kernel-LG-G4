@@ -76,8 +76,8 @@ config FB_MSM_MDSS_XLOG_DEBUG
 	driver during fatal errors and enable some display-driver logging
 	into an internal buffer (this avoids logging overhead).
 
-config LGE_LCD_TUNING
-       bool "Enable sysfs for LCD TUNING"
+config LGE_DISPLAY_TUNING
+       bool "Enable sysfs for DISPLAY TUNING"
        default n
 
 config LGE_LCD_OFF_DIMMING
@@ -109,12 +109,55 @@ config LGE_CAM_PREVIEW_TUNE
     bool "Enable LGE_CAM_PREVIEW_TUNE"
     default n
 
-config LGE_BLMAP_STORE_MODE
-    bool "Enable LGE_BLMAP_STORE_MODE"
-    default n
+config LGE_TE_SEL
+	bool "Select te pin(vsync)"
+	default n
+	help
+	  if you say yes here you get support for setting te pin.
+
+config LGE_DISPLAY_POWER_SEQUENCE
+     bool "lge panel power sequence"
+	default y
+	---help---
+	Support panel power sequence
+
+config LGE_DISPLAY_DFPS
+	bool "LG Dynamic LCD Refresh Driver"
+	select ARCH_HAS_OPP
+	select DEVFREQ_GOV_SIMPLE_ONDEMAND
+	default n
+	---help---
+	This adds the DEVFREQ driver for LG display
+
+config LGE_DISPLAY_VSYNC_SKIP
+	bool "MDSS VSYNC Skip scheme"
+	default n
+	---help---
+	This feature provides VSYNC skip scheme.
+config MACH_MSM8992_PPLUS
+	bool "MACH_MSM8992_PPLUS"
+	---help---
+	This feature for MACH_MSM8992_PPLUS
+
+config LGE_DISPLAY_DUAL_BACKLIGHT
+	bool "LG DUAL Backlight"
+	depends on MACH_MSM8992_PPLUS
+	default n
+	---help---
+	Support dual backlight
+
+config LGE_DISPLAY_EXTENDED_PANEL
+	bool "LGE_DISPLAY_EXTENDED_PANEL"
+	default n
+	help
+	  if you say yes here you get support for the extended panel
 
 config LGE_VSYNC_SKIP
-    bool "MDSS VSYNC Skip scheme"
-    default n
-    ---help---
-    This feature provides VSYNC skip scheme.
+	bool "MDSS VSYNC Skip scheme"
+	default n
+	---help---
+	This feature provides VSYNC skip scheme.
+
+config LGE_BLMAP_STORE_MODE
+	bool "Enable LGE_BLMAP_STORE_MODE"
+	default n

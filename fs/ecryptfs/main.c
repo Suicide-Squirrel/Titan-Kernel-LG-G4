@@ -177,7 +177,10 @@ enum { ecryptfs_opt_sig, ecryptfs_opt_ecryptfs_sig,
        ecryptfs_opt_fn_cipher, ecryptfs_opt_fn_cipher_key_bytes,
        ecryptfs_opt_unlink_sigs, ecryptfs_opt_mount_auth_tok_only,
        ecryptfs_opt_check_dev_ruid,
-       ecryptfs_opt_decryption_only, /* FEATURE_SDCARD_ENCRYPTION */
+#ifdef FEATURE_SDCARD_ENCRYPTION
+       ecryptfs_opt_decryption_only,
+       ecryptfs_opt_media_exception,
+#endif
        ecryptfs_opt_err };
 
 static const match_table_t tokens = {
@@ -195,7 +198,10 @@ static const match_table_t tokens = {
 	{ecryptfs_opt_unlink_sigs, "ecryptfs_unlink_sigs"},
 	{ecryptfs_opt_mount_auth_tok_only, "ecryptfs_mount_auth_tok_only"},
 	{ecryptfs_opt_check_dev_ruid, "ecryptfs_check_dev_ruid"},
-	{ecryptfs_opt_decryption_only, "decryption_only"}, /* FEATURE_SDCARD_ENCRYPTION */
+#ifdef FEATURE_SDCARD_ENCRYPTION
+	{ecryptfs_opt_decryption_only, "decryption_only"},
+	{ecryptfs_opt_media_exception, "media_exception=%s"},
+#endif
 	{ecryptfs_opt_err, NULL}
 };
 
@@ -227,11 +233,21 @@ out:
 	return rc;
 }
 
+#ifdef FEATURE_SDCARD_ENCRYPTION
+static void ecryptfs_init_mount_crypt_stat(
+	struct ecryptfs_mount_crypt_stat *mount_crypt_stat,
+	struct ecryptfs_mount_sd_crypt_stat *mount_sd_crypt_stat)
+#else
 static void ecryptfs_init_mount_crypt_stat(
 	struct ecryptfs_mount_crypt_stat *mount_crypt_stat)
+#endif
 {
 	memset((void *)mount_crypt_stat, 0,
 	       sizeof(struct ecryptfs_mount_crypt_stat));
+#ifdef FEATURE_SDCARD_ENCRYPTION
+	memset((void *)mount_sd_crypt_stat, 0,
+			sizeof(struct ecryptfs_mount_sd_crypt_stat));
+#endif
 	INIT_LIST_HEAD(&mount_crypt_stat->global_auth_tok_list);
 	mutex_init(&mount_crypt_stat->global_auth_tok_list_mutex);
 	mount_crypt_stat->flags |= ECRYPTFS_MOUNT_CRYPT_STAT_INITIALIZED;
@@ -271,6 +287,10 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 	int fn_cipher_key_bytes_set = 0;
 	struct ecryptfs_mount_crypt_stat *mount_crypt_stat =
 		&sbi->mount_crypt_stat;
+#ifdef FEATURE_SDCARD_ENCRYPTION
+	struct ecryptfs_mount_sd_crypt_stat *mount_sd_crypt_stat =
+		&sbi->mount_sd_crypt_stat;
+#endif
 	substring_t args[MAX_OPT_ARGS];
 	int token;
 	char *sig_src;
@@ -290,7 +310,11 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 		rc = -EINVAL;
 		goto out;
 	}
+#ifdef FEATURE_SDCARD_ENCRYPTION
+	ecryptfs_init_mount_crypt_stat(mount_crypt_stat, mount_sd_crypt_stat);
+#else
 	ecryptfs_init_mount_crypt_stat(mount_crypt_stat);
+#endif
 	while ((p = strsep(&options, ",")) != NULL) {
 		if (!*p)
 			continue;
@@ -390,9 +414,15 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 			mount_crypt_stat->flags |=
 				ECRYPTFS_GLOBAL_MOUNT_AUTH_TOK_ONLY;
 			break;
-		case ecryptfs_opt_decryption_only: /* FEATURE_SDCARD_ENCRYPTION */
-			mount_crypt_stat->flags |= ECRYPTFS_DECRYPTION_ONLY;
+#ifdef FEATURE_SDCARD_ENCRYPTION
+		case ecryptfs_opt_decryption_only:
+			mount_sd_crypt_stat->flags |= ECRYPTFS_DECRYPTION_ONLY;
 			break;
+		case ecryptfs_opt_media_exception:
+			mount_sd_crypt_stat->flags |= ECRYPTFS_MEDIA_EXCEPTION;
+			set_media_ext(args[0].from);
+			break;
+#endif
 		case ecryptfs_opt_check_dev_ruid:
 			*check_ruid = 1;
 			break;
@@ -499,6 +529,7 @@ static struct dentry *ecryptfs_mount(struct file_system_type *fs_type, int flags
 {
 	struct super_block *s;
 	struct ecryptfs_sb_info *sbi;
+	struct ecryptfs_mount_crypt_stat *mount_crypt_stat;
 	struct ecryptfs_dentry_info *root_info;
 	const char *err = "Getting sb failed";
 	struct inode *inode;
@@ -517,6 +548,7 @@ static struct dentry *ecryptfs_mount(struct file_system_type *fs_type, int flags
 		err = "Error parsing options";
 		goto out;
 	}
+	mount_crypt_stat = &sbi->mount_crypt_stat;
 
 	s = sget(fs_type, NULL, set_anon_super, flags, NULL);
 	if (IS_ERR(s)) {
@@ -563,11 +595,19 @@ static struct dentry *ecryptfs_mount(struct file_system_type *fs_type, int flags
 
 	/**
 	 * Set the POSIX ACL flag based on whether they're enabled in the lower
-	 * mount. Force a read-only eCryptfs mount if the lower mount is ro.
-	 * Allow a ro eCryptfs mount even when the lower mount is rw.
+	 * mount.
 	 */
 	s->s_flags = flags & ~MS_POSIXACL;
-	s->s_flags |= path.dentry->d_sb->s_flags & (MS_RDONLY | MS_POSIXACL);
+	s->s_flags |= path.dentry->d_sb->s_flags & MS_POSIXACL;
+
+	/**
+	 * Force a read-only eCryptfs mount when:
+	 *   1) The lower mount is ro
+	 *   2) The ecryptfs_encrypted_view mount option is specified
+	 */
+	if (path.dentry->d_sb->s_flags & MS_RDONLY ||
+	    mount_crypt_stat->flags & ECRYPTFS_ENCRYPTED_VIEW_ENABLED)
+		s->s_flags |= MS_RDONLY;
 
 	s->s_maxbytes = path.dentry->d_sb->s_maxbytes;
 	s->s_blocksize = path.dentry->d_sb->s_blocksize;

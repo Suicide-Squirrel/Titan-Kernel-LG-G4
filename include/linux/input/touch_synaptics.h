@@ -269,6 +269,7 @@ struct synaptics_ts_f54_reg {
 	u8 cid_im;
 	u8 freq_scan_im;
 	u8 incell_statistic;
+	u8 general_control;
 };
 
 struct function_descriptor {
@@ -486,6 +487,7 @@ struct synaptics_ts_exp_fn {
 };
 
 extern int touch_ta_status;
+extern int touch_wc_status;
 extern struct workqueue_struct *touch_wq;
 extern char f54_wlog_buf[6000];
 enum error_type synaptics_ts_init(struct i2c_client *client);

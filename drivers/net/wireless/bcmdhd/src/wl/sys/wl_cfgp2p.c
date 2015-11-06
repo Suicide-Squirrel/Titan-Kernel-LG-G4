@@ -377,11 +377,12 @@ void
 wl_cfgp2p_deinit_priv(struct bcm_cfg80211 *cfg)
 {
 	CFGP2P_DBG(("In\n"));
+	cfg->p2p_supported = 0; //bcm patch: prevent kernel crash
 	if (cfg->p2p) {
 		kfree(cfg->p2p);
 		cfg->p2p = NULL;
 	}
-	cfg->p2p_supported = 0;
+	//cfg->p2p_supported = 0;
 }
 /*
  * Set P2P functions into firmware

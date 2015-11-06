@@ -132,7 +132,7 @@ static int broadcast_isdbt_set_regulator(int onoff)
 
     if(onoff)
     {
-        rc = regulator_set_voltage(IsdbCtrlInfo.vdd_io,2950000,2950000);
+        rc = regulator_set_voltage(IsdbCtrlInfo.vdd_io,1800000,2950000);
         if(rc)
         {
             dev_err(&(IsdbCtrlInfo.pdev->dev), "[dtv] could not set regulator ret=%d \n",rc);

@@ -126,11 +126,16 @@ static int _get_more_prng_bytes(struct prng_context *ctx, int cont_test)
 			output = ctx->rand_data;
 			break;
 		case 2:
+#ifdef CONFIG_CRYPTO_FIPS
+// fail fast if we're in a FIPS error state
+			if (unlikely(fips_error()))
+				return -EINVAL;
+#endif
 			/*
 			 * First check that we didn't produce the same
 			 * random data that we did last time around through this
 			 */
-#if FIPS_CRYPTO_TEST == 3
+#if FIPS_FUNC_TEST == 5
 			memcpy(ctx->rand_data, ctx->last_rand_data, DEFAULT_BLK_SZ);
 #endif
 			if (!memcmp(ctx->rand_data, ctx->last_rand_data,
@@ -138,6 +143,9 @@ static int _get_more_prng_bytes(struct prng_context *ctx, int cont_test)
 				if (cont_test) {
 #ifdef CONFIG_CRYPTO_FIPS
 					set_fips_error();
+
+					if (fips_panic)
+						panic("FIPS: cprng %p Failed repetition check!\n", ctx);
 #else
 					panic("cprng %p Failed repetition check!\n",
 						ctx);
@@ -400,6 +408,10 @@ static int fips_cprng_get_random(struct crypto_rng *tfm, u8 *rdata,
 {
 	struct prng_context *prng = crypto_rng_ctx(tfm);
 
+	// fail fast if we're in a FIPS error state
+	if (unlikely(fips_error()))
+		return -EINVAL;
+
 	return get_prng_bytes(rdata, dlen, prng, 1);
 }
 
@@ -488,4 +500,5 @@ module_param(dbg, int, 0);
 MODULE_PARM_DESC(dbg, "Boolean to enable debugging (0/1 == off/on)");
 module_init(prng_mod_init);
 module_exit(prng_mod_fini);
-MODULE_ALIAS("stdrng");
+MODULE_ALIAS_CRYPTO("stdrng");
+MODULE_ALIAS_CRYPTO("ansi_cprng");

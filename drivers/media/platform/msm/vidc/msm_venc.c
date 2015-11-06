@@ -1064,6 +1064,26 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.step = 1,
 		.qmenu = NULL,
 	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY,
+		.name = "Session Priority",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = V4L2_MPEG_VIDC_VIDEO_PRIORITY_REALTIME_ENABLE,
+		.maximum = V4L2_MPEG_VIDC_VIDEO_PRIORITY_REALTIME_DISABLE,
+		.default_value = V4L2_MPEG_VIDC_VIDEO_PRIORITY_REALTIME_DISABLE,
+		.step = 1,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE,
+		.name = "Set Encoder Operating rate",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = 300 << 16,  /* 300 fps in Q16 format*/
+		.default_value = 0,
+		.step = 1,
+		.qmenu = NULL,
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(msm_venc_ctrls)
@@ -1175,6 +1195,7 @@ static int msm_venc_queue_setup(struct vb2_queue *q,
 	rc = msm_comm_try_state(inst, MSM_VIDC_OPEN_DONE);
 	if (rc) {
 		dprintk(VIDC_ERR, "Failed to open instance\n");
+		msm_comm_session_clean(inst);
 		return rc;
 	}
 
@@ -1241,11 +1262,11 @@ static int msm_venc_queue_setup(struct vb2_queue *q,
 		new_buf_count.buffer_type = HAL_BUFFER_OUTPUT;
 		new_buf_count.buffer_count_actual = *num_buffers;
 		new_buf_count.buffer_count_actual +=
-				msm_dcvs_get_extra_buff_count(inst, false);
+				msm_dcvs_get_extra_buff_count(inst);
 		rc = call_hfi_op(hdev, session_set_property, inst->session,
 			property_id, &new_buf_count);
 		if (!rc)
-			msm_dcvs_set_buff_req_handled(inst, false);
+			msm_dcvs_set_buff_req_handled(inst);
 
 		break;
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
@@ -1266,12 +1287,10 @@ static int msm_venc_queue_setup(struct vb2_queue *q,
 		if (extradata == V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP)
 			*num_planes = *num_planes + 1;
 		inst->fmts[OUTPUT_PORT]->num_planes = *num_planes;
-		new_buf_count.buffer_count_actual +=
-			msm_dcvs_get_extra_buff_count(inst, true);
 		rc = call_hfi_op(hdev, session_set_property, inst->session,
 					property_id, &new_buf_count);
-		if (!rc)
-			msm_dcvs_set_buff_req_handled(inst, true);
+		if (rc)
+			dprintk(VIDC_ERR, "failed to set count to fw\n");
 
 		dprintk(VIDC_DBG, "size = %d, alignment = %d, count = %d\n",
 				inst->buff_req.buffer[0].buffer_size,
@@ -2564,8 +2583,6 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			rc = -ENOTSUPP;
 			break;
 		}
-
-		msm_comm_scale_clocks_and_bus(inst);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_H264_VUI_BITSTREAM_RESTRICT:
 		property_id = HAL_PARAM_VENC_H264_VUI_BITSTREAM_RESTRC;
@@ -2687,6 +2704,14 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		property_id = HAL_PARAM_VENC_HIER_P_HYBRID_MODE;
 		hyb_hierp.layers = ctrl->val;
 		pdata = &hyb_hierp;
+		break;
+	case V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY:
+		property_id = HAL_CONFIG_REALTIME;
+		enable.enable = ctrl->val;
+		pdata = &enable;
+		break;
+	case V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE:
+		property_id = 0;
 		break;
 	default:
 		dprintk(VIDC_ERR, "Unsupported index: %x\n", ctrl->id);
@@ -3239,10 +3264,13 @@ int msm_venc_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 
 	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		struct hal_frame_size frame_sz = {0};
+		struct hal_quantization_range qp_range;
+		void *pdata = NULL;
 
 		rc = msm_comm_try_state(inst, MSM_VIDC_OPEN_DONE);
 		if (rc) {
 			dprintk(VIDC_ERR, "Failed to open instance\n");
+			msm_comm_session_clean(inst);
 			goto exit;
 		}
 
@@ -3257,6 +3285,33 @@ int msm_venc_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 					"Failed to set OUTPUT framesize\n");
 			goto exit;
 		}
+
+		if (inst->fmts[CAPTURE_PORT]->fourcc == V4L2_PIX_FMT_HEVC) {
+
+			/*
+			* Currently Venus HW has a limitation on minimum
+			* value of QP for HEVC encoder. Hence restricting
+			* the QP in the range of 2 - 51. This workaround
+			* will be removed once FW able to handle the full
+			* QP range.
+			*/
+
+			qp_range.layer_id = 0;
+			qp_range.max_qp = 51;
+			qp_range.min_qp = 2;
+
+			pdata = &qp_range;
+
+			rc = call_hfi_op(hdev, session_set_property,
+					(void *)inst->session,
+					HAL_PARAM_VENC_SESSION_QP_RANGE, pdata);
+			if (rc) {
+				dprintk(VIDC_ERR,
+						"Failed to set QP range\n");
+				goto exit;
+			}
+		}
+
 	} else if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		struct hal_buffer_requirements *bufreq = NULL;
 		int extra_idx = 0;

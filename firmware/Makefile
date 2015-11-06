@@ -42,6 +42,7 @@ endif
 sic_firmware := $(subst $(srctree)/firmware/,,$(sic_img_file))
 
 fw-shipped-$(CONFIG_TOUCHSCREEN_LGE_SIC) += $(sic_firmware)
+fw-shipped-$(CONFIG_TOUCHSCREEN_LGE_SIC_SPI) += $(sic_firmware)
 fw-shipped-$(CONFIG_ACENIC) += $(acenic-objs)
 fw-shipped-$(CONFIG_ADAPTEC_STARFIRE) += adaptec/starfire_rx.bin \
 					 adaptec/starfire_tx.bin

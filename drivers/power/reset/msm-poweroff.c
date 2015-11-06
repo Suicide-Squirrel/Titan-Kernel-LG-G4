@@ -71,7 +71,7 @@ static void *emergency_dload_mode_addr;
 static bool scm_dload_supported;
 
 static int dload_set(const char *val, struct kernel_param *kp);
-static int download_mode = 0;
+static int download_mode = 1;
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
 static int panic_prep_restart(struct notifier_block *this,
@@ -126,12 +126,12 @@ static void set_dload_mode(int on)
 	dload_mode_enabled = on;
 }
 
-#ifndef CONFIG_LGE_HANDLE_PANIC
 static bool get_dload_mode(void)
 {
 	return dload_mode_enabled;
 }
 
+#ifndef CONFIG_LGE_HANDLE_PANIC
 static void enable_emergency_dload_mode(void)
 {
 	int ret;
@@ -242,7 +242,7 @@ static void msm_restart_prepare(const char *cmd)
 
 #if defined(CONFIG_MACH_LGE)
 	/* there's no reason to forcing a hard reset on reboot request */
-	if (!hard_reset)
+	if (!hard_reset || get_dload_mode())
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
@@ -295,6 +295,10 @@ static void msm_restart_prepare(const char *cmd)
 		} else if (!strncmp(cmd, "LCD off", 7)) {
 			__raw_writel(0x77665562, restart_reason);
 #endif
+        } else if (!strncmp(cmd, "aat_write", 9)) {
+            __raw_writel(0x77665580, restart_reason);
+        } else if (!strncmp(cmd, "aat_enter", 9)) {
+            __raw_writel(0x77665581, restart_reason);
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			int ret;

@@ -318,52 +318,52 @@
 
 /* IRQ status registers */
 #define IRQ_A_REG				0x40
-#define IRQ_HOT_HARD_BIT			BIT(7)
-#define IRQ_COLD_HARD_BIT			BIT(5)
-#define IRQ_HOT_SOFT_BIT			BIT(3)
-#define IRQ_COLD_SOFT_BIT			BIT(1)
+#define IRQ_HOT_HARD_BIT			BIT(6)
+#define IRQ_COLD_HARD_BIT			BIT(4)
+#define IRQ_HOT_SOFT_BIT			BIT(2)
+#define IRQ_COLD_SOFT_BIT			BIT(0)
 
 #define IRQ_B_REG				0x41
-#define IRQ_BATT_TERMINAL_REMOVED_BIT		BIT(7)
-#define IRQ_BATT_MISSING_BIT			BIT(5)
-#define IRQ_LOW_BATT_VOLTAGE_BIT		BIT(3)
-#define IRQ_INTERNAL_TEMP_LIMIT_BIT		BIT(1)
+#define IRQ_BATT_TERMINAL_REMOVED_BIT		BIT(6)
+#define IRQ_BATT_MISSING_BIT			BIT(4)
+#define IRQ_LOW_BATT_VOLTAGE_BIT		BIT(2)
+#define IRQ_INTERNAL_TEMP_LIMIT_BIT		BIT(0)
 
 #define IRQ_C_REG				0x42
-#define IRQ_PRE_TO_FAST_VOLTAGE_BIT		BIT(7)
-#define IRQ_RECHG_BIT				BIT(5)
-#define IRQ_TAPER_BIT				BIT(3)
-#define IRQ_TERM_BIT				BIT(1)
+#define IRQ_PRE_TO_FAST_VOLTAGE_BIT		BIT(6)
+#define IRQ_RECHG_BIT				BIT(4)
+#define IRQ_TAPER_BIT				BIT(2)
+#define IRQ_TERM_BIT				BIT(0)
 
 #define IRQ_D_REG				0x43
-#define IRQ_BATT_OV_BIT				BIT(7)
-#define IRQ_CHG_ERROR_BIT			BIT(5)
-#define IRQ_CHG_TIMEOUT_BIT			BIT(3)
-#define IRQ_PRECHG_TIMEOUT_BIT			BIT(1)
+#define IRQ_BATT_OV_BIT				BIT(6)
+#define IRQ_CHG_ERROR_BIT			BIT(4)
+#define IRQ_CHG_TIMEOUT_BIT			BIT(2)
+#define IRQ_PRECHG_TIMEOUT_BIT			BIT(0)
 
 #define IRQ_E_REG				0x44
-#define IRQ_USBIN_OV_BIT			BIT(7)
-#define IRQ_USBIN_UV_BIT			BIT(5)
-#define IRQ_AFVC_BIT				BIT(3)
-#define IRQ_POWER_OK_BIT			BIT(1)
+#define IRQ_USBIN_OV_BIT			BIT(6)
+#define IRQ_USBIN_UV_BIT			BIT(4)
+#define IRQ_AFVC_BIT				BIT(2)
+#define IRQ_POWER_OK_BIT			BIT(0)
 
 #define IRQ_F_REG				0x45
-#define IRQ_OTG_OVER_CURRENT_BIT		BIT(7)
-#define IRQ_OTG_FAIL_BIT			BIT(5)
-#define IRQ_RID_BIT				BIT(3)
-#define IRQ_OTG_OC_RETRY_BIT			BIT(1)
+#define IRQ_OTG_OVER_CURRENT_BIT		BIT(6)
+#define IRQ_OTG_FAIL_BIT			BIT(4)
+#define IRQ_RID_BIT				BIT(2)
+#define IRQ_OTG_OC_RETRY_BIT			BIT(0)
 
 #define IRQ_G_REG				0x46
-#define IRQ_SOURCE_DET_BIT			BIT(7)
-#define IRQ_AICL_DONE_BIT			BIT(5)
-#define IRQ_AICL_FAIL_BIT			BIT(3)
-#define IRQ_CHG_INHIBIT_BIT			BIT(1)
+#define IRQ_SOURCE_DET_BIT			BIT(6)
+#define IRQ_AICL_DONE_BIT			BIT(4)
+#define IRQ_AICL_FAIL_BIT			BIT(2)
+#define IRQ_CHG_INHIBIT_BIT			BIT(0)
 
 #define IRQ_H_REG				0x47
 #define IRQ_IC_LIMIT_STATUS_BIT			BIT(5)
 #define IRQ_HVDCP_2P1_STATUS_BIT		BIT(4)
-#define IRQ_HVDCP_AUTH_DONE_BIT			BIT(3)
-#define IRQ_WDOG_TIMEOUT_BIT			BIT(1)
+#define IRQ_HVDCP_AUTH_DONE_BIT			BIT(2)
+#define IRQ_WDOG_TIMEOUT_BIT			BIT(0)
 
 /* constants */
 #define USB2_MIN_CURRENT_MA			100
@@ -620,7 +620,11 @@ static int smb1351_fastchg_current_set(struct smb1351_charger *chip,
 	if (chip->parallel_charger_present &&
 		(fastchg_current < SMB1351_CHG_FAST_MIN_MA)) {
 		is_pre_chg = true;
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+		pr_info("is_pre_chg true, current is %d\n", fastchg_current);
+#else
 		pr_debug("is_pre_chg true, current is %d\n", fastchg_current);
+#endif
 	}
 
 	if (is_pre_chg) {
@@ -638,7 +642,11 @@ static int smb1351_fastchg_current_set(struct smb1351_charger *chip,
 		else
 			i = (i - 2) << SMB1351_CHG_PRE_SHIFT;
 
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+		pr_info("prechg setting %02x\n", i);
+#else
 		pr_debug("prechg setting %02x\n", i);
+#endif
 
 		rc = smb1351_masked_write(chip, CHG_OTH_CURRENT_CTRL_REG,
 				PRECHG_CURRENT_MASK, i);
@@ -656,9 +664,13 @@ static int smb1351_fastchg_current_set(struct smb1351_charger *chip,
 		if (i < 0)
 			i = 0;
 		i = i << SMB1351_CHG_FAST_SHIFT;
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+		pr_info("fastchg limit=%d setting %02x\n",
+					chip->fastchg_current_max_ma, i);
+#else
 		pr_debug("fastchg limit=%d setting %02x\n",
 					chip->fastchg_current_max_ma, i);
-
+#endif
 		/* make sure pre chg mode is disabled */
 		rc = smb1351_masked_write(chip, VARIOUS_FUNC_2_REG,
 					PRECHG_TO_FASTCHG_BIT, 0);
@@ -678,6 +690,10 @@ static int smb1351_float_voltage_set(struct smb1351_charger *chip,
 								int vfloat_mv)
 {
 	u8 temp;
+
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+	pr_info("set float voltage = %d\n", vfloat_mv);
+#endif
 
 	if ((vfloat_mv < MIN_FLOAT_MV) || (vfloat_mv > MAX_FLOAT_MV)) {
 		pr_err("bad float voltage mv =%d asked to set\n", vfloat_mv);
@@ -1163,7 +1179,11 @@ static int smb1351_set_usb_chg_current(struct smb1351_charger *chip,
 	int i, rc = 0;
 	u8 reg = 0, mask = 0;
 
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+	pr_info("USB current_ma = %d\n", current_ma);
+#else
 	pr_debug("USB current_ma = %d\n", current_ma);
+#endif
 
 	if (chip->chg_autonomous_mode) {
 		pr_debug("Charger in autonomous mode\n");
@@ -1190,9 +1210,13 @@ static int smb1351_set_usb_chg_current(struct smb1351_charger *chip,
 	} else if (current_ma == USB2_MAX_CURRENT_MA) {
 		/* USB 2.0 - 500mA */
 		reg = CMD_USB_2_MODE | CMD_USB_500_MODE;
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+	//do not use USB mode. USB mode reduces ibat current.
+#else
 	} else if (current_ma == USB3_MAX_CURRENT_MA) {
 		/* USB 3.0 - 900mA */
 		reg = CMD_USB_3_MODE | CMD_USB_500_MODE;
+#endif
 	} else if (current_ma > USB2_MAX_CURRENT_MA) {
 		/* HC mode  - if none of the above */
 		reg = CMD_USB_AC_MODE;
@@ -1345,6 +1369,7 @@ static enum power_supply_property smb1351_parallel_properties[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
+	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
 };
 
@@ -1395,7 +1420,12 @@ static int smb1351_parallel_set_chg_present(struct smb1351_charger *chip,
 		}
 
 		/* set chg en by pin active low  */
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+		/* set charging enable by I2C */
+		reg = EN_BY_I2C_0_ENABLE | USBCS_CTRL_BY_I2C;
+#else
 		reg = EN_BY_PIN_LOW_ENABLE | USBCS_CTRL_BY_I2C;
+#endif
 		rc = smb1351_masked_write(chip, CHG_PIN_EN_CTRL_REG,
 					EN_PIN_CTRL_MASK | USBCS_CTRL_BIT, reg);
 		if (rc) {
@@ -1420,6 +1450,33 @@ static int smb1351_parallel_set_chg_present(struct smb1351_charger *chip,
 			pr_err("Couldn't set fastchg current rc=%d\n", rc);
 			return rc;
 		}
+#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
+		/* adapter allowance to 5~9V */
+		rc = smb1351_masked_write(chip, FLEXCHARGER_REG,
+						CHG_CONFIG_MASK, 0);
+
+		if (rc) {
+			pr_err("Couldn't set charger config adapter rc = %d\n", rc);
+			return rc;
+		}
+
+		/* jeita disable */
+		rc = smb1351_masked_write(chip, THERM_A_CTRL_REG,
+						SOFT_COLD_TEMP_LIMIT_MASK, 0);
+		if (rc) {
+			pr_err("Couldn't set soft cold limit rc = %d\n", rc);
+			return rc;
+		}
+
+		rc = smb1351_masked_write(chip, THERM_A_CTRL_REG,
+						SOFT_HOT_TEMP_LIMIT_MASK, 0);
+
+		if (rc) {
+			pr_err("Couldn't set soft hot limit rc = %d\n", rc);
+			return rc;
+		}
+
+#endif
 	}
 
 	chip->parallel_charger_present = present;
@@ -1467,6 +1524,16 @@ static int smb1351_parallel_set_property(struct power_supply *psy,
 						chip->usb_psy_ma);
 		}
 		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+		if (chip->parallel_charger_present &&
+			(chip->vfloat_mv != val->intval)) {
+			rc = smb1351_float_voltage_set(chip, val->intval);
+			if (!rc)
+				chip->vfloat_mv = val->intval;
+		} else {
+			chip->vfloat_mv = val->intval;
+		}
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1500,6 +1567,9 @@ static int smb1351_parallel_get_property(struct power_supply *psy,
 			val->intval = chip->usb_psy_ma * 1000;
 		else
 			val->intval = 0;
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+		val->intval = chip->vfloat_mv;
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = chip->parallel_charger_present;

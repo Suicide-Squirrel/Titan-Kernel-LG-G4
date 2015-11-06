@@ -602,8 +602,13 @@ int mdss_dsi_long_read_resp(struct dsi_buf *rp)
 }
 
 static char set_tear_on[2] = {0x35, 0x00};
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
 static struct dsi_cmd_desc dsi_tear_on_cmd = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 20, sizeof(set_tear_on)}, set_tear_on};
+#else
+static struct dsi_cmd_desc dsi_tear_on_cmd = {
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 0, sizeof(set_tear_on)}, set_tear_on};
+#endif
 
 static char set_tear_off[2] = {0x34, 0x00};
 static struct dsi_cmd_desc dsi_tear_off_cmd = {

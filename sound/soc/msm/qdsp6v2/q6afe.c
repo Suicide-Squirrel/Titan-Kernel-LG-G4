@@ -15,6 +15,7 @@
 #include <linux/kthread.h>
 #include <linux/uaccess.h>
 #include <linux/wait.h>
+#include <linux/wakelock.h>
 #include <linux/jiffies.h>
 #include <linux/sched.h>
 #include <linux/msm_audio_ion.h>
@@ -24,9 +25,12 @@
 #include <sound/q6audio-v2.h>
 #include "msm-pcm-routing-v2.h"
 #include <sound/audio_cal_utils.h>
+
 #ifdef CONFIG_SND_SOC_DYBOOST
 #include <../../codecs/tas2552.h>
 #endif
+
+#define WAKELOCK_TIMEOUT	5000
 enum {
 	AFE_COMMON_RX_CAL = 0,
 	AFE_COMMON_TX_CAL,
@@ -66,6 +70,7 @@ enum {
 	QUICK_CALIB_ENABLE
 };
 
+
 #ifdef CONFIG_SND_TI_SPK_PROT_OPALUM
 #ifdef CONFIG_SND_SOC_SPKINFO
 int32_t opalum_excursion_model[3] = {0, };
@@ -74,6 +79,13 @@ int32_t opalum_excursion_model[2] = {0, };
 #endif
 int32_t opalum_current_temperature[2] = {0, };
 #endif
+
+struct wlock {
+	struct wakeup_source ws;
+};
+
+static struct wlock wl;
+
 struct afe_ctl {
 	void *apr;
 	atomic_t state;
@@ -460,6 +472,10 @@ int afe_sizeof_cfg_cmd(u16 port_id)
 	case AFE_PORT_ID_PRIMARY_MI2S_TX:
 	case AFE_PORT_ID_QUATERNARY_MI2S_RX:
 	case AFE_PORT_ID_QUATERNARY_MI2S_TX:
+#ifdef CONFIG_SND_USE_TERT_MI2S
+	case AFE_PORT_ID_TERTIARY_MI2S_RX:
+	case AFE_PORT_ID_TERTIARY_MI2S_TX:
+#endif
 		ret_size = SIZEOF_CFG_CMD(afe_param_id_i2s_cfg);
 		break;
 	case HDMI_RX:
@@ -2632,7 +2648,7 @@ int q6afe_audio_client_buf_alloc_contiguous(unsigned int dir,
 	ac->port[dir].buf = buf;
 
 	rc = msm_audio_ion_alloc("afe_client", &buf[0].client,
-				&buf[0].handle, bufsz*bufcnt,
+				&buf[0].handle, PAGE_ALIGN(bufsz*bufcnt),
 				&buf[0].phys, &len,
 				&buf[0].data);
 	if (rc) {
@@ -2682,7 +2698,7 @@ int afe_memory_map(phys_addr_t dma_addr_p, u32 dma_buf_sz,
 
 	mutex_lock(&this_afe.afe_cmd_lock);
 	ac->mem_map_handle = 0;
-	ret = afe_cmd_memory_map(dma_addr_p, dma_buf_sz);
+	ret = afe_cmd_memory_map(dma_addr_p, PAGE_ALIGN(dma_buf_sz));
 	if (ret < 0) {
 		pr_err("%s: afe_cmd_memory_map failed %d\n",
 			__func__, ret);
@@ -2922,6 +2938,11 @@ int afe_cmd_memory_unmap(u32 mem_map_handle)
 
 	pr_debug("%s: handle 0x%x\n", __func__, mem_map_handle);
 
+	if (!mem_map_handle) {
+		pr_err("%s: mem map handle (null)\n", __func__);
+		return -EINVAL;
+	}
+
 	if (this_afe.apr == NULL) {
 		this_afe.apr = apr_register("ADSP", "AFE", afe_callback,
 					0xFFFFFFFF, &this_afe);
@@ -2965,6 +2986,11 @@ int afe_cmd_memory_unmap_nowait(u32 mem_map_handle)
 	struct afe_service_cmd_shared_mem_unmap_regions mregion;
 
 	pr_debug("%s: handle 0x%x\n", __func__, mem_map_handle);
+
+	if (!mem_map_handle) {
+		pr_err("%s: mem map handle (null)\n", __func__);
+		return -EINVAL;
+	}
 
 	if (this_afe.apr == NULL) {
 		this_afe.apr = apr_register("ADSP", "AFE", afe_callback,
@@ -3522,6 +3548,9 @@ int afe_validate_port(u16 port_id)
 	case AFE_PORT_ID_SECONDARY_MI2S_RX:
 	case AFE_PORT_ID_QUATERNARY_MI2S_RX:
 	case AFE_PORT_ID_QUATERNARY_MI2S_TX:
+#ifdef CONFIG_SND_USE_TERT_MI2S
+	case AFE_PORT_ID_TERTIARY_MI2S_RX:
+#endif
 	case AFE_PORT_ID_TERTIARY_MI2S_TX:
 	{
 		ret = 0;
@@ -4359,6 +4388,8 @@ static int afe_set_cal_fb_spkr_prot(int32_t cal_type, size_t data_size,
 	if (data_size != sizeof(*cal_data))
 		goto done;
 
+	if (cal_data->cal_info.mode == MSM_SPKR_PROT_CALIBRATION_IN_PROGRESS)
+		__pm_wakeup_event(&wl.ws, jiffies_to_msecs(WAKELOCK_TIMEOUT));
 	mutex_lock(&this_afe.cal_data[AFE_FB_SPKR_PROT_CAL]->lock);
 	memcpy(&this_afe.prot_cfg, &cal_data->cal_info,
 		sizeof(this_afe.prot_cfg));
@@ -4423,6 +4454,7 @@ static int afe_get_cal_fb_spkr_prot(int32_t cal_type, size_t data_size,
 		cal_data->cal_info.r0[SP_V2_SPKR_2] = -1;
 	}
 	mutex_unlock(&this_afe.cal_data[AFE_FB_SPKR_PROT_CAL]->lock);
+	__pm_relax(&wl.ws);
 done:
 	return ret;
 }
@@ -4918,6 +4950,7 @@ static int __init afe_init(void)
 	for (i = 0; i < AFE_MAX_PORTS; i++)
 		init_waitqueue_head(&this_afe.wait[i]);
 
+	wakeup_source_init(&wl.ws, "spkr-prot");
 	ret = afe_init_cal_data();
 	if (ret)
 		pr_err("%s: could not init cal data! %d\n", __func__, ret);
@@ -4932,6 +4965,7 @@ static void __exit afe_exit(void)
 
 	config_debug_fs_exit();
 	mutex_destroy(&this_afe.afe_cmd_lock);
+	wakeup_source_trash(&wl.ws);
 }
 
 device_initcall(afe_init);

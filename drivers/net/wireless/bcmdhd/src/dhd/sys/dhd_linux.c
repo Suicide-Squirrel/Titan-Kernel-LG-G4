@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_linux.c 529431 2015-01-27 12:21:00Z $
+ * $Id: dhd_linux.c 543294 2015-03-24 06:10:31Z $
  */
 
 #include <typedefs.h>
@@ -166,7 +166,10 @@ extern bool ap_fw_loaded;
 #endif /* CUSTOMER_HW4 */
 
 #ifdef ENABLE_ADAPTIVE_SCHED
-#ifdef CONFIG_MACH_MSM8992_P1
+//LGE_Patch
+#if defined(CONFIG_MACH_MSM8992_P1) || defined(CONFIG_MACH_MSM8992_PPLUS) || defined(CONFIG_MACH_MSM8992_P1A4WP)
+#define DEFAULT_CPUFREQ_THRESH         800000    /* threshold frequency : 800000 = 800MHz */
+#elif defined(CONFIG_MACH_MSM8992_PPLUS)
 #define DEFAULT_CPUFREQ_THRESH		 800000	/* threshold frequency : 800000 = 800MHz */
 #else
 #define DEFAULT_CPUFREQ_THRESH		1000000	/* threshold frequency : 1000000 = 1GHz */
@@ -5396,6 +5399,8 @@ bool dhd_validate_chipid(dhd_pub_t *dhdp)
 	config_chipid = BCM43349_CHIP_ID;
 #elif defined(BCM4335_CHIP)
 	config_chipid = BCM4335_CHIP_ID;
+#elif defined(BCM43455_CHIP)
+	config_chipid = BCM4345_CHIP_ID;
 #elif defined(BCM43241_CHIP)
 	config_chipid = BCM4324_CHIP_ID;
 #elif defined(BCM4334_CHIP)
@@ -5423,14 +5428,17 @@ bool dhd_validate_chipid(dhd_pub_t *dhdp)
 		return TRUE;
 #endif /* BCM4358_CHIP && SUPPORT_MULTIPLE_REVISION */
 #ifdef CUSTOMER_HW10
-#if defined(BCM4356_CHIP)
+#if defined(BCM4358_CHIP)
+	if (chipid == BCM43569_CHIP_ID && config_chipid == BCM4358_CHIP_ID)
+		return TRUE;
+#elif defined(BCM4356_CHIP)
 	if (chipid == BCM4354_CHIP_ID && config_chipid == BCM4356_CHIP_ID)
 		return TRUE;
 #elif defined(BCM4354_CHIP)
 	if (chipid == BCM4356_CHIP_ID && config_chipid == BCM4354_CHIP_ID)
 		return TRUE;
 #endif
-#endif
+#endif /* CUSTOMER_HW10 */
 
 	return config_chipid == chipid;
 }
@@ -6956,11 +6964,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 
 #ifndef DISABLE_11N
 	bcm_mkiovar("ampdu_hostreorder", (char *)&hostreorder, 4, iovbuf, sizeof(iovbuf));
-	    if (
-#ifdef CUSTOMER_HW10	// do not enable ampdu_hostreorder for Mobile hotspot
-	    !(dhd->op_mode & DHD_FLAG_HOSTAP_MODE) &&
-#endif
-	    (ret2 = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
+	if ((ret2 = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
 		DHD_ERROR(("%s wl ampdu_hostreorder failed %d\n", __FUNCTION__, ret2));
 		if (ret2 != BCME_UNSUPPORTED)
 			ret = ret2;

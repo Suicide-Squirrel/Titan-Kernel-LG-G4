@@ -693,7 +693,7 @@ int __meminit vmemmap_populate(unsigned long start, unsigned long end, int node)
 			if (!p)
 				return -ENOMEM;
 
-			set_pmd(pmd, __pmd(__pa(p) | prot_sect_kernel));
+			set_pmd(pmd, __pmd(__pa(p) | prot_sect_kernel | PMD_SECT_UXN | PMD_SECT_PXN));
 		} else
 			vmemmap_verify((pte_t *)pmd, node, addr, next);
 	} while (addr = next, addr != end);

@@ -140,7 +140,7 @@ struct fsg_lun {
 
 	unsigned int	blkbits;	/* Bits of logical block size of bound block device */
 	unsigned int	blksize;	/* logical block size of bound block device */
-#ifndef CONFIG_USB_G_LGE_ANDROID_AUTORUN
+#ifndef CONFIG_LGE_USB_G_AUTORUN
 	unsigned int    max_ratio;
 #endif
 	struct device	dev;
@@ -192,7 +192,7 @@ MODULE_PARM_DESC(num_buffers, "Number of pipeline buffers");
 #endif /* CONFIG_USB_DEBUG */
 #endif /* CONFIG_USB_CSW_HACK */
 
-#ifndef CONFIG_USB_G_LGE_ANDROID_AUTORUN
+#ifndef CONFIG_LGE_USB_G_AUTORUN
 /*
  * uicc_ums_max_ratio is used to set the max ratio for UICC block device when
  * operating in UMS mode. We want to keep this max_ratio as minimum as possible
@@ -436,12 +436,12 @@ static struct usb_gadget_strings	fsg_stringtab = {
 
 static void fsg_lun_close(struct fsg_lun *curlun)
 {
-#ifndef CONFIG_USB_G_LGE_ANDROID_AUTORUN
+#ifndef CONFIG_LGE_USB_G_AUTORUN
 	struct inode *inode = NULL;
 	struct backing_dev_info	*bdi;
 #endif
 	if (curlun->filp) {
-#ifndef CONFIG_USB_G_LGE_ANDROID_AUTORUN
+#ifndef CONFIG_LGE_USB_G_AUTORUN
 		inode = file_inode(curlun->filp);
 		if (inode->i_bdev) {
 			bdi = &inode->i_bdev->bd_queue->backing_dev_info;
@@ -465,7 +465,7 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	struct file			*filp = NULL;
 	int				rc = -EINVAL;
 	struct inode			*inode = NULL;
-#ifndef CONFIG_USB_G_LGE_ANDROID_AUTORUN
+#ifndef CONFIG_LGE_USB_G_AUTORUN
 	struct backing_dev_info		*bdi;
 #endif
 	loff_t				size;
@@ -516,7 +516,7 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	}
 
 	if (curlun->cdrom) {
-#ifdef CONFIG_USB_G_LGE_ANDROID_CDROM_MAC_SUPPORT
+#ifdef CONFIG_LGE_USB_G_CDROM_MAC_SUPPORT
 		blksize = 512;
 		blkbits = 9;
 #else
@@ -534,7 +534,7 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	num_sectors = size >> blkbits; /* File size in logic-block-size blocks */
 	min_sectors = 1;
 	if (curlun->cdrom) {
-#ifdef CONFIG_USB_G_LGE_ANDROID_CDROM_MAC_SUPPORT
+#ifdef CONFIG_LGE_USB_G_CDROM_MAC_SUPPORT
 		num_sectors &= ~3;	/* Reduce to a multiple of 2048 */
 		min_sectors = 300*4;	/* Smallest track is 300 frames */
 		if (num_sectors >= 256*60*75*4) {
@@ -569,8 +569,6 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	curlun->file_length = size;
 	curlun->num_sectors = num_sectors;
 
-#ifndef CONFIG_USB_G_LGE_ANDROID_AUTORUN
-#endif
 	LDBG(curlun, "open backing file: %s\n", filename);
 	return 0;
 
@@ -613,7 +611,7 @@ static void store_cdrom_address(u8 *dest, int msf, u32 addr)
 	}
 }
 
-#ifdef CONFIG_USB_G_LGE_ANDROID_CDROM_MAC_SUPPORT
+#ifdef CONFIG_LGE_USB_G_CDROM_MAC_SUPPORT
 /**
  * fsg_get_toc() - Builds a TOC with required format @format.
  * @curlun: The LUN for which the TOC has to be built

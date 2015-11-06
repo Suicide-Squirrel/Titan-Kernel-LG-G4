@@ -39,6 +39,7 @@
 
 #ifdef CONFIG_CRYPTO_FIPS
 #include <linux/fips.h>
+#include <linux/cc_mode.h>
 #include <crypto/rng.h>
 #define SEED_LEN 48
 #endif
@@ -360,6 +361,7 @@ int ecryptfs_derive_iv(char *iv, struct ecryptfs_crypt_stat *crypt_stat,
 {
 	int rc = 0;
 #ifdef CONFIG_CRYPTO_FIPS
+	int cc_flag;
 	char dst[SHA256_HASH_SIZE];
 #else
 	char dst[MD5_DIGEST_SIZE];
@@ -382,7 +384,9 @@ int ecryptfs_derive_iv(char *iv, struct ecryptfs_crypt_stat *crypt_stat,
 		ecryptfs_dump_hex(src, (crypt_stat->iv_bytes + 16));
 	}
 #ifdef CONFIG_CRYPTO_FIPS
-	if (get_cc_mode_state())
+	/* Check if cc mode is enabled.*/
+	cc_flag = get_cc_mode_state();
+	if ((cc_flag & FLAG_CC_MODE) == FLAG_CC_MODE)
 		rc = ecryptfs_calculate_sha256(dst, crypt_stat, src, (crypt_stat->iv_bytes + 16));
 	else
 #endif
@@ -1059,6 +1063,7 @@ int ecryptfs_compute_root_iv(struct ecryptfs_crypt_stat *crypt_stat)
 	int rc = 0;
 #ifdef CONFIG_CRYPTO_FIPS
 	char dst[SHA256_HASH_SIZE];
+	int cc_flag;
 #else
 	char dst[MD5_DIGEST_SIZE];
 #endif
@@ -1072,7 +1077,9 @@ int ecryptfs_compute_root_iv(struct ecryptfs_crypt_stat *crypt_stat)
 		goto out;
 	}
 #ifdef CONFIG_CRYPTO_FIPS
-	if (get_cc_mode_state())
+	/* Check if cc mode is enabled.*/
+	cc_flag = get_cc_mode_state();
+	if ((cc_flag & FLAG_CC_MODE) == FLAG_CC_MODE)
 		rc = ecryptfs_calculate_sha256(dst, crypt_stat, crypt_stat->key, crypt_stat->key_size);
 	else
 #endif
@@ -1584,23 +1591,12 @@ int ecryptfs_write_metadata(struct dentry *ecryptfs_dentry,
 {
 	struct ecryptfs_crypt_stat *crypt_stat =
 		&ecryptfs_inode_to_private(ecryptfs_inode)->crypt_stat;
-#if 1 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
-	struct ecryptfs_mount_crypt_stat *mount_crypt_stat =
-		&ecryptfs_superblock_to_private(
-				ecryptfs_dentry->d_sb)->mount_crypt_stat;
-#endif
 	unsigned int order;
 	char *virt;
 	size_t virt_len;
 	size_t size = 0;
 	int rc = 0;
 
-#if 1 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
-	if (mount_crypt_stat && (mount_crypt_stat->flags
-				& ECRYPTFS_DECRYPTION_ONLY)) {
-		ecryptfs_printk(KERN_ERR, "%s:%d:: Error decryption_only set \n", __FUNCTION__, __LINE__);
-}
-#endif
 	if (likely(crypt_stat->flags & ECRYPTFS_ENCRYPTED)) {
 		if (!(crypt_stat->flags & ECRYPTFS_KEY_VALID)) {
 			printk(KERN_ERR "Key is invalid; bailing out\n");
@@ -2006,6 +2002,7 @@ ecryptfs_process_key_cipher(struct crypto_blkcipher **key_tfm,
 	char dummy_key[ECRYPTFS_MAX_KEY_BYTES];
 	char *full_alg_name = NULL;
 	int rc = 0;
+	int cc_flag;
 
 	*key_tfm = NULL;
 	if (*key_size > ECRYPTFS_MAX_KEY_BYTES) {
@@ -2015,7 +2012,9 @@ ecryptfs_process_key_cipher(struct crypto_blkcipher **key_tfm,
 		goto out;
 	}
 #ifdef CONFIG_CRYPTO_FIPS
-	if (get_cc_mode_state()) {
+	/* Check if cc mode is enabled.*/
+	cc_flag = get_cc_mode_state();
+	if ((cc_flag & FLAG_CC_MODE) == FLAG_CC_MODE) {
 		kfree(full_alg_name);
 		full_alg_name = kmalloc(strlen("cbc(aes)") + 1, GFP_KERNEL);
 		strlcpy(full_alg_name, "cbc(aes)", strlen("cbc(aes)") + 1);

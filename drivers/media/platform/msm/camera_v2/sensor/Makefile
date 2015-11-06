@@ -13,5 +13,7 @@ obj-$(CONFIG_OV5645) += ov5645.o
 obj-$(CONFIG_OV5645) += ov7695.o
 obj-$(CONFIG_GC0310) += gc0310.o
 obj-$(CONFIG_IMX234) += imx234.o
+obj-$(CONFIG_OV5670) += ov5670.o
+obj-$(CONFIG_OV5670W) += ov5670w.o
 obj-$(CONFIG_IMX208) += imx208.o
 obj-$(CONFIG_T4KA3) += t4ka3.o

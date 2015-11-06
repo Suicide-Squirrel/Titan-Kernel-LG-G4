@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 522630 2014-12-23 05:08:00Z $
+ * $Id: dhd_sdio.c 543294 2015-03-24 06:10:31Z $
  */
 
 #include <typedefs.h>
@@ -6324,12 +6324,8 @@ clkwait:
 		txlimit -= framecnt;
 	}
 	/* Resched the DPC if ctrl cmd is pending on bus credit */
-	if (bus->ctrl_frame_stat) {
-#ifdef CUSTOMER_HW10
-		OSL_SLEEP(50);
-#endif
+	if (bus->ctrl_frame_stat)
 		resched = TRUE;
-	}
 
 	/* Resched if events or tx frames are pending, else await next interrupt */
 	/* On failed register access, all bets are off: no resched or interrupts */
@@ -7762,7 +7758,8 @@ dhdsdio_probe_attach(struct dhd_bus *bus, osl_t *osh, void *sdh, void *regsva,
 				bus->dongle_ram_base = CR4_4360_RAM_BASE;
 				break;
 			case BCM4345_CHIP_ID:
-				bus->dongle_ram_base = CR4_4345_RAM_BASE;
+				bus->dongle_ram_base = (bus->sih->chiprev < 6)  /* from 4345C0 */
+					? CR4_4345_LT_C0_RAM_BASE : CR4_4345_GE_C0_RAM_BASE;
 				break;
 			case BCM4349_CHIP_GRPID:
 				bus->dongle_ram_base = CR4_4349_RAM_BASE;

@@ -131,6 +131,7 @@ int lge_get_lk_panel_status(void);
 
 #if defined(CONFIG_PRE_SELF_DIAGNOSIS)
 int lge_pre_self_diagnosis(char *drv_bus_code, int func_code, char *dev_code, char *drv_code, int errno);
+int lge_pre_self_diagnosis_pass(char *dev_code);
 #endif
 #if defined(CONFIG_CHECK_CPU)
 int lge_fac_check_cpu(char *drv_bus_code, int func_code, char *dev_code, char *drv_code, int errno);

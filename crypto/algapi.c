@@ -43,6 +43,16 @@ static inline int crypto_set_driver_name(struct crypto_alg *alg)
 
 static int crypto_check_alg(struct crypto_alg *alg)
 {
+#ifdef CONFIG_CRYPTO_FIPS
+// fail fast if we're in a FIPS error state
+	if (unlikely(fips_error())) {
+		printk(KERN_ERR
+			"FIPS: crypto_check_alg failed for %s in FIPS error state",
+			alg->cra_name);
+		return -EACCES;
+	}
+#endif
+
 	if (alg->cra_alignmask & (alg->cra_alignmask + 1))
 		return -EINVAL;
 
@@ -495,8 +505,8 @@ static struct crypto_template *__crypto_lookup_template(const char *name)
 
 struct crypto_template *crypto_lookup_template(const char *name)
 {
-	return try_then_request_module(__crypto_lookup_template(name), "%s",
-				       name);
+	return try_then_request_module(__crypto_lookup_template(name),
+				       "crypto-%s", name);
 }
 EXPORT_SYMBOL_GPL(crypto_lookup_template);
 
@@ -784,6 +794,12 @@ void *crypto_alloc_instance2(const char *name, struct crypto_alg *alg,
 	char *p;
 	int err;
 
+#ifdef CONFIG_CRYPTO_FIPS
+// fail fast if we're in a FIPS error state
+	if (unlikely(fips_error()))
+		return ERR_PTR(-EACCES);
+#endif
+
 	p = kzalloc(head + sizeof(*inst) + sizeof(struct crypto_spawn),
 		    GFP_KERNEL);
 	if (!p)
@@ -814,6 +830,12 @@ struct crypto_instance *crypto_alloc_instance(const char *name,
 	struct crypto_instance *inst;
 	struct crypto_spawn *spawn;
 	int err;
+
+#ifdef CONFIG_CRYPTO_FIPS
+// fail fast if we're in a FIPS error state
+	if (unlikely(fips_error()))
+		return ERR_PTR(-EACCES);
+#endif
 
 	inst = crypto_alloc_instance2(name, alg, 0);
 	if (IS_ERR(inst))
@@ -850,6 +872,12 @@ int crypto_enqueue_request(struct crypto_queue *queue,
 			   struct crypto_async_request *request)
 {
 	int err = -EINPROGRESS;
+
+#ifdef CONFIG_CRYPTO_FIPS
+// fail fast if we're in a FIPS error state
+	if (unlikely(fips_error()))
+		return -EACCES;
+#endif
 
 	if (unlikely(queue->qlen >= queue->max_qlen)) {
 		err = -EBUSY;
@@ -955,8 +983,7 @@ EXPORT_SYMBOL_GPL(crypto_xor);
 
 static int __init crypto_algapi_init(void)
 {
-//Move proc init to tcrypt on FIPS device
-#ifndef CONFIG_CRYPTO_FIPS
+#ifndef CONFIG_CRYPTO_FIPS // otherwise, testmgr handles it
 	crypto_init_proc();
 #endif
 	return 0;
@@ -964,7 +991,9 @@ static int __init crypto_algapi_init(void)
 
 static void __exit crypto_algapi_exit(void)
 {
+#ifndef CONFIG_CRYPTO_FIPS // otherwise, testmgr handles it
 	crypto_exit_proc();
+#endif
 }
 
 module_init(crypto_algapi_init);

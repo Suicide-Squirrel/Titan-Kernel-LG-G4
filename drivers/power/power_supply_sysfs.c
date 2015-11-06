@@ -252,6 +252,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(charge_full),
 	POWER_SUPPLY_ATTR(charge_empty),
 	POWER_SUPPLY_ATTR(charge_now),
+	POWER_SUPPLY_ATTR(charge_now_raw),
+	POWER_SUPPLY_ATTR(charge_now_error),
 	POWER_SUPPLY_ATTR(charge_avg),
 	POWER_SUPPLY_ATTR(charge_counter),
 	POWER_SUPPLY_ATTR(charge_counter_shadow),
@@ -273,6 +275,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(capacity_alert_min),
 	POWER_SUPPLY_ATTR(capacity_alert_max),
 	POWER_SUPPLY_ATTR(capacity_level),
+	POWER_SUPPLY_ATTR(capacity_raw),
 	POWER_SUPPLY_ATTR(temp),
 	POWER_SUPPLY_ATTR(temp_alert_min),
 	POWER_SUPPLY_ATTR(temp_alert_max),
@@ -300,9 +303,23 @@ static struct device_attribute power_supply_attrs[] = {
 #ifdef CONFIG_LGE_PM_FACTORY_PSEUDO_BATTERY
 	PSEUDO_BATT_ATTR(pseudo_batt),
 #endif
+#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
+	POWER_SUPPLY_ATTR(is_evp_ta),
+#endif
+#ifdef CONFIG_LGE_PM_QC20_SCENARIO
+	POWER_SUPPLY_ATTR(is_qc20_ta),
+#endif
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+	POWER_SUPPLY_ATTR(evp_vol),
+	POWER_SUPPLY_ATTR(hvdcp_type),
+	POWER_SUPPLY_ATTR(evp_detect_start),
+#endif
 	POWER_SUPPLY_ATTR(update_now),
 	POWER_SUPPLY_ATTR(esr_count),
 	POWER_SUPPLY_ATTR(safety_timer_enabled),
+	POWER_SUPPLY_ATTR(charge_done),
+	POWER_SUPPLY_ATTR(flash_active),
+	POWER_SUPPLY_ATTR(allow_detection),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
 	/* Properties of type `const char *' */
@@ -321,6 +338,10 @@ static struct device_attribute power_supply_attrs[] = {
 #endif
 #ifdef CONFIG_LGE_PM_UNIFIED_WLC_ALIGNMENT
 	POWER_SUPPLY_ATTR(alignment),
+#endif
+#ifdef CONFIG_BATTERY_MAX17050
+	POWER_SUPPLY_ATTR(battery_condition),
+	POWER_SUPPLY_ATTR(battery_age),
 #endif
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),

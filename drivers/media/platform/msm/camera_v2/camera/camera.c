@@ -40,13 +40,8 @@
 #define CAM_PREVIEW_TUNE_OFF 0
 extern int pp_set_cam_preview_tune_status(int flag);
 #endif
-#ifdef CONFIG_LGE_PARTIAL_UPDATE
-extern void mdss_mdp_set_disable_partail_update(int flags);
-extern void mdss_mdp_clear_disable_partail_update(int flags);
 
 static DEFINE_MUTEX(v4l2_sync_lock); /*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
-
-#endif
 
 struct camera_v4l2_private {
 	struct v4l2_fh fh;
@@ -82,7 +77,16 @@ static int camera_check_event_status(struct v4l2_event *event)
 				__func__);
 		pr_err("%s : Line %d event_data->status 0X%x\n",
 				__func__, __LINE__, event_data->status);
-		return -EFAULT;
+
+		switch (event_data->status) {
+		case MSM_CAMERA_ERR_CMD_FAIL:
+		case MSM_CAMERA_ERR_MAPPING:
+			return -EFAULT;
+		case MSM_CAMERA_ERR_DEVICE_BUSY:
+			return -EBUSY;
+		default:
+			return -EFAULT;
+		}
 	}
 
 	return 0;
@@ -627,10 +631,6 @@ static int camera_v4l2_open(struct file *filep)
 				MSM_CAMERA_STREAM_CNT_BITS));
 	atomic_cmpxchg(&pvdev->opened, opn_idx, idx);
 
-#ifdef CONFIG_LGE_PARTIAL_UPDATE
-	mdss_mdp_set_disable_partail_update(0x2);
-#endif
-
 	mutex_unlock(&v4l2_sync_lock);/*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
 	return rc;
 
@@ -702,9 +702,6 @@ static int camera_v4l2_close(struct file *filep)
 #if defined(CONFIG_LGE_CAM_PREVIEW_TUNE)
 		pp_set_cam_preview_tune_status(CAM_PREVIEW_TUNE_OFF);
 #endif /* LGE_CAM_PREVIEW_TUNE */
-#ifdef CONFIG_LGE_PARTIAL_UPDATE
-		mdss_mdp_clear_disable_partail_update(0x2);
-#endif
 	} else {
 		camera_pack_event(filep, MSM_CAMERA_SET_PARM,
 			MSM_CAMERA_PRIV_DEL_STREAM, -1, &event);

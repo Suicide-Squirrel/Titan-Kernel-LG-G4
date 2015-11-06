@@ -36,10 +36,6 @@
 #include <asm/unaligned.h>
 #include "ecryptfs_kernel.h"
 
-#if defined (FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION)
-#include <linux/unistd.h>
-#include "../LGSDEncManager.h"
-#endif /* FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION */
 static struct dentry *lock_parent(struct dentry *dentry)
 {
 	struct dentry *dir;
@@ -236,10 +232,10 @@ int ecryptfs_initialize_file(struct dentry *ecryptfs_dentry,
 {
 	struct ecryptfs_crypt_stat *crypt_stat =
 		&ecryptfs_inode_to_private(ecryptfs_inode)->crypt_stat;
-#if 1 /* FEATURE_SDCARD_ENCRYPTION */
-	struct ecryptfs_mount_crypt_stat *mount_crypt_stat =
+#ifdef FEATURE_SDCARD_ENCRYPTION
+	struct ecryptfs_mount_sd_crypt_stat *mount_sd_crypt_stat =
 		&ecryptfs_superblock_to_private(
-			ecryptfs_dentry->d_sb)->mount_crypt_stat;
+			ecryptfs_dentry->d_sb)->mount_sd_crypt_stat;
 	char dentry_name[MAX_FILE_NAME_LENGTH] = {0,};
 #endif
 	int rc = 0;
@@ -249,22 +245,21 @@ int ecryptfs_initialize_file(struct dentry *ecryptfs_dentry,
 		crypt_stat->flags &= ~(ECRYPTFS_ENCRYPTED);
 		goto out;
 	}
-#if defined (FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION)
-	memcpy (dentry_name, ecryptfs_dentry->d_name.name, ecryptfs_dentry->d_name.len);
-	if (getMediaProperty() == 1) {
-		if (ecryptfs_mediaFileSearch(dentry_name)) {
+#ifdef FEATURE_SDCARD_ENCRYPTION
+	memcpy(dentry_name, ecryptfs_dentry->d_name.name, ecryptfs_dentry->d_name.len);
+	if (mount_sd_crypt_stat && (mount_sd_crypt_stat->flags
+						& ECRYPTFS_MEDIA_EXCEPTION)) {
+		if(ecryptfs_media_file_search(dentry_name)){
 			crypt_stat->flags &= ~(ECRYPTFS_ENCRYPTED);
 			goto out;
 		}
 	}
 
-    if (ecryptfs_asecFileSearch(dentry_name)) {
-		crypt_stat->flags &= ~(ECRYPTFS_ENCRYPTED);
-		goto out;
+    if(ecryptfs_asec_file_search(dentry_name)){
+        crypt_stat->flags &= ~(ECRYPTFS_ENCRYPTED);
+        goto out;
     }
-#endif /* FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION */
-#if 1 /* FEATURE_SDCARD_ENCRYPTION */
-	if (mount_crypt_stat && (mount_crypt_stat->flags
+	if (mount_sd_crypt_stat && (mount_sd_crypt_stat->flags
 			& ECRYPTFS_DECRYPTION_ONLY)) {
 		crypt_stat->flags &= ~(ECRYPTFS_ENCRYPTED);
 		goto out;
@@ -993,12 +988,6 @@ static int ecryptfs_setattr(struct dentry *dentry, struct iattr *ia)
 			rc = 0;
 			crypt_stat->flags &= ~(ECRYPTFS_I_SIZE_INITIALIZED
 					       | ECRYPTFS_ENCRYPTED);
-#if 1 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
-			if (mount_crypt_stat && (mount_crypt_stat->flags
-						& ECRYPTFS_DECRYPTION_ONLY)) {
-				ecryptfs_printk(KERN_ERR, "%s:%d:: Error decryption_only set : ENCRYPTION DISABLED\n", __FUNCTION__, __LINE__);
-			}
-#endif
 		}
 	}
 	mutex_unlock(&crypt_stat->cs_mutex);
@@ -1088,7 +1077,7 @@ ecryptfs_setxattr(struct dentry *dentry, const char *name, const void *value,
 	}
 
 	rc = vfs_setxattr(lower_dentry, name, value, size, flags);
-	if (!rc)
+	if (!rc && dentry->d_inode)
 		fsstack_copy_attr_all(dentry->d_inode, lower_dentry->d_inode);
 out:
 	return rc;

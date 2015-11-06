@@ -20,6 +20,7 @@ LIBGCC 		:= $(shell $(CC) $(KBUILD_CFLAGS) -print-libgcc-file-name)
 KBUILD_DEFCONFIG := defconfig
 
 KBUILD_CFLAGS	+= -mgeneral-regs-only
+KBUILD_CFLAGS	+= -fno-pic
 ifeq ($(CONFIG_CPU_BIG_ENDIAN), y)
 KBUILD_CPPFLAGS	+= -mbig-endian
 AS		+= -EB
@@ -88,7 +89,7 @@ Image.gz-dtb: vmlinux scripts dtbs
 
 # We use MRPROPER_FILES and CLEAN_FILES now
 archclean:
-	$(Q)$(MAKE) $(clean)=$(boot)/dts
+	$(Q)$(MAKE) $(clean)=$(boot)
 
 define archhelp
   echo  '* Image.gz      - Compressed kernel image (arch/$(ARCH)/boot/Image.gz)'

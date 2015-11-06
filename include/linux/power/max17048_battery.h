@@ -16,6 +16,11 @@
 #define CONFIG_LGE_PM_MAX17048_SHOW_OCV
 #define CONFIG_LGE_PM_MAX17048_EVL
 #define CONFIG_LGE_PM_MAX17048_BMS_DEBUG
+#define CONFIG_LGE_PM_BATT_PROFILE
+//#define CONFIG_LGE_PM_BATT_PROFILE_DEBUG // compare level between origin and tune
+#if defined(CONFIG_MACH_MSM8992_P1) || defined(CONFIG_MACH_MSM8992_P1A4WP)
+#define CONFIG_LGE_PM_MAX17048_RECHARGING
+#endif
 
 struct max17048_battery_model {
 	int empty;
@@ -39,6 +44,9 @@ struct max17048_battery_model {
 	uint16_t vreset;
 	uint16_t valert;
 	uint16_t ocvtest;
+#endif
+#ifdef CONFIG_LGE_PM_BATT_PROFILE
+	int batt_profile_enabled;
 #endif
 };
 

@@ -1,0 +1,75 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+
+/dts-v1/;
+
+#include "../../qcom/msm8992.dtsi"
+#include "msm8992-pplus_cmo_cn.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. MSM8992 PPLUS CMO CN";
+	compatible = "qcom,msm8992-cdp", "qcom,msm8992", "qcom,cdp";
+	qcom,board-id = <0x265 0>;
+};
+
+//ADD HERE TO SUPPORT HW CHANGE
+
+&soc {
+	i2c_5: i2c@f9967000 {
+		ti-tas2552_41@41 {
+			status = "ok";
+		};
+
+		bcm2079x@76 {
+			status = "ok";
+		};
+	};
+};
+
+&sdhc_2 {
+	interrupt-map = <0 &intc 0 125 0
+			1 &intc 0 221 0
+			2 &msm_gpio 100 0x0>;
+	cd-gpios = <&msm_gpio 100 0x1>;
+	pinctrl-0 = <&sdc2_clk_on &sdc2_cmd_on &sdc2_data_on &sdc2_cd_on>;
+	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &sdc2_cd_off>;
+	status = "ok";
+};
+
+/* fingerprint spi master */
+&soc {
+	spi_blsp12: spi_fpc@f9968000{
+		status = "disabled";
+	};
+};
+
+/* fingerprint fpc1022 */
+&spi_blsp12 {
+	csfp@0 {
+		status = "disabled";
+	};
+};
+
+/* fingerprint spi master */
+&soc {
+	spi_blsp10: spi_fpc@f9966000{
+		status = "ok";
+	};
+};
+
+/* fingerprint fpc1022 */
+&spi_blsp10 {
+	csfp@0 {
+		status = "ok";
+	};
+};

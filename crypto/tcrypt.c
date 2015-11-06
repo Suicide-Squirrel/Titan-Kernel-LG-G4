@@ -97,6 +97,7 @@ static int test_cipher_cycles(struct blkcipher_desc *desc, int enc,
 	int ret = 0;
 	int i;
 
+	local_bh_disable();
 	local_irq_disable();
 
 	/* Warm-up run. */
@@ -129,6 +130,7 @@ static int test_cipher_cycles(struct blkcipher_desc *desc, int enc,
 
 out:
 	local_irq_enable();
+	local_bh_enable();
 
 	if (ret == 0)
 		printk("1 operation in %lu cycles (%d bytes)\n",
@@ -298,6 +300,7 @@ static int test_hash_cycles_digest(struct hash_desc *desc,
 	int i;
 	int ret;
 
+	local_bh_disable();
 	local_irq_disable();
 
 	/* Warm-up run. */
@@ -324,6 +327,7 @@ static int test_hash_cycles_digest(struct hash_desc *desc,
 
 out:
 	local_irq_enable();
+	local_bh_enable();
 
 	if (ret)
 		return ret;
@@ -344,6 +348,7 @@ static int test_hash_cycles(struct hash_desc *desc, struct scatterlist *sg,
 	if (plen == blen)
 		return test_hash_cycles_digest(desc, sg, blen, out);
 
+	local_bh_disable();
 	local_irq_disable();
 
 	/* Warm-up run. */
@@ -386,6 +391,7 @@ static int test_hash_cycles(struct hash_desc *desc, struct scatterlist *sg,
 
 out:
 	local_irq_enable();
+	local_bh_enable();
 
 	if (ret)
 		return ret;
@@ -1850,26 +1856,36 @@ static int __init tcrypt_mod_init(void)
 	int err = -ENOMEM;
 	int i;
 
-#ifdef CONFIG_CRYPTO_FIPS
-	fips_init_proc();
-	if (!fips_enabled)
-		return 0;
-#endif
 	for (i = 0; i < TVMEMSIZE; i++) {
 		tvmem[i] = (void *)__get_free_page(GFP_KERNEL);
 		if (!tvmem[i])
 			goto err_free_tv;
 	}
 
+#ifdef CONFIG_CRYPTO_FIPS
+	testmgr_crypto_proc_init();
+	printk(KERN_INFO "FIPS: running power-on self-tests\n");
+#endif
+
 	if (alg)
 		err = do_alg_test(alg, type, mask);
 	else
 		err = do_test(mode);
 
-	if (err) {
-		printk(KERN_ERR "tcrypt: one or more tests failed!\n");
-		goto err_free_tv;
+#ifdef CONFIG_CRYPTO_FIPS
+	if (fips_enabled) {
+		fips_integrity_check();
+		if (fips_error()) {
+			printk(KERN_ERR "FIPS: ERROR! could not start FIPS mode\n");
+			if (fips_panic)
+				panic("FIPS: ERROR! could not start FIPS mode\n");
+		} else {
+			printk(KERN_INFO "FIPS: now running in FIPS mode\n");
+		}
+	} else {
+		printk(KERN_INFO "FIPS: running in non-FIPS mode\n");
 	}
+#endif
 
 	/* We intentionaly return -EAGAIN to prevent keeping the module,
 	 * unless we're running in fips mode. It does all its work from

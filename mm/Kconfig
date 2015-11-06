@@ -568,22 +568,22 @@ config KSWAPD_CPU_AFFINITY_MASK
 	  CONFIG_KSWAPD_CPU_AFFINITY_MASK="f"
 
 config READAHEAD_MMAP_SIZE_ENABLE
-    bool "readahead mmap size set enable"
-    default n
-    help
-       readahead mmap size set enable
+	bool "readahead mmap size set enable"
+	default n
+	help
+	  readahead mmap size set enable
 
 config READAHEAD_MMAP_PAGE_CNT
-    int "readahead mmap page count set"
-    depends on READAHEAD_MMAP_SIZE_ENABLE
-    help
-      Select readahead mmap page count
-      Examples:
-        128 ==>512KB
-        64 ==>256KB
-        32 ==>128KB
-        16 ==>64 KB
-        8 ==>32 KB
-        4 ==>16 KB
-        2 ==>8 KB
-        1 ==>4 KB
+	int "readahead mmap page count set"
+	depends on READAHEAD_MMAP_SIZE_ENABLE
+	help
+	  Select readahead mmap page count
+	  Examples:
+		128 ==>512KB
+		64 ==>256KB
+		32 ==>128KB
+		16 ==>64 KB
+		8 ==>32 KB
+		4 ==>16 KB
+		2 ==>8 KB
+		1 ==>4 KB

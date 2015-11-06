@@ -1,4 +1,4 @@
-BCM43XX DHD 1.201.54.1 for L OS.
+BCM43XX DHD 1.201.54 for L OS Release Note.
 
 DHD 1.201.54.1 (2014.10.06)
   - Initial release for L OS
@@ -34,3 +34,10 @@ DHD 1.201.54.4 (2015.02.03)
   - Removed pointer of packet filter's union member for 64bit host CPU (CSP#877380)
   - Added LPS feature (CSP#836412)
   - Fixed packet count routine for TCP ack suppress not to numerate suppressed acks as dropped packets (CSP#881850)
+
+DHD 1.201.54.5 (2015.03.20)
+  - Added support for BCM43455
+
+DHD 1.201.54.6 (2015.03.23)
+  - Fixed invalid FW ram base address at BCM43455
+

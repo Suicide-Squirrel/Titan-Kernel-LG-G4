@@ -279,4 +279,9 @@ config LGE_BLUETOOTH_PM
 		LGE Bluetooth Power & Sleep
 		This driver provides support for LGE BT Power & Sleep.
 #[P1_BRINGUP_BT_E]
+
+#BT_S : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2
+source drivers/bluetooth/broadcom/Kconfig
+#BT_E : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2
+
 endmenu

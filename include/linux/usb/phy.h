@@ -125,7 +125,11 @@ struct usb_phy {
 
 	/* reset the PHY clocks */
 	int	(*reset)(struct usb_phy *x);
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+	int	(*set_evp)(struct usb_phy *x, bool connect);
+	void	(*notify_evp_connect)(struct usb_phy *x);
+#endif
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	void(*notify_set_hostmode)(struct usb_phy *x,bool host);
 #endif
 };
@@ -285,6 +289,15 @@ static inline int usb_bind_phy(const char *dev_name, u8 index,
 }
 #endif
 
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+static inline int usb_phy_evp_connect(struct usb_phy *x, bool connect)
+{
+	if (x && x->set_evp)
+		return x->set_evp(x, connect);
+	return 0;
+}
+#endif
+
 static inline int
 usb_phy_set_power(struct usb_phy *x, unsigned mA)
 {
@@ -302,7 +315,16 @@ usb_phy_set_suspend(struct usb_phy *x, int suspend)
 	else
 		return 0;
 }
-#ifdef CONFIG_USB_G_LGE_ANDROID
+
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+static inline void usb_phy_notify_evp_connect(struct usb_phy *x)
+{
+	if (x && x->notify_evp_connect)
+		x->notify_evp_connect(x);
+}
+#endif
+
+#ifdef CONFIG_LGE_USB_G_ANDROID
 static inline void usb_phy_notify_set_hostmode(struct usb_phy *x,bool host)
 {
 	if (x && x->notify_set_hostmode)

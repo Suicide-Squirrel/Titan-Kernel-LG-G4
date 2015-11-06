@@ -1363,9 +1363,11 @@ static int hdmi_tx_init_panel_info(struct hdmi_tx_ctrl *hdmi_ctrl)
 	pinfo->lcdc.h_back_porch = timing.back_porch_h;
 	pinfo->lcdc.h_front_porch = timing.front_porch_h;
 	pinfo->lcdc.h_pulse_width = timing.pulse_width_h;
+	pinfo->lcdc.h_polarity = timing.active_low_h;
 	pinfo->lcdc.v_back_porch = timing.back_porch_v;
 	pinfo->lcdc.v_front_porch = timing.front_porch_v;
 	pinfo->lcdc.v_pulse_width = timing.pulse_width_v;
+	pinfo->lcdc.v_polarity = timing.active_low_v;
 
 	pinfo->type = DTV_PANEL;
 	pinfo->pdest = DISPLAY_2;
@@ -2717,7 +2719,7 @@ static int hdmi_tx_get_cable_status(struct platform_device *pdev, u32 vote)
 	}
 
 	spin_lock_irqsave(&hdmi_ctrl->hpd_state_lock, flags);
-	hpd = hdmi_ctrl->hpd_state;
+	hpd = hdmi_ctrl->hpd_state && hdmi_ctrl->panel_power_on;
 	spin_unlock_irqrestore(&hdmi_ctrl->hpd_state_lock, flags);
 
 	hdmi_ctrl->vote_hdmi_core_on = false;
@@ -3006,10 +3008,6 @@ static int hdmi_tx_power_on(struct mdss_panel_data *panel_data)
 		return rc;
 	}
 
-	mutex_lock(&hdmi_ctrl->power_mutex);
-	hdmi_ctrl->panel_power_on = true;
-	mutex_unlock(&hdmi_ctrl->power_mutex);
-
 	hdmi_cec_config(hdmi_ctrl->feature_data[HDMI_TX_FEAT_CEC]);
 
 	if (hdmi_ctrl->hpd_state) {
@@ -3022,6 +3020,10 @@ static int hdmi_tx_power_on(struct mdss_panel_data *panel_data)
 			return rc;
 		}
 	}
+
+	mutex_lock(&hdmi_ctrl->power_mutex);
+	hdmi_ctrl->panel_power_on = true;
+	mutex_unlock(&hdmi_ctrl->power_mutex);
 end:
 	dss_reg_dump(io->base, io->len, "HDMI-ON: ", REG_DUMP);
 
@@ -3187,7 +3189,6 @@ static int hdmi_tx_sysfs_enable_hpd(struct hdmi_tx_ctrl *hdmi_ctrl, int on)
 			INIT_COMPLETION(hdmi_ctrl->hpd_off_done);
 			timeout = wait_for_completion_timeout(
 				&hdmi_ctrl->hpd_off_done, HZ);
-
 			if (!timeout) {
 				hdmi_ctrl->hpd_off_pending = false;
 				DEV_ERR("%s: hpd off still pending\n",
@@ -3195,6 +3196,7 @@ static int hdmi_tx_sysfs_enable_hpd(struct hdmi_tx_ctrl *hdmi_ctrl, int on)
 				return 0;
 			}
 		}
+
 		rc = hdmi_tx_hpd_on(hdmi_ctrl);
 	} else {
 		mutex_lock(&hdmi_ctrl->power_mutex);
@@ -3330,8 +3332,6 @@ static irqreturn_t hdmi_tx_isr(int irq, void *data)
 #else
 		DSS_REG_W(io, HDMI_HPD_INT_CTRL, BIT(0));
 #endif
-		queue_work(hdmi_ctrl->workq, &hdmi_ctrl->hpd_int_work);
-
 		pr_err("%s : tx_isr hpd_int_work\n", __func__); /* temporary adding log print for HDMI core doesn't off */
 
 		/*
@@ -3646,8 +3646,6 @@ static int hdmi_tx_panel_event_handler(struct mdss_panel_data *panel_data,
 		if (!hdmi_ctrl->panel_power_on &&
 			!hdmi_ctrl->hpd_off_pending) {
 			mutex_unlock(&hdmi_ctrl->power_mutex);
-			if (hdmi_ctrl->hpd_feature_on)
-				hdmi_tx_hpd_off(hdmi_ctrl);
 
 			hdmi_ctrl->panel_suspend = false;
 		} else {

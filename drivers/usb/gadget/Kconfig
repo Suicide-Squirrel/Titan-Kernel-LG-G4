@@ -1119,7 +1119,7 @@ config RMNET_SDIO_SMD_DATA_CHANNEL
        help
 	  Data SMD channel for transferring network data
 
-config USB_G_LGE_ANDROID
+config LGE_USB_G_ANDROID
 	boolean "LGE Android Gadget for LG PC host Driver"
 	depends on USB_G_ANDROID
 	help
@@ -1128,9 +1128,9 @@ config USB_G_LGE_ANDROID
 
 	default n
 
-config USB_G_LGE_ANDROID_PFSC
+config LGE_USB_FACTORY
 	boolean "Force full speed support if pif is connected in LGE Android"
-	depends on USB_G_LGE_ANDROID
+	depends on LGE_USB_G_ANDROID
 	help
 	   This feature is that USB set forcely full speed if pif cable is
 	   connected. It is only for PIF cable, not normal USB cable.
@@ -1139,9 +1139,9 @@ config USB_G_LGE_ANDROID_PFSC
 
 	default n
 
-config USB_G_LGE_ANDROID_STORAGE_NAME
+config LGE_USB_G_ANDROID_STORAGE_NAME
 	string "USB mass & cdrom storage device name for LGE Android"
-	depends on USB_G_LGE_ANDROID_AUTORUN
+	depends on LGE_USB_G_AUTORUN
 	default "Android Platform"
 	help
 	   Name for USB mass & cdrom device name used in LGE Andoird Autorun.
@@ -1149,9 +1149,9 @@ config USB_G_LGE_ANDROID_STORAGE_NAME
 	   NOTE: default name is "Android Platform", need to change your
 	   board config to use other device name(e.g. in VZW devices)
 
-config USB_G_LGE_ANDROID_AUTORUN
+config LGE_USB_G_AUTORUN
 	boolean "Common autorun support in LGE Android"
-	depends on USB_G_LGE_ANDROID
+	depends on LGE_USB_G_ANDROID
 	help
 	  Autorun is LGE specific feature which is able to install PC host
 	  USB driver automatically on Autorun-enabled OS(Ex. Windows). For this,
@@ -1159,9 +1159,9 @@ config USB_G_LGE_ANDROID_AUTORUN
 
 	default n
 
-config USB_G_LGE_ANDROID_AUTORUN_VZW
+config LGE_USB_G_AUTORUN_VZW
 	boolean "VZW specific autorun support in LGE Android"
-	depends on USB_G_LGE_ANDROID_AUTORUN
+	depends on LGE_USB_G_AUTORUN
 	help
 	  It supports VZW specific autorun feature. note that this
 	  must be used in VZW devices.
@@ -1169,32 +1169,10 @@ config USB_G_LGE_ANDROID_AUTORUN_VZW
 	  Say y if this must be needed.
 
 	default n
-config USB_G_LGE_ANDROID_AUTORUN_LGE
-	boolean "LGE specific autorun support in LGE Android"
-	depends on USB_G_LGE_ANDROID_AUTORUN
-	help
-	  It supports LGE specific autorun feature. note that this
-	  must be used in LGE(with non-VZW) devices.
 
-	  Say y if this must be needed.
-
-	default n
-config USB_G_LGE_ANDROID_VZWLAN
-	boolean "VZW USB LAN support in LGE Android"
-	depends on USB_G_LGE_ANDROID
-	help
-	  VZW's Mobile UC Application communicate with docking station
-	  via USB LAN. When device connect with docking station, it must
-	  configure usb mode to USB LAN only. This feature can configure
-	  USB LAN only mode when a device connect with docking station.
-
-	  Say y if this feature must be used.
-
-	default n
-
-config USB_G_LGE_ANDROID_CDROM_MAC_SUPPORT
+config LGE_USB_G_CDROM_MAC_SUPPORT
 	boolean "USB CDROM support patch of LGE Android on Mac OS-X"
-	depends on USB_G_LGE_ANDROID
+	depends on LGE_USB_G_ANDROID
 	help
 	  This feature is based on Roger Quadros' patch as following;
 
@@ -1218,9 +1196,9 @@ config USB_G_LGE_ANDROID_CDROM_MAC_SUPPORT
 
 	default n
 
-config USB_G_LGE_ANDROID_NCM
+config LGE_USB_G_NCM
 	boolean "LGE specific mirror link support in LGE Android"
-	depends on USB_G_LGE_ANDROID
+	depends on LGE_USB_G_ANDROID
 	help
 	 It supports LGE specific mirror link feature.
 
@@ -1228,38 +1206,19 @@ config USB_G_LGE_ANDROID_NCM
 
 	default n
 
-config USB_G_LGE_ANDROID_DIAG_OSP_SUPPORT
-	boolean "On Screen Phone patch for reducing packet loss on Diag"
-	depends on USB_G_LGE_ANDROID
-	help
-	 LG OSP(On Screen Phone) communicate by diag port in Qualcomm based model.
-	 But Diag port can't fully transmit OSP's packets, it often discard OSP packets
-	 when diagchar_read is operated continuously.
-	 This problem occur for only OSP packets, because OSP is implemented that
-	 OSP server and client can simultaneously transfer request/reply each other.
-	 Finally, this is read timing issue between usb and diag layer.
-
-	 Fix the issue using synchronization of read operation between usb and diag.
-	 This feature will be used in only Qualcomm based OSP supporting model.
-
-	 Say y if this must be needed.
-
-	default n
-
-config USB_DWC3_MSM_VZW_SUPPORT
-	bool "VZW specific DWC3_MSM support in LGE Android"
-	depends on USB_DWC3_MSM
-	help
-	  It supports VZW specific DWC3_MSM feature for USB BC 1.2 event.
-	  note that this must be used in VZW devices.
-
-	  Say y if this must be needed.
-
-	default n
-
 config DWC3_MSM_BC_12_VZW_SUPPORT
+        bool "Specific BC 1.2 Scenario for VZW"
+        depends on USB_G_LGE_ANDROID
+        help
+          VZW wants that don't charging for open dcd and not configured situation.
+
+          Say y if this must be needed.
+
+        default n
+
+config LGE_USB_CHARGING_SPEC_VZW
 	bool "Specific BC 1.2 Scenario for VZW"
-	depends on USB_G_LGE_ANDROID
+	depends on LGE_USB_G_ANDROID
 	help
 	  VZW wants that don't charging for open dcd and not configured situation.
 
@@ -1267,7 +1226,7 @@ config DWC3_MSM_BC_12_VZW_SUPPORT
 
 	default n
 
-config USB_G_LGE_MULTIPLE_CONFIGURATION
+config LGE_USB_G_MULTIPLE_CONFIGURATION
 	boolean "LGE Multiple Configuration"
 	help
 	  Support multiple mtp functions in multiple configuration.
@@ -1277,8 +1236,9 @@ config USB_G_LGE_MULTIPLE_CONFIGURATION
 
 	default n
 
-config USB_G_LGE_MULTIPLE_CONFIGURATION_VZW
+config LGE_USB_G_MULTIPLE_CONFIGURATION_VZW
 	boolean "LGE Multiple Configuration"
+	depends on LGE_USB_G_MULTIPLE_CONFIGURATION
 	help
 	  Support multiple configuration for VZW.
 	  Added vzw specific SCSI cmd.
@@ -1287,16 +1247,7 @@ config USB_G_LGE_MULTIPLE_CONFIGURATION_VZW
 
 	default n
 
-config USB_G_LGE_SERIALNO_REDIRECTION
-	boolean "LGE specific serial number support in LGE Android"
-	help
-	  if ro.serialno is not available, use sys device node
-
-	  Say y if this must be needed.
-
-	default n
-
-config LGE_DIAG_USB_ACCESS_LOCK
+config LGE_USB_DIAG_LOCK
 	boolean "feature for usb diag access lock"
 	help
 	  this feature should be applied to meet usb diag lock requirement
@@ -1305,7 +1256,7 @@ config LGE_DIAG_USB_ACCESS_LOCK
 
 	default n
 
-config LGE_DIAG_SYNC_STATUS
+config LGE_USB_DIAG_LOCK_SPR
 	boolean "feature for usb diag access lock"
 	help
 	  this feature should be applied to meet usb diag lock requirement
@@ -1314,7 +1265,7 @@ config LGE_DIAG_SYNC_STATUS
 
 	default n
 
-config USB_LGE_AUDIO_DOCK
+config LGE_USB_AUDIO_DOCK
 	boolean "Audio dock workaround"
 	help
 	  Suspend event is generated before disconnect event when disconnect cable.
@@ -1325,4 +1276,7 @@ config USB_LGE_AUDIO_DOCK
 	  Say y if this must be needed.
 
 	default n
+
+config LGE_USB_MAXIM_EVP
+       boolean "EVP charger support"
 endif # USB_GADGET

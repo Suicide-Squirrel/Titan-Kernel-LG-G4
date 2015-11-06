@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -864,9 +864,6 @@ struct hal_device_data {
 struct msm_vidc_fw {
 	void *cookie;
 };
-
-void hfi_process_sys_error(
-   msm_vidc_callback callback, u32 device_id);
 
 u32 hfi_process_msg_packet(msm_vidc_callback callback,
 		u32 device_id, struct vidc_hal_msg_pkt_hdr *msg_hdr,

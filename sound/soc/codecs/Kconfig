@@ -65,6 +65,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_STAC9766 if SND_SOC_AC97_BUS
 	select SND_SOC_TAS5086 if I2C
 	select SND_SOC_TAS2552 if I2C
+	select SND_SOC_ES9018 if I2C
 	select SND_SOC_TLV320AIC23 if I2C
 	select SND_SOC_TLV320AIC26 if SPI_MASTER
 	select SND_SOC_TLV320AIC32X4 if I2C
@@ -553,6 +554,11 @@ config SND_SOC_TPA6130A2
 
 config SND_SOC_MSM_STUB
 	tristate
+
+config SND_SOC_ES9018
+	tristate "es9018 Hi-Fi headphones amp"
+	depends on MACH_LGE
+	default n
 
 config SND_SOC_TAS2552
 	tristate "tps2552 boost amp"

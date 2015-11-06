@@ -545,7 +545,12 @@ static int mdss_mdp_splash_thread(void *data)
 	mfd->bl_updated = true;
 	mdss_fb_set_backlight(mfd, mfd->panel_info->bl_max >> 1);
 	mutex_unlock(&mfd->bl_lock);
-
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_DUAL_BACKLIGHT)
+	mutex_lock(&mfd->bl_lock);
+	mfd->bl_updated_ex = true;
+	mdss_fb_set_backlight_ex(mfd, mfd->panel_info->bl_max >> 1);
+	mutex_unlock(&mfd->bl_lock);
+#endif
 	init_completion(&mfd->splash_info.frame_done);
 
 	mfd->splash_info.notifier.notifier_call = mdss_mdp_splash_ctl_cb;

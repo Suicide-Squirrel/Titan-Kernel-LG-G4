@@ -24,6 +24,10 @@ ifeq ($(CONFIG_MACH_MSM8992_P1_VZW),y)
 DTS_TARGET := msm8992-p1_vzw
 endif
 
+ifeq ($(CONFIG_MACH_MSM8992_P1_LRA_US),y)
+DTS_TARGET := msm8992-p1_lra_us
+endif
+
 ifeq ($(CONFIG_MACH_MSM8992_P1_USC_US),y)
 DTS_TARGET := msm8992-p1_usc_us
 endif
@@ -46,6 +50,58 @@ endif
 
 ifeq ($(CONFIG_MACH_MSM8992_P1_ACG_US),y)
 DTS_TARGET := msm8992-p1_acg_us
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_KR),y)
+DTS_TARGET := msm8992-pplus_kr
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_VZW),y)
+DTS_TARGET := msm8992-pplus_vzw
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_ATT_US),y)
+DTS_TARGET := msm8992-pplus_att_us
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_CMCC_CN),y)
+DTS_TARGET := msm8992-pplus_cmcc_cn
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_CMO_CN),y)
+DTS_TARGET := msm8992-pplus_cmo_cn
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_CTC_CN),y)
+DTS_TARGET := msm8992-pplus_ctc_cn
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_CTO_CN),y)
+DTS_TARGET := msm8992-pplus_cto_cn
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_USC_US),y)
+DTS_TARGET := msm8992-pplus_usc_us
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_KDDI_JP),y)
+DTS_TARGET := msm8992-pplus_kddi_jp
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_SPR_US),y)
+DTS_TARGET := msm8992-pplus_spr_us
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_TMO_US),y)
+DTS_TARGET := msm8992-pplus_tmo_us
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_PPLUS_GLOBAL_COM),y)
+DTS_TARGET := msm8992-pplus_global_com
+endif
+
+ifeq ($(CONFIG_MACH_MSM8992_P1A4WP_KR),y)
+DTS_TARGET := msm8992-p1a4wp_kr
 endif
 
 ALL_DTS := $(notdir $(wildcard echo $(srctree)/$(src)/$(DTS_TARGET)/*.dts))

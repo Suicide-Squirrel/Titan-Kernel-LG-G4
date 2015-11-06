@@ -1332,6 +1332,16 @@ if LG_VPN_V33
 source "net/netfilter/interceptor_v33/Kconfig"
 endif
 
+config LG_VPN_V34
+	tristate "LG VPN ver3.4 Support"
+	default n
+	---help---
+	This feature is for LG VPN ver3.4 support. It includes interceptor netfilter
+
+if LG_VPN_V34
+source "net/netfilter/interceptor_v34/Kconfig"
+endif
+
 endmenu
 
 source "net/netfilter/ipset/Kconfig"

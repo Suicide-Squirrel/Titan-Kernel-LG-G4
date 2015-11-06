@@ -73,11 +73,22 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 				unsigned int target_freq,
 				unsigned int relation)
 {
-	int ret = -EFAULT;
+	int ret = 0;
 	int index;
 	struct cpufreq_frequency_table *table;
 
 	mutex_lock(&per_cpu(cpufreq_suspend, policy->cpu).suspend_mutex);
+
+#ifdef CONFIG_SMP
+	if (!cpu_active(policy->cpu)) {
+		pr_info("cpufreq: cpu %d is not active.\n", policy->cpu);
+		ret = -ENODEV;
+		goto done;
+	}
+#endif
+
+	if (target_freq == policy->cur)
+		goto done;
 
 	if (per_cpu(cpufreq_suspend, policy->cpu).device_suspended) {
 		pr_debug("cpufreq: cpu%d scheduling frequency change "

@@ -32,6 +32,7 @@
 
 &pmi8994_charger {
 	status = "ok";
+	qcom,fastchg-current-ma = <1450>;
 };
 
 /{
@@ -143,6 +144,24 @@
 &soc {
 	charger_controller: charger_controller {
 		status = "ok";
-		lge,chargercontroller-ibat-qc20 = <2000 1600>;
+		lge,chargercontroller-current-ibat-max = <1450>;
+		lge,chargercontroller-iusb-qc20 = <1200 700>;
+		lge,chargercontroller-ibat-qc20 = <2000 1450>;
+
+		lge,no-init-cable = <0 0 0>;
+		lge,cable-mhl-1k = <5000 500 500>;
+		lge,cable-u-28p7k = <5500 1600 500>;
+		lge,cable-28p7k = <6000 1600 500>;
+		lge,cable-56k = <200000 1800 1800>;
+		lge,cable-100k = <239000 1600 500>;
+		lge,cable-130k = <340000 1800 1800>;
+		lge,cable-180k = <400000 1600 500>;
+		lge,cable-200k = <410000 1600 500>;
+		lge,cable-220k = <485000 1600 500>;
+		lge,cable-270k = <560000 1600 500>;
+		lge,cable-330k = <735000 1600 500>;
+		lge,cable-620k = <955000 1600 500>;
+		lge,cable-910k = <1140000 1800 1800>;
+		lge,cable-none = <1900000 1600  500>;
 	};
 };

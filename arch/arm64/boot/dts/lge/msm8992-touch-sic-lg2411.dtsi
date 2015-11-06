@@ -76,6 +76,8 @@
 		crack.enable = <0>;
 		crack.min.cap = <300>;
 
+		use_lpwg_test = <1>;
+
 		/*ghost_detection -S*/
 		ghost_detection_enable = <0>;
 		ghost_detection_chk_cnt = <3>;
@@ -119,7 +121,7 @@
 		reset_control = <3>;
 
 		/*Swipe Down*/
-		swp_down_min_distance = <10>;
+		swp_down_min_distance = <16>;
 		swp_down_ratio_thres = <200>;
 		swp_down_ratio_chk_period = <5>;
 		swp_down_ratio_chk_min_distance = <2>;
@@ -153,7 +155,7 @@
 		ref_chk_option = <0 0 1 1>;
 
 		/* firmware & panel_spec path */
-		fw_image = "sic/p1/L0L55P1_1_05.img";
+		fw_image = "sic/p1/L0L55P1_1_11.img";
 		panel_spec = "sic/p1/p1_limit.txt";
 		panel_spec_mfts_folder = "sic/p1/p1_limit_mfts_folder.txt";
 		panel_spec_mfts_flat = "sic/p1/p1_limit_mfts_flat.txt";

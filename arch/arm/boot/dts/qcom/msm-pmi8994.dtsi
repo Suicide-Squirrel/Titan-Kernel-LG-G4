@@ -196,6 +196,7 @@
 			qcom,parallel-usb-min-current-ma = <1400>;
 			qcom,parallel-usb-9v-min-current-ma = <900>;
 			qcom,parallel-allowed-lowering-ma = <500>;
+			qcom,autoadjust-vfloat;
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
@@ -304,6 +305,8 @@
 			qcom,cycle-counter-low-soc = <15>;
 			qcom,cycle-counter-high-soc = <85>;
 			qcom,capacity-learning-on;
+			qcom,fg-cc-cv-threshold-mv = <4340>;
+			qcom,pmic-revid = <&pmi8994_revid>;
 
 			qcom,fg-soc@4000 {
 				status = "okay";
@@ -453,7 +456,7 @@
 				qcom,qpnp-lab-switching-clock-frequency = <1600>;
 				qcom,qpnp-lab-limit-maximum-current = <800>;
 				qcom,qpnp-lab-limit-max-current-enable;
-				qcom,qpnp-lab-ps-threshold = <40>;
+				qcom,qpnp-lab-ps-threshold = <20>;
 				qcom,qpnp-lab-ps-enable;
 				qcom,qpnp-lab-nfet-size = <100>;
 				qcom,qpnp-lab-pfet-size = <100>;

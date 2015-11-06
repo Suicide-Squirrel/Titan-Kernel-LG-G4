@@ -1491,7 +1491,8 @@ static int anx7816_i2c_probe(struct i2c_client *client,
 							 GFP_KERNEL);
 		if (!pdata) {
 			pr_err("%s: Failed to allocate memory\n", __func__);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto err0;
 		}
 		client->dev.platform_data = pdata;
 	/* device tree parsing function call */

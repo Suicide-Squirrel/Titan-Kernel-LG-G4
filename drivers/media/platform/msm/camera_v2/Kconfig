@@ -195,6 +195,24 @@ config OV5648
 		snapshot set to 2592*1944 at 12 fps,
 		This sensor driver does not support auto focus.
 
+config OV5670
+	bool "Sensor OV5670 (BAYER 5M)"
+	depends on MSMB_CAMERA
+	---help---
+		OmniVision 5 MP Bayer Sensor, use 1 or 2 mipi lane,
+		preview set to 1296*972 at 30 fps,
+		snapshot set to 2592*1944 at 30 fps,
+		This sensor driver does not support auto focus.
+
+config OV5670W
+	bool "Sensor OV5670W (BAYER 5M wide angle)"
+	depends on MSMB_CAMERA
+	---help---
+		OmniVision 5 MP Bayer Sensor, use 1 or 2 mipi lane,
+		preview set to 1296*972 at 30 fps,
+		snapshot set to 2592*1944 at 30 fps,
+		This sensor driver does not support auto focus.
+
 config MT9M114
 	bool "Sensor MT9M114 (YUV 1.26MP)"
 	depends on MSMB_CAMERA

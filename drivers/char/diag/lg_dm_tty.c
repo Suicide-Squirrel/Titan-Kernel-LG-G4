@@ -518,14 +518,15 @@ static int lge_dm_tty_read_thread(void *data)
                     (void *)entry->buf,
                     entry->len);
 
-                lge_dm_tty->ops->write_done(entry->buf, entry->len,
-                            entry->ctx, lge_dm_tty->ctx);
+                if (lge_dm_tty->ops && lge_dm_tty->ops->write_done)
+                    lge_dm_tty->ops->write_done(entry->buf, entry->len,
+                                entry->ctx, lge_dm_tty->ctx);
                 diag_ws_on_copy(DIAG_WS_MD);
-                spin_lock_irqsave(&entry->lock, flags);
+                spin_lock_irqsave(&lge_dm_tty->lock, flags);
                 entry->buf = NULL;
                 entry->len = 0;
                 entry->ctx = 0;
-                spin_unlock_irqrestore(&entry->lock, flags);
+                spin_unlock_irqrestore(&lge_dm_tty->lock, flags);
             }
 
            for (i = 0; i < NUM_SMD_DATA_CHANNELS; i++) {
@@ -786,11 +787,11 @@ static int lge_dm_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
                 if (entry->len <= 0)
                     continue;
 
-                spin_lock_irqsave(&entry->lock, flags);
+                spin_lock_irqsave(&lge_dm_tty->lock, flags);
                 entry->buf = NULL;
                 entry->len = 0;
                 entry->ctx = 0;
-                spin_unlock_irqrestore(&entry->lock, flags);
+                spin_unlock_irqrestore(&lge_dm_tty->lock, flags);
             }
 
             diag_ws_reset(DIAG_WS_MD);
@@ -931,11 +932,11 @@ static int lge_dm_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
                 if (entry->len <= 0)
                     continue;
 
-                spin_lock_irqsave(&entry->lock, flags);
+                spin_lock_irqsave(&lge_dm_tty->lock, flags);
                 entry->buf = NULL;
                 entry->len = 0;
                 entry->ctx = 0;
-                spin_unlock_irqrestore(&entry->lock, flags);
+                spin_unlock_irqrestore(&lge_dm_tty->lock, flags);
             }
 
             diag_ws_reset(DIAG_WS_MD);

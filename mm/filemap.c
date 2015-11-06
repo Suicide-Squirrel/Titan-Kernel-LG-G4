@@ -1566,7 +1566,7 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 	 * mmap read-around
 	 */
 #ifdef CONFIG_READAHEAD_MMAP_SIZE_ENABLE
-    ra_pages = CONFIG_READAHEAD_MMAP_PAGE_CNT;
+	ra_pages = CONFIG_READAHEAD_MMAP_PAGE_CNT;
 #else
 	ra_pages = max_sane_readahead(ra->ra_pages);
 #endif
@@ -2364,7 +2364,7 @@ again:
 
 		status = a_ops->write_begin(file, mapping, pos, bytes, flags,
 						&page, &fsdata);
-		if (unlikely(status))
+		if (unlikely(status < 0))
 			break;
 
 		if (mapping_writably_mapped(mapping))

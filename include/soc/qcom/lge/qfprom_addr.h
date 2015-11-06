@@ -1,33 +1,30 @@
-#ifndef __MACH_QFPROM_ADDR_8994_H__
-#define __MACH_QFPROM_ADDR_8994_H__
+#ifndef __MACH_QFPROM_ADDR_8992_H__
+#define __MACH_QFPROM_ADDR_8992_H__
 
-#define SEC_PATH "/dev/block/platform/f9824900.sdhci/by-name/sec"
+#define SEC_PATH "/dev/block/platform/soc.0/f9824900.sdhci/by-name/sec"
 /* QFPROM address to blow */
-#define QFPROM_CTRL_BASE            (0xfc4b8000)
+#define QFPROM_CTRL_BASE        (0xfc4b8000)
 
-#define QFPROM_RD_WR_PERM	    (QFPROM_CTRL_BASE + 0x00A8) /* 0xFC4B80A8 ok */
-
-#define QFPROM_DBG_DISABLE        (QFPROM_CTRL_BASE + 0x00E8) /* 0xFC4B80E8 ok */
-#define QFPROM_OEM_CONFIG           (QFPROM_CTRL_BASE + 0x00F0) /* 0xFC4B80F0 ok */
-
-#define QFPROM_SPARE_REG19          (QFPROM_CTRL_BASE + 0x01F8) /* 0xFC4B81F8 ok */
-#define QFPROM_FEC_EN               (QFPROM_CTRL_BASE + 0x01D0) /* 0xFC4B81D0 ok */
-
-#define QFPROM_SEC_HW_KEY           (QFPROM_CTRL_BASE + 0x03A8) /* 0xFC4B83A8 ok */
-#define QFPROM_SEC_HW_KEY_1         (QFPROM_CTRL_BASE + 0x03B0) /* 0xFC4B83B0 ok */
-#define QFPROM_SEC_HW_KEY_2         (QFPROM_CTRL_BASE + 0x03B8) /* 0xFC4B83B8 ok */
-#define QFPROM_SEC_HW_KEY_3         (QFPROM_CTRL_BASE + 0x03C0) /* 0xFC4B83C0 ok */
-#define QFPROM_SEC_HW_KEY_4         (QFPROM_CTRL_BASE + 0x03C8) /* 0xFC4B83C8 ok */
-
-#define QFPROM_OEM_PK_HASH          (QFPROM_CTRL_BASE + 0x03D0) /* 0xFC4B83D0 ok */
-//#define QFPROM_OEM_PK_HASH_1        (QFPROM_CTRL_BASE + 0x03D8) /* 0xFC4B83D0 ok */
-//#define QFPROM_OEM_PK_HASH_2        (QFPROM_CTRL_BASE + 0x03E0) /* 0xFC4B83D0 ok */
-//#define QFPROM_OEM_PK_HASH_3        (QFPROM_CTRL_BASE + 0x03E8) /* 0xFC4B83D0 ok */
-//#define QFPROM_OEM_PK_HASH_4        (QFPROM_CTRL_BASE + 0x03F0) /* 0xFC4B83D0 ok */
-
-#define QFPROM_SEC_ENABLE           (QFPROM_CTRL_BASE + 0x03F8) /* 0xFC4B83F8 ok */
-
-#define QFPROM_HW_KEY_STATUS        (QFPROM_CTRL_BASE + 0x204C) /* 0xFC4BA04C */
+#define QFPROM_RD_WR_PERM       (QFPROM_CTRL_BASE + 0x00A8) /* 0xFC4B80A8 */
+#define QFPROM_ANTIROLLBACK1    (QFPROM_CTRL_BASE + 0x00B8) /* 0xFC4B80B8 */
+#define QFPROM_ANTIROLLBACK2    (QFPROM_CTRL_BASE + 0x00C0) /* 0xFC4B80C0 */
+#define QFPROM_ANTIROLLBACK3    (QFPROM_CTRL_BASE + 0x00C8) /* 0xFC4B80C8 */
+#define QFPROM_DBG_DISABLE      (QFPROM_CTRL_BASE + 0x00E8) /* 0xFC4B80E8 */
+#define QFPROM_OEM_CONFIG       (QFPROM_CTRL_BASE + 0x00F0) /* 0xFC4B80F0 */
+#define QFPROM_SPARE_REG19      (QFPROM_CTRL_BASE + 0x01F8) /* 0xFC4B81F8 */
+#define QFPROM_FEC_EN           (QFPROM_CTRL_BASE + 0x01D0) /* 0xFC4B81D0 */
+#define QFPROM_SEC_HW_KEY       (QFPROM_CTRL_BASE + 0x03A8) /* 0xFC4B83A8 */
+#define QFPROM_SEC_HW_KEY_1     (QFPROM_CTRL_BASE + 0x03B0) /* 0xFC4B83B0 */
+#define QFPROM_SEC_HW_KEY_2     (QFPROM_CTRL_BASE + 0x03B8) /* 0xFC4B83B8 */
+#define QFPROM_SEC_HW_KEY_3     (QFPROM_CTRL_BASE + 0x03C0) /* 0xFC4B83C0 */
+#define QFPROM_SEC_HW_KEY_4     (QFPROM_CTRL_BASE + 0x03C8) /* 0xFC4B83C8 */
+#define QFPROM_OEM_PK_HASH      (QFPROM_CTRL_BASE + 0x03D0) /* 0xFC4B83D0 */
+//#define QFPROM_OEM_PK_HASH_1    (QFPROM_CTRL_BASE + 0x03D8) /* 0xFC4B83D0 */
+//#define QFPROM_OEM_PK_HASH_2    (QFPROM_CTRL_BASE + 0x03E0) /* 0xFC4B83D0 */
+//#define QFPROM_OEM_PK_HASH_3    (QFPROM_CTRL_BASE + 0x03E8) /* 0xFC4B83D0 */
+//#define QFPROM_OEM_PK_HASH_4    (QFPROM_CTRL_BASE + 0x03F0) /* 0xFC4B83D0 */
+#define QFPROM_SEC_ENABLE       (QFPROM_CTRL_BASE + 0x03F8) /* 0xFC4B83F8 */
+#define QFPROM_HW_KEY_STATUS    (QFPROM_CTRL_BASE + 0x204C) /* 0xFC4BA04C */
 
 typedef enum {
   QFPROM_RESULT_OEM_CONFIG  = 0,
@@ -62,5 +59,47 @@ qfprom_result_bits result_bits[QFPROM_RESULT_MAX] = {
 /* secondary hw key status flag */
 #define SEC_KEY_DERIVATION_BLOWN    (0x00000002)
 
-#endif // __MACH_QFPROM_ADDR_8994_H__
+/* ANTI_ROLLBACK Version check */
+typedef enum {
+  QFPROM_VERSION_SBL1   = 0,
+  QFPROM_VERSION_TZ     = 1,
+  QFPROM_VERSION_PIL    = 2,
+  QFPROM_VERSION_APPSBL = 3,
+  QFPROM_VERSION_RPM    = 4,
+  QFPROM_VERSION_HYP    = 5,
+  QFPROM_VERSION_MBA    = 6,
+  QFPROM_VERSION_MODEM  = 7,
+  QFPROM_VERSION_MAX
+} qfprom_version_etype;
 
+#define RV_IMAGE_NAME_SIZE 10
+#define RV_ERR_DISABLED -1
+#define RV_ERR_NOT_SUPPORTED -2
+#define RV_ERR_EXCEED_NAME_SIZE -3
+
+typedef struct {
+  u32 type;
+  char name[RV_IMAGE_NAME_SIZE];
+} qfprom_version_typename;
+
+qfprom_result_bits anti_rollback_enable = {QFPROM_RESULT_OEM_CONFIG, QFPROM_OEM_CONFIG, 0x00000F00, 0x00000000};
+
+qfprom_version_typename version_type[QFPROM_VERSION_MAX] = {
+  {QFPROM_VERSION_SBL1,   "sbl1"  },
+  {QFPROM_VERSION_TZ,     "tz"    },
+  {QFPROM_VERSION_PIL,    "pil"   },
+  {QFPROM_VERSION_APPSBL, "appsbl"},
+  {QFPROM_VERSION_RPM,    "rpm"   },
+  {QFPROM_VERSION_HYP,    "hyp"   },
+  {QFPROM_VERSION_MBA,    "mba"   },
+  {QFPROM_VERSION_MODEM,  "modem" },
+};
+
+qfprom_result_bits version_bits[4] = {
+  {QFPROM_VERSION_SBL1,    QFPROM_ANTIROLLBACK1,  0x0000FFFF,  0x00000000},
+  {QFPROM_VERSION_TZ,      QFPROM_ANTIROLLBACK1,  0xFFFF0000,  0x00000000},
+  {QFPROM_VERSION_APPSBL,  QFPROM_ANTIROLLBACK2,  0xFFFFFFFF,  0x0003FFFF},
+  {QFPROM_VERSION_RPM,     QFPROM_ANTIROLLBACK2,  0x00000000,  0x03FC000F},
+};
+
+#endif // __MACH_QFPROM_ADDR_8992_H__

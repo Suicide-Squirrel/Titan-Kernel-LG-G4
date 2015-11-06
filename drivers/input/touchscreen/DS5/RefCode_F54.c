@@ -942,6 +942,50 @@ int GetImageReport(char *buf)
 	return ret;
 }
 
+int GetDelta(char *buf)
+{
+	int ret = 1;
+	int i, j, k = 0;
+
+	Read8BitRegisters((F54DataBase + REPORT_DATA_OFFEST),
+			&Data[0], MaxArrayLength);
+
+	for (i = 0; i < (int)TxChannelCount; i++) {
+		for (j = 0; j < (int)RxChannelCount; j++) {
+			if (j != 0 && j < 16)
+				continue;
+
+			Image1[i][j] = ((short)Data[k]
+					| (short)Data[k + 1] << 8);
+			ImagepF[i][j] = Image1[i][j];
+
+			if (ImagepF[i][j] >= 42) {
+				TOUCH_I("Delta[%d][%d] = %d\n",
+					i, j, ImagepF[i][j]);
+				ret = 0;
+			}
+
+			f54len += snprintf(f54buf + f54len,
+					sizeof(f54buf) - f54len,
+					"delta[%2d][%2d] : %5d ",
+					i, j, ImagepF[i][j]);
+
+			k = k + 2;
+		}
+		f54len += snprintf(f54buf + f54len,
+				sizeof(f54buf) - f54len, "\n");
+		write_log(NULL, f54buf);
+		f54len = 0;
+
+	}
+
+	/*Reset Device*/
+	Reset();
+
+	return ret;
+}
+
+
 int ReadGndReport(void)
 {
 	int ret = 0;
@@ -1661,6 +1705,9 @@ int ReadReport(unsigned char input, char *buf)
 		break;
 	case 'p':
 		ret = ReadGndReport();
+		break;
+	case 'q':
+		ret = GetDelta(buf);
 		break;
 	default:
 		break;
@@ -2778,7 +2825,7 @@ int ImageTest(int mode, char *buf)
 	return ret;
 }
 
-int DeltaTest(char *buf)
+int DeltaTest(char *buf, int mode)
 {
 	unsigned char data;
 
@@ -2793,8 +2840,10 @@ int DeltaTest(char *buf)
 	Write8BitRegisters(F54DataBase, &data, 1);
 
 	do_gettimeofday(&t_interval[STARTTIME]);
-
-	data = 'l';/*rawdata display mode*/
+	if (mode)
+		data = 'q';/*rawdata display mode*/
+	else
+		data = 'l';/*rawdata check mode*/
 
 	return ReadReport(data, buf);
 
@@ -3326,12 +3375,17 @@ void RspCollectRawData(void)
 	int k = 0;
 
 	TOUCH_I("%s\n", __func__);
-	for (i = 0; i < RSP_COLLECT_FRAMES; i++) {
+	for (i = 0; i < (RSP_COLLECT_FRAMES + 3); i++) {
 		if (RspTestPreparation())
 			RspReadReport(eRT_RSPGroupTest);
+		if ( i < 3 )
+		{
+			TOUCH_I("[RSP Collect Raw data]ignore %d frame\n", i);
+			continue;
+		}
 		for (j = 0; j < RSP_MAX_ROW; j++)
 			for (k = 0; k < RSP_MAX_COL; k++)
-				RspImageStack[i][j][k] = RspRawImage[j][k];
+				RspImageStack[i - 3][j][k] = RspRawImage[j][k];
 	}
 
 	TOUCH_I("Collect raw data image completed.\n");
@@ -3535,6 +3589,8 @@ int RspDisplayNoiseP2P(char *buf)
 
 int RspCalTest(char *buf)
 {
+	bool coarse_cal_result = true;
+	bool fine_cal_result = true;
 	bool isPassed = true;
 	int f = 0;
 	int c = 0;
@@ -3595,11 +3651,23 @@ int RspCalTest(char *buf)
 							sizeof(f54buf) - f54len,
 							"RSP Coarse Fail area : Row [%2d] Col [%2d] Value : %3d\n",
 							r, c, coarse[f]);
-					isPassed = false;
+					coarse_cal_result = false;
 				}
 			}
 			f++;
 		}
+	}
+
+	if (coarse_cal_result) {
+		TOUCH_I("RSP Coarse Cal Test passed.\n");
+		f54len += snprintf(f54buf + f54len,
+				sizeof(f54buf) - f54len,
+				"RSP Coarse Cal Test passed.\n\n\n");
+	} else {
+		TOUCH_I("RSP Coarse Cal Test failed.\n");
+		f54len += snprintf(f54buf + f54len,
+				sizeof(f54buf) - f54len,
+				"RSP Coarse Cal Test failed.\n\n\n");
 	}
 
 	write_log(NULL, f54buf);
@@ -3660,15 +3728,32 @@ int RspCalTest(char *buf)
 							sizeof(f54buf) - f54len,
 							"RSP Coarse Fail area : Row [%2d] Col [%2d] Value : %3d\n",
 							r, c, fine[f]);
-					isPassed = false;
+					fine_cal_result = false;
 				}
 			}
 			f++;
 		}
 	}
 
+	if (fine_cal_result) {
+		TOUCH_I("RSP Fine Cal Test passed.\n");
+		f54len += snprintf(f54buf + f54len,
+				sizeof(f54buf) - f54len,
+				"RSP Fine Cal Test passed.\n\n\n");
+	} else {
+		TOUCH_I("RSP Fine Cal Test failed.\n");
+		f54len += snprintf(f54buf + f54len,
+				sizeof(f54buf) - f54len,
+				"RSP Fine Cal Test failed.\n\n\n");
+	}
+
+	write_log(NULL, f54buf);
+	f54len = 0;
+
+	isPassed = (coarse_cal_result && fine_cal_result);
+
 	if (isPassed) {
-		TOUCH_I("RSP Cal Test passed.");
+		TOUCH_I("RSP Cal Test passed.\n");
 		f54len += snprintf(f54buf + f54len,
 				sizeof(f54buf) - f54len,
 				"RSP Cal Test passed.\n\n\n");
@@ -4171,7 +4256,7 @@ retry:
 		CheckCrash(buf, mode);
 		break;
 	case 'm':
-		ret = DeltaTest(buf);
+		ret = DeltaTest(buf, mode);
 		break;
 	case 'n':
 		f54len = strlcpy(f54buf,

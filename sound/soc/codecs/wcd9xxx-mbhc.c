@@ -45,6 +45,12 @@
 #include "wcd9xxx-resmgr.h"
 #include "wcd9xxx-common.h"
 
+#ifdef CONFIG_SND_SOC_ES9018
+#include <soc/qcom/lge/board_lge.h>
+extern int sabre_headphone_on(void);
+extern int sabre_headphone_off(void);
+#endif
+
 #define WCD9XXX_JACK_MASK (SND_JACK_HEADSET | SND_JACK_OC_HPHL | \
 			   SND_JACK_OC_HPHR | SND_JACK_LINEOUT | \
 			   SND_JACK_UNSUPPORTED | SND_JACK_MICROPHONE2)
@@ -144,7 +150,7 @@
 /* LGE UPDATE ADVANCED HEADSET TYPE DETECT L impedance Range*/
 #if defined(CONFIG_SND_LGE_HIDDEN_AUX)
 #define LGE_ADVANCED_MIN_THD	77000
-#define LGE_ADVANCED_MAX_THD	8000000
+#define LGE_ADVANCED_MAX_THD	50000000
 #define LGE_SWITCH_NAME_ADVANCED	"h2w_advanced"
 #define LGE_SWITCH_NAME_AUX 		"h2w_aux_hidden"
 #define LGE_SWITCH_NAME_NORMAL		"h2w"
@@ -166,6 +172,9 @@
 #define WCD9XXX_V_CS_HS_MAX 10000
 #endif
 #define WCD9XXX_V_CS_NO_MIC 5
+#ifdef CONFIG_MACH_LGE
+#define CHECK_CORRECTION_RANGE(x) ( (5 <= x) && (x <= 10) ? 1 : 0)
+#endif
 #define WCD9XXX_MB_MEAS_DELTA_MAX_MV 80
 #ifdef CONFIG_MACH_LGE
 #define WCD9XXX_CS_MEAS_DELTA_MAX_MV 50
@@ -194,7 +203,10 @@ MODULE_PARM_DESC(z_det_box_car_avg,
 		 "Number of samples for impedance detection");
 
 static bool detect_use_vddio_switch;
-
+#ifdef CONFIG_MACH_LGE
+static int __vdce;
+static bool retry_flag; // dce value for fixed incorrect detection
+#endif
 struct wcd9xxx_mbhc_detect {
 	u16 dce;
 	u16 sta;
@@ -244,6 +256,7 @@ enum {
 	NO_DEVICE   = 0,
 	LGE_HEADSET = (1 << 0),
 	LGE_HEADSET_NO_MIC = (1 << 1),
+	LGE_HIDDEN_AUX = (1 << 6),
 };
 
 static   ssize_t lge_hsd_print_state(struct switch_dev *sdev, char *buf)
@@ -277,16 +290,43 @@ static void wcd9xxx_turn_onoff_override(struct wcd9xxx_mbhc *mbhc, bool on)
 			    0x04, on ? 0x04 : 0x00);
 }
 
+#if defined(CONFIG_SND_LGE_HIDDEN_AUX)
+static bool wcd9xxx_swch_level_remove(struct wcd9xxx_mbhc *mbhc);
+
+static void lge_set_switch_device_for_hidden_aux(struct wcd9xxx_mbhc *mbhc, int state)
+{
+	if(mbhc->zl > LGE_ADVANCED_MAX_THD)
+	{ //LGE UPDATE L impedance is higher than 50k ohm
+		if(state == SND_JACK_LINEOUT && mbhc->zr > LGE_ADVANCED_MAX_THD)
+			mbhc->sdev.name = LGE_SWITCH_NAME_AUX;
+		else
+			mbhc->sdev.name = LGE_SWITCH_NAME_ADVANCED;
+	}
+	else if((mbhc->zl < LGE_ADVANCED_MAX_THD) && (mbhc->zl > LGE_ADVANCED_MIN_THD))
+	{ //LGE UPDATE L impedance is 100 ~ 50k ohm
+		mbhc->sdev.name = LGE_SWITCH_NAME_ADVANCED;
+	}
+	else
+	{ //LGE UPDATE L impedance is under 100 ohm
+		mbhc->sdev.name = LGE_SWITCH_NAME_NORMAL;
+	}
+	if((strcmp(mbhc->sdev.name,LGE_SWITCH_NAME_AUX) == 0)) {
+		if(!mbhc->mbhc_aux_extend_status) {
+			printk("[LGE MBHC]: lge_set_switch_device: LGE_HIDDEN_AUX\n");
+			switch_set_state(&mbhc->sdev, LGE_HIDDEN_AUX);
+		} else {
+			printk("[LGE MBHC]: Aux already inserted. Do not report\n");
+		}
+	} else {
+		switch_set_state(&mbhc->sdev, (state == SND_JACK_HEADPHONE) ? LGE_HEADSET_NO_MIC  : LGE_HEADSET );
+	}
+}
+#else
 // LGE_CHANGE_S, separate set switch device name function.
 static void lge_set_switch_device(struct wcd9xxx_mbhc *mbhc, int state)
 {
 	if(mbhc->zl > LGE_ADVANCED_MAX_THD)
 	{ //LGE UPDATE L impedance is higher than 400 ohm
-#if defined(CONFIG_SND_LGE_HIDDEN_AUX)
-		if(state != SND_JACK_LINEOUT)
-			mbhc->sdev.name = LGE_SWITCH_NAME_ADVANCED;
-		else
-#endif
 		mbhc->sdev.name = LGE_SWITCH_NAME_AUX;
 	}
 	else if((mbhc->zl < LGE_ADVANCED_MAX_THD) && (mbhc->zl > LGE_ADVANCED_MIN_THD))
@@ -297,12 +337,30 @@ static void lge_set_switch_device(struct wcd9xxx_mbhc *mbhc, int state)
 	{ //LGE UPDATE L impedance is under 100 ohm
 		mbhc->sdev.name = LGE_SWITCH_NAME_NORMAL;
 	}
-#if defined(CONFIG_SND_LGE_HIDDEN_AUX)
-	if(strcmp(mbhc->sdev.name,LGE_SWITCH_NAME_AUX) != 0)
-#endif
+#ifdef CONFIG_MACH_LGE
+	if (CHECK_CORRECTION_RANGE(__vdce)){ // detection retry
+		if(retry_flag == 0){
+			retry_flag = 1;
+			pr_debug("[LGE MBHC] %s: vdce ( 4 < value < 11) retry!! \n", __func__);
+			schedule_delayed_work(&mbhc->mbhc_detect_for_boot,
+									 usecs_to_jiffies(1000000));
+		} else {
+			pr_debug("[LGE MBHC] %s: retry flag set \n", __func__);
+			switch_set_state(&mbhc->sdev, (state == SND_JACK_HEADPHONE) ? LGE_HEADSET_NO_MIC  : LGE_HEADSET );
+			__vdce = 0; // reset __vdce value for button irq
+			retry_flag = 0;
+		}
+	} else {
+		switch_set_state(&mbhc->sdev, (state == SND_JACK_HEADPHONE) ? LGE_HEADSET_NO_MIC  : LGE_HEADSET );
+		pr_debug("[LGE MBHC] %s: normal case __vdce : %d \n", __func__, __vdce);
+		__vdce = 0; // reset __vdce value for button irq
+		retry_flag = 0;
+	}
+#else
 	switch_set_state(&mbhc->sdev, (state == SND_JACK_HEADPHONE) ? LGE_HEADSET_NO_MIC  : LGE_HEADSET );
+#endif
 }
-// LGE_CHANGE_E, separate set switch device name function.
+#endif
 
 /* called under codec_resource_lock acquisition */
 static void wcd9xxx_pause_hs_polling(struct wcd9xxx_mbhc *mbhc)
@@ -571,7 +629,7 @@ void *wcd9xxx_mbhc_cal_btn_det_mp(
 			    const struct wcd9xxx_mbhc_btn_detect_cfg *btn_det,
 			    const enum wcd9xxx_mbhc_btn_det_mem mem)
 {
-	void *ret = &btn_det->_v_btn_low;
+	void *ret = (void *)&btn_det->_v_btn_low;
 
 	switch (mem) {
 	case MBHC_BTN_DET_GAIN:
@@ -687,18 +745,43 @@ static void wcd9xxx_jack_report(struct wcd9xxx_mbhc *mbhc,
 				|| status == SND_JACK_HEADSET
 				|| status == SND_JACK_LINEOUT)
 		{
+#if defined(CONFIG_SND_LGE_HIDDEN_AUX)
+			lge_set_switch_device_for_hidden_aux(mbhc, status);
+#else
 			lge_set_switch_device(mbhc, status);
+#endif
 			printk("[LGE MBHC]: wcd9xxx_jack_report: switch device name = %s, state = %d \n", mbhc->sdev.name, (status == SND_JACK_HEADPHONE ? LGE_HEADSET_NO_MIC  : LGE_HEADSET ));
 		}
 		else if (status == 0)
 		{
 #if defined(CONFIG_SND_LGE_HIDDEN_AUX)
-			if(strcmp(mbhc->sdev.name,LGE_SWITCH_NAME_AUX) != 0)
-#endif
+			if(strcmp(mbhc->sdev.name,LGE_SWITCH_NAME_AUX) == 0) {
+				if(!wcd9xxx_swch_level_remove(mbhc)) {
+					printk("[LGE MBHC]: Aux still is inserted. Do not remove report\n");
+					mbhc->mbhc_aux_extend_status = true;
+				} else {
+					mbhc->mbhc_aux_extend_status = false;
+					mbhc->sdev.state = LGE_HIDDEN_AUX;
+					switch_set_state(&mbhc->sdev, NO_DEVICE);
+					printk("[LGE MBHC]: Aux remove report: switch device name = %s, state = %d \n", mbhc->sdev.name, 0);
+				}
+			} else {
+				switch_set_state(&mbhc->sdev, NO_DEVICE);
+				printk("[LGE MBHC]: wcd9xxx_jack_report: switch device name = %s, state = %d \n", mbhc->sdev.name, 0);
+				if(mbhc->mbhc_aux_extend_status && wcd9xxx_swch_level_remove(mbhc)) {
+					mbhc->mbhc_aux_extend_status = false;
+					mbhc->sdev.name = LGE_SWITCH_NAME_AUX;
+					mbhc->sdev.state = LGE_HIDDEN_AUX;
+					switch_set_state(&mbhc->sdev, NO_DEVICE);
+					printk("[LGE MBHC]: Aux extend status remove report: switch device name = %s, state = %d \n", mbhc->sdev.name, 0);
+				}
+			}
+#else
 			switch_set_state(&mbhc->sdev, NO_DEVICE);
+			printk("[LGE MBHC]: wcd9xxx_jack_report: switch device name = %s, state = %d \n", mbhc->sdev.name, 0);
+#endif
 #ifdef CONFIG_LGE_EARJACK_DEBUGGER
 			lge_uart_console_on_earjack_out();
-			printk("[LGE MBHC]: wcd9xxx_jack_report: switch device name = %s, state = %d \n", mbhc->sdev.name, 0);
 #endif
 		}
 		else
@@ -1064,8 +1147,19 @@ static void wcd9xxx_report_plug(struct wcd9xxx_mbhc *mbhc, int insertion,
 						mbhc->mbhc_cfg->micbias);
 		}
 
+#if defined(CONFIG_SND_LGE_HIDDEN_AUX)
+		if (mbhc->impedance_detect && impedance_detect_en) {
+			wcd9xxx_detect_impedance(mbhc, &mbhc->zl, &mbhc->zr);
+			if((mbhc->zl < LGE_ADVANCED_MAX_THD && mbhc->zr > LGE_ADVANCED_MAX_THD) ||
+				(mbhc->zl > LGE_ADVANCED_MAX_THD && mbhc->zr < LGE_ADVANCED_MAX_THD)) {
+				printk("[LGE MBHC]: unbalance impedance case. retry wcd9xxx_detect_impedance\n");
+				wcd9xxx_detect_impedance(mbhc, &mbhc->zl, &mbhc->zr);
+			}
+		}
+#else
 		if (mbhc->impedance_detect && impedance_detect_en)
 			wcd9xxx_detect_impedance(mbhc, &mbhc->zl, &mbhc->zr);
+#endif
 
 		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
@@ -1600,6 +1694,9 @@ wcd9xxx_cs_find_plug_type(struct wcd9xxx_mbhc *mbhc,
 
 		vdce = __wcd9xxx_codec_sta_dce_v(mbhc, true, d->dce,
 						 dce_z, (u32)mb_mv);
+#ifdef CONFIG_MACH_LGE
+		__vdce = vdce;
+#endif
 		d->_vdces = vdce;
 		if (d->_vdces < no_mic)
 			d->_type = PLUG_TYPE_HEADPHONE;
@@ -1763,6 +1860,9 @@ wcd9xxx_find_plug_type(struct wcd9xxx_mbhc *mbhc,
 
 	for (i = 0, d = dt, ch = 0; i < size; i++, d++) {
 		vdce = wcd9xxx_codec_sta_dce_v(mbhc, true, d->dce);
+#ifdef CONFIG_MACH_LGE
+		__vdce = vdce;
+#endif
 		if (d->vddio)
 			d->_vdces = scale_v_micb_vddio(mbhc, vdce, false);
 		else
@@ -3589,6 +3689,16 @@ static irqreturn_t wcd9xxx_mech_plug_detect_irq(int irq, void *data)
 
 	pr_debug("%s: enter\n", __func__);
 	printk("[LGE MBHC]: %s: enter\n", __func__);
+
+#ifdef CONFIG_SND_SOC_ES9018
+	if (lge_get_board_revno() >= HW_REV_0) {
+		if (!(mbhc->hph_status))
+		{
+			sabre_headphone_on();
+		}
+	}
+#endif /* CONFIG_SND_SOC_ES9018 */
+
 	if (unlikely(wcd9xxx_lock_sleep(mbhc->resmgr->core_res) == false)) {
 		pr_warn("%s: failed to hold suspend\n", __func__);
 		r = IRQ_NONE;
@@ -3598,7 +3708,15 @@ static irqreturn_t wcd9xxx_mech_plug_detect_irq(int irq, void *data)
 		wcd9xxx_unlock_sleep(mbhc->resmgr->core_res);
 	}
 
-	pr_debug("%s: leave %d\n", __func__, r);
+#ifdef CONFIG_SND_SOC_ES9018
+	if (lge_get_board_revno() >= HW_REV_0) {
+		if (mbhc->hph_status & (SND_JACK_HEADPHONE |
+				SND_JACK_HEADSET |SND_JACK_LINEOUT))
+			sabre_headphone_on();
+		else
+			sabre_headphone_off(); 
+	}
+#endif /* CONFIG_SND_SOC_ES9018 */
 	return r;
 }
 
@@ -3831,6 +3949,13 @@ irqreturn_t wcd9xxx_dce_handler(int irq, void *data)
 	WCD9XXX_BCL_LOCK(mbhc->resmgr);
 	mutex_lock(&mbhc->mbhc_lock);
 	mbhc_status = snd_soc_read(codec, WCD9XXX_A_CDC_MBHC_B1_STATUS) & 0x3E;
+
+#ifdef CONFIG_MACH_LGE
+	if (CHECK_CORRECTION_RANGE(__vdce)){
+		pr_err("[LGE MBHC]: %s: skip invalid btn event \n", __func__);
+		goto done;
+	}
+#endif
 
 	if (mbhc->mbhc_state == MBHC_STATE_POTENTIAL_RECOVERY) {
 		pr_debug("%s: mbhc is being recovered, skip button press\n",
@@ -5595,6 +5720,9 @@ int wcd9xxx_mbhc_init(struct wcd9xxx_mbhc *mbhc, struct wcd9xxx_resmgr *resmgr,
 	mbhc->mbhc_data.t_dce = DEFAULT_DCE_WAIT;
 	mbhc->mbhc_data.t_sta = DEFAULT_STA_WAIT;
 	mbhc->mbhc_micbias_switched = false;
+#if defined(CONFIG_SND_LGE_HIDDEN_AUX)
+	mbhc->mbhc_aux_extend_status = false;
+#endif
 	mbhc->polling_active = false;
 	mbhc->mbhc_state = MBHC_STATE_NONE;
 	mbhc->in_swch_irq_handler = false;

@@ -129,9 +129,13 @@ MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 #define USB_HSPHY_1P8_VOL_MAX			1800000 /* uV */
 #define USB_HSPHY_1P8_HPM_LOAD			19000	/* uA */
 
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 /* TXREFTUNE[3:0] from 1000 (+10%) to 0011 (Default)*/
+#if defined(CONFIG_MACH_MSM8992_P1) || defined(CONFIG_MACH_MSM8992_P1A4WP)
+#define DEFAULT_HSPHY_INIT			(0x00D3C9A4)
+#else
 #define DEFAULT_HSPHY_INIT			(0x00D187A4)
+#endif
 #endif
 struct msm_hsphy {
 	struct usb_phy		phy;
@@ -146,6 +150,7 @@ struct msm_hsphy {
 	bool			sleep_clk_reset;
 
 	struct regulator	*vdd;
+	struct regulator	*vddcx;
 	struct regulator	*vdda33;
 	struct regulator	*vdda18;
 	int			vdd_levels[3]; /* none, low, high */
@@ -157,7 +162,10 @@ struct msm_hsphy {
 	bool			ext_vbus_id;
 	int			num_ports;
 	bool			cable_connected;
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+	bool			evp_connected;
+#endif
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	bool		host;
 #endif
 };
@@ -176,6 +184,10 @@ static int msm_hsusb_config_vdd(struct msm_hsphy *phy, int high)
 		dev_err(phy->phy.dev, "unable to set voltage for hsusb vdd\n");
 		return ret;
 	}
+
+	if (phy->vddcx)
+		regulator_set_voltage(phy->vddcx, phy->vdd_levels[min],
+					phy->vdd_levels[2]);
 
 	dev_dbg(phy->phy.dev, "%s: min_vol:%d max_vol:%d\n", __func__,
 		phy->vdd_levels[min], phy->vdd_levels[2]);
@@ -497,7 +509,7 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 		}
 
 		/* can turn off regulators if disconnected in device mode */
-#ifdef CONFIG_LGE_PM
+#if defined(CONFIG_LGE_PM) && !defined(CONFIG_LGE_USB_MAXIM_EVP)
 		if (phy->lpm_flags & PHY_RETENTIONED && !phy->cable_connected
 				&& phy->ext_vbus_id) {
 			msm_hsusb_ldo_enable(phy, 0);
@@ -527,7 +539,7 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 		}
 	} else {
 		atomic_inc(&hsphy_active_count);
-#ifdef CONFIG_LGE_PM
+#if defined(CONFIG_LGE_PM) && !defined(CONFIG_LGE_USB_MAXIM_EVP)
 		if (phy->lpm_flags & PHY_VDD_MINIMIZED) {
 			msm_hsusb_config_vdd(phy, 1);
 			phy->lpm_flags &= ~PHY_VDD_MINIMIZED;
@@ -647,7 +659,7 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 		 */
 		if (override_phy_init)
 			phy->hsphy_init_seq = override_phy_init;
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 		dev_info(uphy->dev, "OTG mode: %d\n", phy->host);
 		if( phy->host) {
 			msm_usb_write_readback(phy->base,
@@ -668,6 +680,15 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 	phy->suspended = !!suspend; /* double-NOT coerces to bool value */
 	return 0;
 }
+
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+static void msm_hsphy_notify_evp_connect(struct usb_phy *uphy)
+{
+	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
+	if (uphy->otg->gadget->evp_sts & (BIT(0) | BIT(1))) /*check evp connected*/
+		phy->evp_connected = true;
+}
+#endif
 
 static int msm_hsphy_notify_connect(struct usb_phy *uphy,
 				    enum usb_device_speed speed)
@@ -733,6 +754,9 @@ static int msm_hsphy_notify_disconnect(struct usb_phy *uphy,
 	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
 
 	phy->cable_connected = false;
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+	phy->evp_connected = false;
+#endif
 
 	if (uphy->flags & PHY_HOST_MODE) {
 		if (phy->core_ver == MSM_CORE_VER_160 ||
@@ -765,7 +789,7 @@ static int msm_hsphy_notify_disconnect(struct usb_phy *uphy,
 
 	return 0;
 }
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 static void msm_hsphy_notify_set_host(struct usb_phy *uphy, bool host)
 {
 	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
@@ -856,6 +880,15 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 		goto err_ret;
 	}
 
+	if (of_get_property(dev->of_node, "vddcx-supply", NULL)) {
+		phy->vddcx = devm_regulator_get(dev, "vddcx");
+		if (IS_ERR(phy->vddcx)) {
+			dev_err(dev, "unable to get vddcx supply\n");
+			ret = PTR_ERR(phy->vddcx);
+			goto err_ret;
+		}
+	}
+
 	phy->vdda33 = devm_regulator_get(dev, "vdda33");
 	if (IS_ERR(phy->vdda33)) {
 		dev_err(dev, "unable to get vdda33 supply\n");
@@ -880,6 +913,13 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(dev, "unable to enable the hsusb vdd_dig\n");
 		goto unconfig_hs_vdd;
+	}
+	if (phy->vddcx) {
+		ret = regulator_enable(phy->vddcx);
+		if (ret) {
+			dev_err(dev, "unable to enable vddcx\n");
+			goto unconfig_hs_vdd;
+		}
 	}
 
 	ret = msm_hsusb_ldo_enable(phy, 1);
@@ -936,10 +976,13 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 
 	phy->phy.init			= msm_hsphy_init;
 	phy->phy.set_suspend		= msm_hsphy_set_suspend;
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+	phy->phy.notify_evp_connect	= msm_hsphy_notify_evp_connect;
+#endif
 	phy->phy.notify_connect		= msm_hsphy_notify_connect;
 	phy->phy.notify_disconnect	= msm_hsphy_notify_disconnect;
 	phy->phy.reset			= msm_hsphy_reset;
-#ifdef CONFIG_USB_G_LGE_ANDROID
+#ifdef CONFIG_LGE_USB_G_ANDROID
 	dev_err(dev, "set notify_set_hostmode\n");
 	phy->phy.notify_set_hostmode	= msm_hsphy_notify_set_host;
 	phy->host = false;
@@ -959,6 +1002,8 @@ disable_clk:
 disable_hs_ldo:
 	msm_hsusb_ldo_enable(phy, 0);
 disable_hs_vdd:
+	if (phy->vddcx)
+		regulator_disable(phy->vddcx);
 	regulator_disable(phy->vdd);
 unconfig_hs_vdd:
 	msm_hsusb_config_vdd(phy, 0);
@@ -980,6 +1025,8 @@ static int msm_hsphy_remove(struct platform_device *pdev)
 	if (phy->vdda_force_on)
 		msm_hsusb_ldo_enable(phy, 0);
 	msm_hsusb_ldo_enable(phy, 0);
+	if (phy->vddcx)
+		regulator_disable(phy->vddcx);
 	regulator_disable(phy->vdd);
 	msm_hsusb_config_vdd(phy, 0);
 	if (!phy->suspended)

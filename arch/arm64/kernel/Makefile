@@ -4,6 +4,12 @@
 
 CPPFLAGS_vmlinux.lds	:= -DTEXT_OFFSET=$(TEXT_OFFSET)
 AFLAGS_head.o		:= -DTEXT_OFFSET=$(TEXT_OFFSET)
+
+# in a FIPS build, FIPS_KERNEL_RAM_BASE is the start of kernel text in RAM
+ifeq ($(CONFIG_CRYPTO_FIPS),y)
+AFLAGS_head.o += -DFIPS_KERNEL_RAM_BASE=0x00080000
+endif
+
 CFLAGS_efi-stub.o 	:= -DTEXT_OFFSET=$(TEXT_OFFSET) \
 			   -I$(src)/../../../scripts/dtc/libfdt
 

@@ -264,6 +264,8 @@ static void abt_ksocket_start_for_abtstudio(struct i2c_client *client)
 	int bufsize = 10;
 	unsigned char buf[bufsize+1];
 
+	frame_num	= 0;
+
 	/* kernel thread initialization */
 	abt_comm.running = 1;
 	abt_comm.client = client;

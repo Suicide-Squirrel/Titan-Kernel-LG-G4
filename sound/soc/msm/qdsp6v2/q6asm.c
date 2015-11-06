@@ -410,13 +410,12 @@ static int q6asm_session_alloc(struct audio_client *ac)
 	return -ENOMEM;
 }
 
-static int32_t  q6asm_is_valid_audio_client(struct audio_client *ac)
+static bool q6asm_is_valid_audio_client(struct audio_client *ac)
 {
 	int n;
 	for (n = 1; n <= SESSION_MAX; n++) {
-		if (session[n] == ac) {
+		if (session[n] == ac)
 			return 1;
-		}
 	}
 	return 0;
 }
@@ -1135,7 +1134,7 @@ int q6asm_audio_client_buf_alloc(unsigned int dir,
 		while (cnt < bufcnt) {
 			if (bufsz > 0) {
 				if (!buf[cnt].data) {
-					msm_audio_ion_alloc("asm_client",
+					rc = msm_audio_ion_alloc("asm_client",
 					&buf[cnt].client, &buf[cnt].handle,
 					      bufsz,
 					      (ion_phys_addr_t *)&buf[cnt].phys,
@@ -1461,8 +1460,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		pr_err("%s: data NULL\n", __func__);
 		return -EINVAL;
 	}
-	if (ac->session <= 0 || ac->session > 8 ||
-		!q6asm_is_valid_audio_client(ac)) {
+	if (!q6asm_is_valid_audio_client(ac)) {
+		pr_err("%s: audio client pointer is invalid, ac = %p\n",
+				__func__, ac);
+		return -EINVAL;
+	}
+
+	if (ac->session <= 0 || ac->session > 8) {
 		pr_err("%s: Session ID is invalid, session = %d\n", __func__,
 			ac->session);
 		return -EINVAL;
@@ -2079,7 +2083,8 @@ static int __q6asm_open_read(struct audio_client *ac,
 	}
 
 #if defined(CONFIG_SND_LGE_EFFECT) || defined(CONFIG_SND_LGE_NORMALIZER) || defined(CONFIG_SND_LGE_MABL)
-	if (open.preprocopo_id == ASM_STREAM_POSTPROC_TOPO_ID_DEFAULT_LGE)
+	if (open.preprocopo_id == ASM_STREAM_POSTPROC_TOPO_ID_DEFAULT_LGE ||
+		open.preprocopo_id == ASM_STREAM_POSTPROC_TOPO_ID_OFFLOAD_LGE )
 		open.preprocopo_id = ASM_STREAM_POSTPROCOPO_ID_DEFAULT;
 #endif
 
@@ -2406,7 +2411,8 @@ static int __q6asm_open_read_write(struct audio_client *ac, uint32_t rd_format,
 		open.bits_per_sample = 24;
 
 #if defined(CONFIG_SND_LGE_EFFECT) || defined(CONFIG_SND_LGE_NORMALIZER) || defined(CONFIG_SND_LGE_MABL)
-	if (open.postprocopo_id == ASM_STREAM_POSTPROC_TOPO_ID_DEFAULT_LGE)
+	if (open.postprocopo_id == ASM_STREAM_POSTPROC_TOPO_ID_DEFAULT_LGE ||
+		open.postprocopo_id == ASM_STREAM_POSTPROC_TOPO_ID_OFFLOAD_LGE)
 		open.postprocopo_id = ASM_STREAM_POSTPROCOPO_ID_DEFAULT;
 #endif
 

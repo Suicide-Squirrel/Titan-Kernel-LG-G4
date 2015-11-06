@@ -924,6 +924,10 @@ struct dwc3 {
 	unsigned                bh_completion_time[MAX_INTR_STATS];
 	unsigned                bh_handled_evt_cnt[MAX_INTR_STATS];
 	unsigned                bh_dbg_index;
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+	struct delayed_work	dcp_check_work;
+	unsigned int		evp_usbctrl_err_cnt;
+#endif
 	ktime_t			irq_start_time[MAX_INTR_STATS];
 	unsigned                irq_completion_time[MAX_INTR_STATS];
 	unsigned                irq_event_count[MAX_INTR_STATS];
@@ -1083,11 +1087,18 @@ static inline void dwc3_host_exit(struct dwc3 *dwc)
 #if IS_ENABLED(CONFIG_USB_DWC3_GADGET) || IS_ENABLED(CONFIG_USB_DWC3_DUAL_ROLE)
 int dwc3_gadget_init(struct dwc3 *dwc);
 void dwc3_gadget_exit(struct dwc3 *dwc);
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+void dwc_dcp_check_work(struct work_struct *w);
+#endif
 #else
 static inline int dwc3_gadget_init(struct dwc3 *dwc)
 { return 0; }
 static inline void dwc3_gadget_exit(struct dwc3 *dwc)
 { }
+#ifdef CONFIG_LGE_USB_MAXIM_EVP
+static void dwc_dcp_check_work(struct work_struct *w)
+{ }
+#endif
 #endif
 
 /* power management interface */

@@ -493,7 +493,8 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 	dcvs = &inst->dcvs;
 	instance_count = msm_dcvs_count_active_instances(core);
 
-	if (instance_count == 1 && inst->session_type == MSM_VIDC_DECODER) {
+	if (instance_count == 1 && inst->session_type == MSM_VIDC_DECODER &&
+		!msm_comm_turbo_session(inst)) {
 		num_mbs_per_frame = msm_dcvs_get_mbs_per_frame(inst);
 		output_buf_req = get_buff_req_buffer(inst,
 			msm_comm_get_hal_output_buffer(inst));
@@ -519,7 +520,8 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 			return -EINVAL;
 		}
 	} else if (instance_count == 1 &&
-			inst->session_type == MSM_VIDC_ENCODER) {
+			inst->session_type == MSM_VIDC_ENCODER &&
+			!msm_comm_turbo_session(inst)) {
 		if (!msm_dcvs_enc_check(inst) ||
 			!inst->dcvs.is_additional_buff_added)
 			return -ENOTSUPP;
@@ -557,8 +559,7 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 	return rc;
 }
 
-int msm_dcvs_get_extra_buff_count(struct msm_vidc_inst *inst,
-					bool is_input_buff)
+int msm_dcvs_get_extra_buff_count(struct msm_vidc_inst *inst)
 {
 	int extra_buffer = 0;
 
@@ -569,18 +570,14 @@ int msm_dcvs_get_extra_buff_count(struct msm_vidc_inst *inst,
 
 	if (inst->session_type == MSM_VIDC_ENCODER) {
 		if (msm_dcvs_enc_check(inst)) {
-			if (is_input_buff && !inst->dcvs.is_input_buff_added)
-				extra_buffer = DCVS_ENC_EXTRA_INPUT_BUFFERS;
-			else if (!is_input_buff &&
-					!inst->dcvs.is_output_buff_added)
+			if (!inst->dcvs.is_additional_buff_added)
 				extra_buffer = DCVS_ENC_EXTRA_OUTPUT_BUFFERS;
 		}
 	}
 	return extra_buffer;
 }
 
-void msm_dcvs_set_buff_req_handled(struct msm_vidc_inst *inst,
-					bool is_input_buff)
+void msm_dcvs_set_buff_req_handled(struct msm_vidc_inst *inst)
 {
 	if (!inst) {
 		dprintk(VIDC_ERR, "%s Invalid args\n", __func__);
@@ -589,18 +586,10 @@ void msm_dcvs_set_buff_req_handled(struct msm_vidc_inst *inst,
 
 	if (inst->session_type == MSM_VIDC_ENCODER) {
 		if (msm_dcvs_enc_check(inst)) {
-			if (is_input_buff && !inst->dcvs.is_input_buff_added)
-				inst->dcvs.is_input_buff_added = true;
-			else if (!is_input_buff &&
-					!inst->dcvs.is_output_buff_added)
-				inst->dcvs.is_output_buff_added = true;
-
-			if (inst->dcvs.is_input_buff_added &&
-				inst->dcvs.is_output_buff_added) {
+			if (!inst->dcvs.is_additional_buff_added)
 				inst->dcvs.is_additional_buff_added = true;
 				dprintk(VIDC_PROF,
-					"ENC_DCVS: additional i/p o/p buffer added");
-			}
+					"ENC_DCVS: additional o/p buffer added");
 		}
 	}
 }

@@ -1,0 +1,65 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+
+/dts-v1/;
+
+#include "../../qcom/msm8992.dtsi"
+#include "msm8992-pplus_usc_us.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. MSM8992 PPLUS USC US";
+	compatible = "qcom,msm8992-cdp", "qcom,msm8992", "qcom,cdp";
+	qcom,board-id = <0x065 0>;
+};
+
+//ADD HERE TO SUPPORT HW CHANGE
+
+&soc {
+	i2c_5: i2c@f9967000 {
+		ti-tas2552_41@41 {
+			status = "ok";
+		};
+
+		bcm2079x@76 {
+			status = "ok";
+		};
+	};
+};
+
+/* fingerprint spi master */
+&soc {
+	spi_blsp12: spi_fpc@f9968000{
+		status = "disabled";
+	};
+};
+
+/* fingerprint fpc1022 */
+&spi_blsp12 {
+	csfp@0 {
+		status = "disabled";
+	};
+};
+
+/* fingerprint spi master */
+&soc {
+	spi_blsp10: spi_fpc@f9966000{
+		status = "ok";
+	};
+};
+
+/* fingerprint fpc1022 */
+&spi_blsp10 {
+	csfp@0 {
+		status = "ok";
+	};
+};

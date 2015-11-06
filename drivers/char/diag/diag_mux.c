@@ -130,13 +130,13 @@ int diag_mux_init()
                 lge_dm_tty->tbl[j].buf = NULL;
                 lge_dm_tty->tbl[j].len = 0;
                 lge_dm_tty->tbl[j].ctx = 0;
-                spin_lock_init(&(lge_dm_tty->tbl[j].lock));
             }
         } else {
             kfree(lge_dm_tty->tbl);
             lge_dm_tty->num_tbl_entries = 0;
             lge_dm_tty->ops = NULL;
         }
+        spin_lock_init(&(lge_dm_tty->lock));
     }
 #endif
 
@@ -240,7 +240,7 @@ int diag_mux_write(int proc, unsigned char *buf, int len, int ctx)
         }
 
         for (i = 0; i < lge_dm_tty->num_tbl_entries && !found; i++) {
-            spin_lock_irqsave(&lge_dm_tty->tbl[i].lock, flags);
+            spin_lock_irqsave(&lge_dm_tty->lock, flags);
             if (lge_dm_tty->tbl[i].len == 0) {
                 lge_dm_tty->tbl[i].buf = buf;
                 lge_dm_tty->tbl[i].len = len;
@@ -248,7 +248,7 @@ int diag_mux_write(int proc, unsigned char *buf, int len, int ctx)
                 found = 1;
                 diag_ws_on_read(DIAG_WS_MD, len);
             }
-            spin_unlock_irqrestore(&lge_dm_tty->tbl[i].lock, flags);
+            spin_unlock_irqrestore(&lge_dm_tty->lock, flags);
         }
 
         lge_dm_tty->set_logging = 1;

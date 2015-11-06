@@ -37,9 +37,13 @@
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pm8994_s1_corner_ao";
 			qcom,set = <1>;
-			regulator-min-microvolt = <1>;
+			regulator-min-microvolt = <4>;
 			regulator-max-microvolt = <7>;
+			regulator-always-on;
+			qcom,init-voltage-corner = <6>;
 			qcom,use-voltage-corner;
+			proxy-supply = <&pm8994_s1_corner_ao>;
+			qcom,proxy-consumer-voltage = <7 7>;
 		};
 	};
 
@@ -630,7 +634,7 @@
 		qcom,cpr-apc-volt-step = <5000>;
 
 		qcom,cpr-fuse-row = <137 0>;
-		qcom,cpr-fuse-target-quot = <31 39 47 55>;
+		qcom,cpr-fuse-target-quot = <39 39 47 55>;
 		qcom,cpr-fuse-target-quot-size = <8 8 8 8>;
 		qcom,cpr-fuse-target-quot-scale =
 					<0 10>,
@@ -651,7 +655,7 @@
 					<57 55 4 0>;
 		qcom,cpr-fuse-redun-sel = <140 61 3 1 0>;
 		qcom,cpr-fuse-redun-row = <1000 0>;
-		qcom,cpr-fuse-redun-target-quot = <0 8 16 24>;
+		qcom,cpr-fuse-redun-target-quot = <8 8 16 24>;
 		qcom,cpr-fuse-redun-ro-sel = <44 44 44 44>;
 		qcom,cpr-fuse-redun-init-voltage =
 					<1000 32 6 0>,
@@ -687,8 +691,8 @@
 		qcom,cpr-init-voltage-adjustment =
 				<0 0 0 (-25000)>,
 				<0 0 0 (-25000)>,
-				<0 (-25000) (-45000) 20000>,
-				<0 (-25000) (-45000) 0>;
+				<0 (-25000) (-25000) 20000>,
+				<0 (-25000) (-25000) 0>;
 
 		qcom,cpr-scaled-init-voltage-as-ceiling;
 		qcom,cpr-voltage-scaling-factor-max = <0 0 2000 2000>;
@@ -811,17 +815,17 @@
 				<1 0xffffffff 3 4 4 4 4>,
 				<1 0xffffffff 4 4 4 4 4>;
 		qcom,cpr-quotient-adjustment =
-				<0 0 0 (-60)>,
-				<0 0 0 (-60)>,
-				<0 0 0 (-210)>,
+				<0 0 0 (-24)>,
+				<0 0 0 (-24)>,
+				<0 0 0 (-84)>,
 				<0 0 (-105) (-115)>,
 				<0 0 (-105) (-115)>,
 				<0 0 (-105) (-115)>,
 				<0 0 (-105) (-115)>;
 		qcom,cpr-init-voltage-adjustment =
-				<0 0 0 (-80000)>,
-				<0 0 0 (-80000)>,
-				<0 0 0 (-80000)>,
+				<0 0 0 (-15000)>,
+				<0 0 0 (-15000)>,
+				<0 0 0 (-15000)>,
 				<0 0 (-25000) (-35000)>,
 				<0 0 (-25000) (-35000)>,
 				<0 0 (-25000) (-35000)>,

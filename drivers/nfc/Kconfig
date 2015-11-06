@@ -53,7 +53,14 @@ config NFC_QNCI
 config LGE_NFC
 	bool "NFC Device Enabled for LGE"
 	default n
-
+	
+config NFC_BCM2079X
+	bool "Broadcom 2079X NFC Controller Driver"
+	depends on I2C
+	select CRC_CCITT
+	help
+	  Broadcom 2079X Near Field Communication controller support.
+	  
 config LGE_NFC_PN547_C2
 	bool "PN547 C2 NFC driver"
 	depends on I2C

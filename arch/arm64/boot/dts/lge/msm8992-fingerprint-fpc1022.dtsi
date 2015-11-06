@@ -1,0 +1,196 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/ {
+	memory {
+		removed_regions: removed_regions@0 {
+			reg = <0 0x05a00000 0 0x1800000>;
+		};
+	};
+
+};
+
+	&soc {
+		qcom,qseecom@6500000 {
+			reg = <0x5a00000 0x1000000>;
+		};
+	};
+
+
+
+/ {
+	aliases {
+	spi2 = &spi_blsp10;
+	spi3 = &spi_blsp12;
+	};
+
+
+	soc {
+		spi_blsp12: spi_fpc@f9968000{    /* BLSP2 QUP5 */
+			status = "ok";
+			compatible = "qcom,spi-qup-v2";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			reg-names = "spi_physical", "spi_bam_physical";
+			reg = <0xf9968000 0x1000>, <0xf9944000 0x19000>;
+
+			interrupt-names = "spi_irq", "spi_bam_irq";
+			interrupts = <0 106 0>, <0 239 0>;
+
+			spi-max-frequency = <5000000>; /* TODO */
+			qcom,master-id = <84>;
+
+			clock-names = "iface_clk", "core_clk";
+			clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			<&clock_gcc clk_gcc_blsp2_qup6_spi_apps_clk>;
+
+			/* Assign runtime functions to pins */
+
+			/* only  REE
+			qcom,use-pinctrl;
+			pinctrl-names = "spi_default","spi_sleep";
+			pinctrl-0 = <&spi_blsp12_active>;
+			pinctrl-1 = <&spi_blsp12_suspend>;
+			*/
+
+			/* Need to be disable */
+			/*
+			qcom,gpio-mosi = <&msm_gpio 85 0>;
+			qcom,gpio-miso = <&msm_gpio 86 0>;
+
+			qcom,gpio-cs0 = <&msm_gpio 87 0>;
+			qcom,gpio-clk = <&msm_gpio 88 0>;
+			*/
+
+			qcom,infinite-mode = <0>;
+			qcom,use-bam;
+			qcom,ver-reg-exists;
+			qcom,bam-consumer-pipe-index = <22>;
+			qcom,bam-producer-pipe-index = <23>;
+
+		};
+	};
+
+	soc {
+		spi_blsp10: spi_fpc@f9966000{    /* BLSP2 QUP3 */
+			status = "disable";
+			compatible = "qcom,spi-qup-v2";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			reg-names = "spi_physical", "spi_bam_physical";
+			reg = <0xf9966000 0x1000>, <0xf9944000 0x19000>;
+
+			interrupt-names = "spi_irq", "spi_bam_irq";
+			interrupts = <0 104 0>, <0 239 0>;
+
+			spi-max-frequency = <5000000>; /* TODO */
+			qcom,master-id = <84>;
+
+			clock-names = "iface_clk", "core_clk";
+			clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			<&clock_gcc clk_gcc_blsp2_qup4_spi_apps_clk>;
+
+			/* Assign runtime functions to pins */
+
+			/* only  REE
+			qcom,use-pinctrl;
+			pinctrl-names = "spi_default","spi_sleep";
+			pinctrl-0 = <&spi_blsp10_active>;
+			pinctrl-1 = <&spi_blsp10_suspend>;
+			*/
+
+			/* Need to be disable */
+			/*
+			qcom,gpio-mosi = <&msm_gpio 53 0>;
+			qcom,gpio-miso = <&msm_gpio 54 0>;
+
+			qcom,gpio-cs0 = <&msm_gpio 55 0>;
+			qcom,gpio-clk = <&msm_gpio 56 0>;
+			*/
+
+			qcom,infinite-mode = <0>;
+			qcom,use-bam;
+			qcom,ver-reg-exists;
+			qcom,bam-consumer-pipe-index = <18>;
+			qcom,bam-producer-pipe-index = <19>;
+
+		};
+	};
+};
+
+&spi_blsp12 {
+	csfp@0 {
+		status = "ok";
+		compatible = "fpc,btp";
+		reg = <0>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <36 0x0>;
+		spi-max-frequency = <5000000>;
+
+		qcom,qup-id = <12>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+		<&clock_gcc clk_gcc_blsp2_qup6_spi_apps_clk>;
+
+		/* only tz*/
+		qcom,use-pinctrl;
+		pinctrl-names = "default","sleep";
+		pinctrl-0 = <&spi_blsp12_active>;
+		pinctrl-1 = <&spi_blsp12_suspend>;
+
+		/*
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&fpc_int_active>;
+		pinctrl-1 = <&fpc_int_suspend>;
+		*/
+
+		fpc,gpio_irq	=  <&msm_gpio 36 0x00>;
+		fpc,gpio_reset	= <&msm_gpio 38 0x00>;
+		fpc,gpio_cs	= <&msm_gpio 55 0x00>;
+	};
+};
+
+&spi_blsp10 {
+	csfp@0 {
+		status = "disable";
+		compatible = "fpc,btp";
+		reg = <0>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <36 0x0>;
+		spi-max-frequency = <5000000>;
+
+		qcom,qup-id = <10>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+		<&clock_gcc clk_gcc_blsp2_qup4_spi_apps_clk>;
+
+		/* only tz*/
+		qcom,use-pinctrl;
+		pinctrl-names = "default","sleep";
+		pinctrl-0 = <&spi_blsp10_active>;
+		pinctrl-1 = <&spi_blsp10_suspend>;
+
+		/*
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&fpc_int_active>;
+		pinctrl-1 = <&fpc_int_suspend>;
+		*/
+
+		fpc,gpio_irq	=  <&msm_gpio 36 0x00>;
+		fpc,gpio_reset	= <&msm_gpio 38 0x00>;
+		fpc,gpio_cs	= <&msm_gpio 55 0x00>;
+	};
+};

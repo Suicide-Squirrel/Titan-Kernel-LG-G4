@@ -1,0 +1,81 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+
+/dts-v1/;
+
+#include "../../qcom/msm8992.dtsi"
+#include "msm8992-pplus_cto_cn.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. MSM8992 PPLUS CTO CN";
+	compatible = "qcom,msm8992-cdp", "qcom,msm8992", "qcom,cdp";
+	qcom,board-id = <0x365 0>;
+};
+
+//ADD HERE TO SUPPORT HW CHANGE
+
+&soc {
+	i2c_1: i2c@f9923000 { /* BLSP1 : BLSP1 QUP1 */
+		status = "ok";
+
+		smb1351-charger@1d {
+			status = "ok";
+		};
+
+		max17050@36 {
+			status = "ok";
+			interrupts = <0x3f 0x0>;
+			max17048,alert_gpio = <&msm_gpio 0x3f 0x0>;
+		};
+	};
+
+	i2c_5: i2c@f9967000 {
+		ti-tas2552_41@41 {
+			status = "ok";
+		};
+	};
+
+	i2c_6: i2c@f9928000 { /* BLSP6 : BLSP1 QUP6 */
+		bcm2079x@76 {
+			status = "ok";
+		};
+
+		smb1358-charger@1c {
+			status = "disabled";
+		};
+
+		max17050@36 {
+			status = "disabled";
+		};
+	};
+};
+
+&soc {
+	gpio_keys {
+		compatible = "gpio-keys";
+		input-name = "gpio-keys";
+
+		/delete-property/ pinctrl-names;
+		/delete-property/ pinctrl-0;
+		/delete-property/ pinctrl-1;
+
+		hall_ic {
+			label = "hall_ic";
+			gpios = <&pm8994_gpios 2 0x1>;
+			linux,input-type = <5>;
+			linux,code = <222>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
+};

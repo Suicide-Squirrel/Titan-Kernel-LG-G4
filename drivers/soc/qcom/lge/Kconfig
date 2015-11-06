@@ -84,6 +84,13 @@ config MACH_MSM8992_P1_VZW
 	help
 	  Support for the Qualcomm MSM8992 P1_VZW device.
 
+config MACH_MSM8992_P1_LRA_US
+	bool "MSM8992 P1_LRA_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_LRA_US device.
+
 config MACH_MSM8992_P1_TMO_US
 	bool "MSM8992 P1_TMO_US"
 	depends on ARCH_MSM8992
@@ -139,6 +146,142 @@ config MACH_MSM8992_P1_VTR_CA
 	select MACH_LGE
 	help
 	  Support for the Qualcomm MSM8992 P1_VTR_CA device.
+
+config MACH_MSM8992_PPLUS
+	bool "MSM8992 PPLUS"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS device.
+
+config MACH_MSM8992_PPLUS_KR
+	bool "MSM8992 PPLUS_KR"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_KR device.
+
+config MACH_MSM8992_PPLUS_LGU_KR
+    bool "MSM8992 PPLUS_LGU_KR"
+    depends on MACH_MSM8992_PPLUS_KR
+    help
+      Support for the Qualcomm MSM8992 PPLUS_LGU_KR device.
+
+config MACH_MSM8992_PPLUS_SKT_KR
+    bool "MSM8992 PPLUS_SKT_KR"
+    depends on MACH_MSM8992_PPLUS_KR
+    help
+      Support for the Qualcomm MSM8992 PPLUS_SKT_KR device.
+
+config MACH_MSM8992_PPLUS_KT_KR
+    bool "MSM8992 PPLUS_KT_KR"
+    depends on MACH_MSM8992_PPLUS_KR
+    help
+      Support for the Qualcomm MSM8992 PPLUS_KT_KR device.
+
+config MACH_MSM8992_PPLUS_VZW
+	bool "MSM8992 PPLUS_VZW"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_VZW device.
+
+config MACH_MSM8992_PPLUS_ATT_US
+	bool "MSM8992 PPLUS_ATT_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_ATT_US device.
+
+config MACH_MSM8992_PPLUS_CN
+	bool "MSM8992 PPLUS_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_CN device.
+
+config MACH_MSM8992_PPLUS_CMCC_CN
+	bool "MSM8992 PPLUS_CMCC_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_CMCC_CN device.
+
+config MACH_MSM8992_PPLUS_CMO_CN
+	bool "MSM8992 PPLUS_CMO_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_CMO_CN device.
+
+config MACH_MSM8992_PPLUS_CTC_CN
+	bool "MSM8992 PPLUS_CTC_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_CTC_CN device.
+
+config MACH_MSM8992_PPLUS_CTO_CN
+	bool "MSM8992 PPLUS_CTO_CN"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_CTO_CN device.
+
+config MACH_MSM8992_PPLUS_USC_US
+	bool "MSM8992 PPLUS_USC_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_USC_US device.
+
+config MACH_MSM8992_PPLUS_KDDI_JP
+	bool "MSM8992 PPLUS_KDDI_JP"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_KDDI_JP device.
+
+config MACH_MSM8992_PPLUS_SPR_US
+    bool "MSM8992 PPLUS_SPR_US"
+    depends on ARCH_MSM8992
+    select MACH_LGE
+    help
+      Support for the Qualcomm MSM8992 PPLUS_SPR_US device.
+
+config MACH_MSM8992_PPLUS_TMO_US
+	bool "MSM8992 PPLUS_TMO_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_TMO_US device.
+
+config MACH_MSM8992_PPLUS_GLOBAL_COM
+	bool "MSM8992 PPLUS_GLOBAL_COM"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 PPLUS_GLOBAL_COM device.
+	  
+config MACH_MSM8992_P1A4WP
+	bool "MSM8992 P1A4WP"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1A4WP device.
+
+config MACH_MSM8992_P1A4WP_KR
+	bool "MSM8992 P1A4WP_KR"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1A4WP_KR device.
+
+config MACH_MSM8992_P1A4WP_LGU_KR
+    bool "MSM8992 P1A4WP_LGU_KR"
+    depends on MACH_MSM8992_P1A4WP_KR
+    help
+      Support for the Qualcomm MSM8992 P1A4WP_LGU_KR device.
 endmenu
 
 menu "LGE Specific Patches"
@@ -186,13 +329,6 @@ config LGE_MISC_CHECKER
     depends on MACH_LGE
     help
       Read/Write ftm items in misc.
-
-config LGE_PROBE_TIME_PROFILING
-	bool "Support kernel driver probe time profiling"
-	default n
-	depends on MACH_LGE
-	help
-	  Support kernel driver probe time profiling.
 
 config PRE_SELF_DIAGNOSIS
 	tristate "Support LGE self diagnosis for factory"
@@ -254,4 +390,10 @@ config LGE_QFPROM_SECHASH
 	depends on LGE_QFPROM_INTERFACE
 	help
 	  LGE QFPROM DRIVER-SEC partition's hash value.
+
+config LGE_PM_UNIFIED_NODE
+	bool "enable LGE PM Unified sysfs node"
+	help
+	  Support LGE PM Unified sysfs node
+
 endmenu

@@ -26,7 +26,8 @@
 #define TUNING_PCT_RED                   90
 #define TUNING_PCT_GREEN                100
 #define TUNING_PCT_BLUE                  70
-#elif defined(CONFIG_MACH_MSM8992_P1)
+
+#elif defined(CONFIG_MACH_MSM8992_P1) || defined(CONFIG_MACH_MSM8992_PPLUS) || defined(CONFIG_MACH_MSM8992_P1A4WP)
 #define TUNING_LUT_SCALE                 64
 #define TUNING_PCT_RED                  200
 #define TUNING_PCT_GREEN                100

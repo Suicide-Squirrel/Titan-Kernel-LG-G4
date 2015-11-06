@@ -327,7 +327,7 @@ static void *timer_list_start(struct seq_file *file, loff_t *offset)
 	return move_iter(iter, *offset);
 }
 
-static __attribute__ ((aligned(4096))) void *timer_list_next(struct seq_file *file, void *v, loff_t *offset)
+static void *timer_list_next(struct seq_file *file, void *v, loff_t *offset)
 {
 	struct timer_list_iter *iter = file->private;
 	++*offset;

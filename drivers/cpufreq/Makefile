@@ -14,6 +14,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
 obj-$(CONFIG_CPU_BOOST)			+= cpu-boost.o
 
 obj-$(CONFIG_GENERIC_CPUFREQ_CPU0)	+= cpufreq-cpu0.o
+obj-$(CONFIG_MACH_MSM8992_P1)        += cpufreq_waver.o
 
 ##################################################################################
 # x86 drivers.

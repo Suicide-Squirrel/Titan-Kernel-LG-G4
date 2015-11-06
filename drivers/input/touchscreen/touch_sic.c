@@ -39,6 +39,8 @@
 
 #if USE_ABT_MONITOR_APP
 #include <linux/input/touch_sic_abt.h>
+
+u16 frame_num = 0;
 #endif
 static char power_state;
 static int sensor_state;	/* near 0, far 1 */
@@ -75,6 +77,8 @@ static int doze_state;
 #define FAIL_REASON_CTRL2		101
 #define OVERTAP_CTRL			102
 
+#define MAX_LOG_FILE_SIZE		(10 * 1024 * 1024)      /* 10 MBytes */
+#define MAX_LOG_FILE_COUNT		(4)
 
 static const char const *sic_tci_fail_reason_str[] = {
 	"NONE",
@@ -99,7 +103,6 @@ static const char const *sic_swipe_fail_reason_str[] = {
 	"RATIO_FAIL",
 };
 
-static int sic_mfts_mode;
 /*   0 : normal mode
 	1 : mfts_folder
 	2 : mfts_flat
@@ -109,8 +112,8 @@ static char Write_Buffer[BUFFER_SIZE];
 static u16 sicImage[COL_SIZE][ROW_SIZE];
 static u16 LowerLimit[COL_SIZE][ROW_SIZE];
 static u16 UpperLimit[COL_SIZE][ROW_SIZE];
-static u32 doze1Offset;
-static u32 doze2Offset;
+static u16 doze1Offset[2];
+static u16 doze2Offset[2];
 static u16 runInfo;
 
 int sic_i2c_read(struct i2c_client *client,
@@ -595,17 +598,11 @@ static int lpwg_control(struct sic_ts_data *ts, int mode)
 		if (ts->lpwg_ctrl.qcover == QUICKCOVER_CLOSE)
 			DO_SAFE(tci_control(ts, ACTIVE_AREA_CTRL), error);
 		DO_SAFE(tci_control(ts, TCI_ENABLE_CTRL), error);
-		/* tap count = 2 */
 		DO_SAFE(tci_control(ts, TAP_COUNT_CTRL), error);
-		/* min inter_tap, 60ms*/
 		DO_SAFE(tci_control(ts, MIN_INTERTAP_CTRL), error);
-		/* max inter_tap, 700ms*/
 		DO_SAFE(tci_control(ts, MAX_INTERTAP_CTRL), error);
-		/* touch_slop = 10mm */
 		DO_SAFE(tci_control(ts, TOUCH_SLOP_CTRL), error);
-		/* tap distance = 10mm*/
 		DO_SAFE(tci_control(ts, TAP_DISTANCE_CTRL), error);
-		/* interrupt delay = 10ms unit*/
 		DO_SAFE(tci_control(ts, INTERRUPT_DELAY_CTRL), error);
 
 		if (atomic_read(&ts->lpwg_ctrl.is_suspend)) {
@@ -631,15 +628,10 @@ static int lpwg_control(struct sic_ts_data *ts, int mode)
 		DO_SAFE(tci_control(ts, OVERTAP_CTRL), error);
 		DO_SAFE(tci_control(ts, TCI_ENABLE_CTRL), error);
 		DO_SAFE(tci_control(ts, TAP_COUNT_CTRL), error);
-		/* min inter_tap, 60ms*/
 		DO_SAFE(tci_control(ts, MIN_INTERTAP_CTRL), error);
-		/* max inter_tap, 700ms*/
 		DO_SAFE(tci_control(ts, MAX_INTERTAP_CTRL), error);
-		/* touch_slop = 0.1mm unit, 10mm */
 		DO_SAFE(tci_control(ts, TOUCH_SLOP_CTRL), error);
-		/* tap distance = 7mm*/
 		DO_SAFE(tci_control(ts, TAP_DISTANCE_CTRL), error);
-		/* interrupt delay = 10ms unit, 700ms */
 		DO_SAFE(tci_control(ts, INTERRUPT_DELAY_CTRL), error);
 
 		if (atomic_read(&ts->lpwg_ctrl.is_suspend)) {
@@ -885,11 +877,16 @@ static int get_ic_info(struct sic_ts_data *ts)
 			ts->fw_info.fw_product_id);
 
 	DO_SAFE(sic_i2c_read(ts->client, tc_doze1_offset,
-				(u8 *)&doze1Offset, sizeof(u32)), error);
+				(u8 *)&rdata, sizeof(u32)), error);
+	doze1Offset[0] = rdata;
+	doze1Offset[1] = rdata >> 16;
 	DO_SAFE(sic_i2c_read(ts->client, tc_doze2_offset,
-				(u8 *)&doze2Offset, sizeof(u32)), error);
+				(u8 *)&rdata, sizeof(u32)), error);
+	doze2Offset[0] = rdata;
+	doze2Offset[1] = rdata >> 16;
 	DO_SAFE(sic_i2c_read(ts->client, tc_runinfo,
-				(u8 *)&runInfo, sizeof(u32)), error);
+				(u8 *)&rdata, sizeof(u32)), error);
+	runInfo = rdata & 0xffff;
 	get_tci_info(ts);
 	get_swipe_info(ts);
 
@@ -959,10 +956,10 @@ static ssize_t show_firmware(struct i2c_client *client, char *buf)
 				runInfo);
 	ret += snprintf(buf+ret, PAGE_SIZE - ret,
 			"Offset1 Left : %d, Right : %d\n",
-			(int16_t)doze1Offset, (int16_t)(doze1Offset >> 16));
+			(int16_t)doze1Offset[0], (int16_t)doze1Offset[1]);
 	ret += snprintf(buf+ret, PAGE_SIZE - ret,
 			"Offset2 Left : %d, Right : %d\n\n",
-			(int16_t)doze2Offset, (int16_t)(doze2Offset >> 16));
+			(int16_t)doze2Offset[0], (int16_t)doze2Offset[1]);
 
 	ret += snprintf(buf+ret, PAGE_SIZE - ret,
 				"=== img_fw_version info ===\n");
@@ -1324,6 +1321,113 @@ error:
 	return -ERROR;
 }
 
+static void log_file_size_check(void)
+{
+	char *filename = NULL;
+	struct file *file;
+	loff_t file_size = 0;
+	int i = 0;
+	char buf1[1024] = {0};
+	char buf2[1024] = {0};
+	mm_segment_t old_fs = get_fs();
+	int ret = 0;
+
+	set_fs(KERNEL_DS);
+
+	switch (mfts_mode) {
+	case 0:
+		if (factory_boot)
+			filename = "/data/logger/touch_self_test.txt";
+		else
+			filename = "/sdcard/touch_self_test.txt";
+		break;
+	case 1:
+		filename = "/data/logger/touch_self_test_mfts_folder.txt";
+		break;
+	case 2:
+		filename = "/data/logger/touch_self_test_mfts_flat.txt";
+		break;
+	case 3:
+		filename = "/data/logger/touch_self_test_mfts_curved.txt";
+		break;
+	default:
+		TOUCH_I("%s : not support mfts_mode\n", __func__);
+		break;
+	}
+
+	if (filename) {
+		file = filp_open(filename, O_RDONLY, 0666);
+		sys_chmod(filename, 0666);
+	} else {
+		TOUCH_E("%s : filename is NULL, can not open FILE\n",
+				__func__);
+		goto error;
+	}
+
+	if (IS_ERR(file)) {
+		TOUCH_I("%s : ERR(%ld) Open file error [%s]\n",
+				__func__, PTR_ERR(file), filename);
+		goto error;
+	}
+
+	file_size = vfs_llseek(file, 0, SEEK_END);
+	TOUCH_I("%s : [%s] file_size = %lld\n",
+			__func__, filename, file_size);
+
+	filp_close(file, 0);
+
+	if (file_size > MAX_LOG_FILE_SIZE) {
+		TOUCH_I("%s : [%s] file_size(%lld) > MAX_LOG_FILE_SIZE(%d)\n",
+				__func__, filename, file_size, MAX_LOG_FILE_SIZE);
+
+		for (i = MAX_LOG_FILE_COUNT - 1; i >= 0; i--) {
+			if (i == 0)
+				sprintf(buf1, "%s", filename);
+			else
+				sprintf(buf1, "%s.%d", filename, i);
+
+			ret = sys_access(buf1, 0);
+
+			if (ret == 0) {
+				TOUCH_I("%s : file [%s] exist\n", __func__, buf1);
+
+				if (i == (MAX_LOG_FILE_COUNT - 1)) {
+					if (sys_unlink(buf1) < 0) {
+						TOUCH_E(
+								"%s : failed to remove file [%s]\n",
+								__func__, buf1);
+						goto error;
+					}
+
+					TOUCH_I(
+							"%s : remove file [%s]\n",
+							__func__, buf1);
+				} else {
+					sprintf(buf2, "%s.%d", filename,
+							(i + 1));
+
+					if (sys_rename(buf1, buf2) < 0) {
+						TOUCH_E(
+								"%s : failed to rename file [%s] -> [%s]\n",
+								__func__, buf1, buf2);
+						goto error;
+					}
+
+					TOUCH_I(
+							"%s : rename file [%s] -> [%s]\n",
+							__func__, buf1, buf2);
+				}
+			} else {
+				TOUCH_I("%s : file [%s] does not exist (ret = %d)\n", __func__, buf1, ret);
+			}
+		}
+	}
+
+error:
+	set_fs(old_fs);
+	return;
+}
+
 static void write_file(char *filename, char *data, int time, int append)
 {
 	int fd = 0;
@@ -1336,18 +1440,21 @@ static void write_file(char *filename, char *data, int time, int append)
 	set_fs(KERNEL_DS);
 
 	if (filename == NULL) {
-		switch (sic_mfts_mode) {
+		switch (mfts_mode) {
 		case 0:
-			fname = "/mnt/sdcard/touch_self_test.txt";
+			if (factory_boot)
+				fname= "/data/logger/touch_self_test.txt";
+			else
+				fname = "/sdcard/touch_self_test.txt";
 			break;
 		case 1:
-			fname = "/mnt/sdcard/touch_self_test_mfts_folder.txt";
+			fname = "/data/logger/touch_self_test_mfts_folder.txt";
 			break;
 		case 2:
-			fname = "/mnt/sdcard/touch_self_test_mfts_flat.txt";
+			fname = "/data/logger/touch_self_test_mfts_flat.txt";
 			break;
 		case 3:
-			fname = "/mnt/sdcard/touch_self_test_mfts_curved.txt";
+			fname = "/data/logger/touch_self_test_mfts_curved.txt";
 			break;
 		default:
 			TOUCH_I("%s : not support mfts_mode\n", __func__);
@@ -1793,7 +1900,6 @@ static ssize_t store_boot_mode(struct i2c_client *client,
 				__func__);
 		if (boot_mode != current_mode) {
 			sic_ts_power(client, POWER_ON);
-			atomic_set(&ts->state->power, POWER_SLEEP);
 			msleep(ts->pdata->role->booting_delay);
 			DO_SAFE(sic_ts_init(ts->client), error);
 			atomic_set(&ts->state->device_init, INIT_DONE);
@@ -1814,23 +1920,43 @@ error:
 	return count;
 }
 
-int prd_os_xline_result_read(struct i2c_client *client, char *buf,
-					int is_prod_test)
+int prd_os_result_get(struct i2c_client *client, u32 *buf, u32 wdata)
 {
 	struct sic_ts_data *ts =
 				(struct sic_ts_data *)get_touch_handle(client);
 	int i;
-	int j;
-	u32 rdata;
-	u32 readBuffer[32];
-	u32 wdata = 0x1;
-	int ret = 0;
-	int length_size = BUFFER_SIZE;
 
 	DO_SAFE(sic_i2c_write(ts->client,
 			tc_tsp_test_mode_node_os_result,
 			(u8 *)&wdata, sizeof(wdata)), error);
-	TOUCH_I("[%s] i2c_write : wdata = %x\n", __func__, wdata);
+
+	for (i = 0; i < COL_SIZE; i++) {
+		DO_SAFE(sic_i2c_read(ts->client,
+					tc_tsp_test_mode_node_os_result,
+					(u8 *)&buf[i],
+					sizeof(u32)), error);
+	}
+
+	return 0;
+error:
+	TOUCH_E("prd_os_result_get() i2c fail\n");
+	return 0;
+}
+
+int prd_os_xline_result_read(struct i2c_client *client, char *buf,
+					int is_prod_test, u32 result)
+{
+	int i;
+	int j;
+	u32 openBuffer[32] = {0,};
+	u32 shortBuffer[32] = {0,};
+	int ret = 0;
+	int length_size = BUFFER_SIZE;
+
+	if (result & 0x1)
+		prd_os_result_get(client, openBuffer, 1);
+	if (result & 0x2 || result & 0x4)
+		prd_os_result_get(client, shortBuffer, 2);
 
 	if (is_prod_test == NORMAL_MODE)
 		length_size = PAGE_SIZE;
@@ -1842,18 +1968,15 @@ int prd_os_xline_result_read(struct i2c_client *client, char *buf,
 			length_size - ret, " [%2d] ", i);
 
 	for (i = 0; i < COL_SIZE; i++) {
-		DO_SAFE(sic_i2c_read(ts->client,
-					tc_tsp_test_mode_node_os_result,
-					(u8 *)&rdata,
-					sizeof(rdata)), error);
-		readBuffer[i] = rdata;
 		ret += snprintf(buf + ret,
 		length_size - ret,  "\n[%2d] ", i);
 
 		for (j = 0; j < ROW_SIZE; j++) {
 			ret += snprintf(buf + ret,
 				length_size - ret,
-				"%5c ", (rdata & (0x1 << j)) ? 'X' : 'O');
+				"%5c ",
+				(openBuffer[i] & (0x1 << j)) ? 'O' :
+				((shortBuffer[i] & (0x1 << j)) ? 'S' : '-'));
 		}
 	}
 	ret += snprintf(buf + ret,
@@ -1864,34 +1987,33 @@ int prd_os_xline_result_read(struct i2c_client *client, char *buf,
 	} else {
 		for (i = 0; i < COL_SIZE; i++) {
 			for (j = 0; j < ROW_SIZE; j++) {
-				if (readBuffer[i] & (0x1 << j))
-					TOUCH_I("FAIL %d,%d\n", i, j);
+				if (openBuffer[i] & (0x1 << j))
+					TOUCH_I("open %d,%d\n", i, j);
+				if (shortBuffer[i] & (0x1 << j))
+					TOUCH_I("short %d,%d\n", i, j);
 			}
 		}
 	}
 
 	return ret;
-error:
-	return -ERROR;
-
 }
 
 static int sdcard_spec_file_read(void)
 {
 	int ret = 0;
 	int fd;
-	char *path[4] = { "/mnt/sdcard/p1_limit.txt",
-			"/mnt/sdcard/p1_limit_mfts_folder.txt",
-			"/mnt/sdcard/p1_limit_mfts_flat.txt",
-			"/mnt/sdcard/p1_limit_mfts_curved.txt" };
+	char *path[4] = { "/data/logger/p1_limit.txt",
+			"/data/logger/p1_limit_mfts_folder.txt",
+			"/data/logger/p1_limit_mfts_flat.txt",
+			"/data/logger/p1_limit_mfts_curved.txt" };
 	mm_segment_t old_fs = get_fs();
 
 	set_fs(KERNEL_DS);
-	fd = sys_open(path[sic_mfts_mode], O_RDONLY, 0);
+	fd = sys_open(path[mfts_mode], O_RDONLY, 0);
 	if (fd >= 0) {
 		sys_read(fd, line, sizeof(line));
 		sys_close(fd);
-		TOUCH_I("%s file existing\n", path[sic_mfts_mode]);
+		TOUCH_I("%s file existing\n", path[mfts_mode]);
 		ret = 1;
 	}
 	set_fs(old_fs);
@@ -1919,7 +2041,7 @@ static int spec_file_read(struct i2c_client *client)
 		goto exit;
 	}
 
-	if (request_firmware(&fwlimit, path[sic_mfts_mode],
+	if (request_firmware(&fwlimit, path[mfts_mode],
 		&client->dev) < 0) {
 		TOUCH_I("request ihex is failed in normal mode\n");
 		ret = -1;
@@ -1961,7 +2083,7 @@ int sic_get_limit(unsigned char Tx, unsigned char Rx, struct i2c_client *client,
 		goto exit;
 	}
 
-	if (sic_mfts_mode > 3 || sic_mfts_mode < 0) {
+	if (mfts_mode > 3 || mfts_mode < 0) {
 		ret = -1;
 		goto exit;
 	}
@@ -2030,7 +2152,7 @@ exit:
 int prd_compare_rawdata(struct i2c_client *client,
 			char *buf, int is_prod_test)
 {
-	u32 result = 0; /*pass : 0 fail : 1*/
+	int result = 0; /*pass : 0 fail : 1*/
 	int i, j;
 	int ret = 0;
 	int ret2 = 0;
@@ -2057,7 +2179,8 @@ int prd_compare_rawdata(struct i2c_client *client,
 		TOUCH_I(
 			"[%s][FAIL] Can not check the limit of raw cap, lower return = %d upper return = %d\n",
 			__func__, lower_ret, upper_ret);
-		return -ERROR;
+		result = 1;
+		return result;
 	}
 
 	if (is_prod_test == NORMAL_MODE)
@@ -2084,6 +2207,7 @@ int prd_compare_rawdata(struct i2c_client *client,
 				max = sicImage[i][j];
 		}
 	}
+
 	ret += snprintf(buf + ret,
 		buffer_length - ret, "\n");
 
@@ -2116,32 +2240,12 @@ int prd_compare_rawdata(struct i2c_client *client,
 	if (is_prod_test == PRODUCTION_MODE) {
 		ret2 += snprintf(buf + ret2,
 				buffer_length - ret2,
-				"\nmin : %d , max : %d\n", min, max);
-		ret2 += snprintf(buf + ret2,
-				buffer_length - ret2,
-				"Offset1 Left : %d , Right : %d\n",
-				(int16_t)doze1Offset,
-				(int16_t)(doze1Offset >> 16));
-		ret2 += snprintf(buf + ret2,
-				buffer_length - ret2,
-				"Offset2 Left : %d , Right : %d\n",
-				(int16_t)doze2Offset,
-				(int16_t)(doze2Offset >> 16));
-		ret2 += snprintf(buf + ret2,
-				buffer_length - ret2,
-				"Run info : %d\n", runInfo);
+				"\nRawdata min : %d , max : %d\n", min, max);
 		write_file(NULL, buf, 0, 1);
 		ret = result;
 	} else {
-		TOUCH_I("[Rawdata Test] - %s\n", result ? "Fail":"Pass");
-		TOUCH_I("min = %d , max = %d\n", min, max);
-		TOUCH_I("Offset1 Left : %d , Right : %d\n",
-				(int16_t)doze1Offset,
-				(int16_t)(doze1Offset >> 16));
-		TOUCH_I("Offset2 Left : %d , Right : %d\n",
-				(int16_t)doze2Offset,
-				(int16_t)(doze2Offset >> 16));
-		TOUCH_I("Run info : %d\n", runInfo);
+		TOUCH_I("Rawdata min : %d , max : %d\n", min, max);
+		TOUCH_I("[Rawdata Test] - %s\n\n", result ? "Fail" : "Pass");
 	}
 	return ret;
 }
@@ -2200,42 +2304,54 @@ void prd_pass_fail_result_print(u8 type, u32 result)
 
 	switch (type) {
 	case OPEN_SHORT_ALL_TEST:
-		TOUCH_I("[Open Short All Test] - %s\n\n",
-			result ? "fail" : "pass");
+		TOUCH_I("[Open Short All Test] - %s (%d/%d/%d)\n",
+			(result == 0) ?	"Pass" : "Fail",
+			(result & 0x1) ? 0 : 1,
+			(result & 0x2) ? 0 : 1,
+			(result & 0x4) ? 0 : 1);
 		ret += snprintf(buffer + ret, LOG_BUF_SIZE - ret,
-				"Open Short All Test %s\n\n",
-				result ? "fail" : "pass");
+			"Open Short All Test : %s (%d/%d/%d)\n",
+			(result == 0) ?	"Pass" : "Fail",
+			(result & 0x1) ? 0 : 1,
+			(result & 0x2) ? 0 : 1,
+			(result & 0x4) ? 0 : 1);
 		break;
 
 	case OPEN_NODE_TEST:
-		TOUCH_I("[Open Node Test] - %s\n\n", result ? "fail" : "pass");
+		TOUCH_I("[Open Node Test] - %s\n\n", result ? "Fail" : "Pass");
 		ret += snprintf(buffer + ret, LOG_BUF_SIZE - ret,
 				"Open Node Test %s\n\n",
-				result ? "fail" : "pass");
+				result ? "Fail" : "Pass");
 		break;
 
 	case ADJACENCY_SHORT_TEST:
 		TOUCH_I("[Adjacency Node Short Test] - %s\n\n",
-				result ? "fail" : "pass");
+				result ? "Fail" : "Pass");
 		ret += snprintf(buffer + ret, LOG_BUF_SIZE - ret,
 				"Adjacency Node Short Test %s\n\n",
-				result ? "fail" : "pass");
+				result ? "Fail" : "Pass");
 		break;
 
 	case SAME_MUX_SHORT_TEST:
 		TOUCH_I("[Same Mux Short Test] - %s\n\n",
-			result ? "fail" : "pass");
+			result ? "Fail" : "Pass");
 		ret += snprintf(buffer + ret, LOG_BUF_SIZE - ret,
 				"Same Mux Short Test %s\n\n",
-				result ? "fail" : "pass");
+				result ? "Fail" : "Pass");
 		break;
 
 	case RAWDATA_TEST:
-		TOUCH_I("[Rawdata Test] - %s\n\n", result ? "fail" : "pass");
+		TOUCH_I("[Rawdata Test] - %s\n\n", result ? "Fail" : "Pass");
 		ret += snprintf(buffer + ret, LOG_BUF_SIZE - ret,
 				"Rawdata Test %s\n\n",
-				result ? "fail" : "pass");
+				result ? "Fail" : "Pass");
 		break;
+
+	case RAWDATA_DOZE2:
+		TOUCH_I("[LPWG Rawdata Test] - %s\n\n", result ? "Fail" : "Pass");
+		ret += snprintf(buffer + ret, LOG_BUF_SIZE - ret,
+				"Rawdata Test %s\n\n",
+				result ? "Fail" : "Pass");
 	}
 
 	write_file(NULL, buffer, 0, 1);
@@ -2272,6 +2388,12 @@ int write_test_mode(struct i2c_client *client, u8 type)
 	case RAWDATA_TEST:
 		retry_count = 5;
 		break;
+
+	case RAWDATA_DOZE2:
+		doze_mode = 0x2;
+		sic_ts_power(ts->client, POWER_OFF);
+		sic_ts_power(ts->client, POWER_ON);
+		msleep(ts->pdata->role->booting_delay);
 	}
 
 	testmode = (doze_mode << 8) | type;
@@ -2281,7 +2403,6 @@ int write_test_mode(struct i2c_client *client, u8 type)
 		DO_SAFE(sic_i2c_write(ts->client,
 				tc_tsp_test_mode_ctl,
 				(u8 *)&testmode, sizeof(testmode)), error);
-		TOUCH_I("i2c_write, testmode = %x\n", testmode);
 		retry = retry_count;
 
 		/* Check Test Result - wait until 0 is written */
@@ -2304,6 +2425,56 @@ error:
 	return -ERROR;
 }
 
+int production_test_offset(int is_prod_test)
+{
+	int result = 0;
+	char buf[LOG_BUF_SIZE] = {0,};
+	int ret = 0;
+
+	/* offset spec check */
+	if (DOZE1_OFFSET_MAX < (int16_t)doze1Offset[0] ||
+		DOZE1_OFFSET_MIN > (int16_t)doze1Offset[0] ||
+		DOZE1_OFFSET_MAX < (int16_t)doze1Offset[1] ||
+		DOZE1_OFFSET_MIN > (int16_t)doze1Offset[1] ||
+		DOZE2_OFFSET_MAX < (int16_t)doze2Offset[0] ||
+		DOZE2_OFFSET_MIN > (int16_t)doze2Offset[0] ||
+		DOZE2_OFFSET_MAX < (int16_t)doze2Offset[1] ||
+		DOZE2_OFFSET_MIN > (int16_t)doze2Offset[1]) {
+		result = 1;
+	}
+
+	if (is_prod_test == PRODUCTION_MODE) {
+		ret += snprintf(buf + ret, LOG_BUF_SIZE - ret,
+				"Run info : %d\n", runInfo);
+		ret += snprintf(buf + ret, LOG_BUF_SIZE - ret,
+				"Offset1 Left : %d , Right : %d\n",
+				(int16_t)doze1Offset[0],
+				(int16_t)doze1Offset[1]);
+		ret += snprintf(buf + ret, LOG_BUF_SIZE - ret,
+				"Offset2 Left : %d , Right : %d\n",
+				(int16_t)doze2Offset[0],
+				(int16_t)doze2Offset[1]);
+		ret += snprintf(buf + ret, LOG_BUF_SIZE - ret,
+				"Rawdata Offset Test %s\n",
+				result ? "Fail" : "Pass");
+		write_file(NULL, buf, 0, 1);
+	} else {
+		TOUCH_I("Run info : %d\n", runInfo);
+		TOUCH_I("Offset1 Left : %d , Right : %d\n",
+				(int16_t)doze1Offset[0],
+				(int16_t)doze1Offset[1]);
+		TOUCH_I("Offset2 Left : %d , Right : %d\n",
+				(int16_t)doze2Offset[0],
+				(int16_t)doze2Offset[1]);
+	}
+
+	TOUCH_I("[Rawdata Offset Test] - %s\n", result ? "Fail" : "Pass");
+
+	return result;
+
+}
+
+
 int production_test(struct i2c_client *client, u8 type)
 {
 	struct sic_ts_data *ts =
@@ -2325,18 +2496,15 @@ int production_test(struct i2c_client *client, u8 type)
 		DO_SAFE(sic_i2c_read(ts->client,
 			tc_tsp_test_mode_pf_result,
 			(u8 *)&result, sizeof(result)), error);
-		TOUCH_I("[OpenShort result = %s (%d, %d, %d)]\n",
-			result ? "fail":"pass",
-			(result & 0x1) ? 1 : 0,
-			(result & 0x2) ? 1 : 0,
-			(result & 0x4) ? 1 : 0);
 		/* if fail, show f/p result of each node */
 		if (result)
 			prd_os_xline_result_read(client, Write_Buffer,
-							PRODUCTION_MODE);
+						PRODUCTION_MODE, result);
 		break;
 
 	case RAWDATA_TEST:
+	case RAWDATA_DOZE2:
+		TOUCH_I("production_test Type = %s\n", RAWDATA_TEST ? "RAWDATA_TEST" : "RAWDATA_DOZE2");
 		DO_SAFE(prd_frame_read(client), error);
 		result = prd_compare_rawdata(client, Write_Buffer,
 						PRODUCTION_MODE);
@@ -2354,7 +2522,7 @@ void firmware_version_log(struct sic_ts_data *ts)
 	int ret = 0;
 	unsigned char buffer[LOG_BUF_SIZE] = {0,};
 
-	if (sic_mfts_mode)
+	if (mfts_mode)
 		ret = get_ic_info(ts);
 
 	ret = snprintf(buffer, LOG_BUF_SIZE,
@@ -2372,7 +2540,6 @@ void firmware_version_log(struct sic_ts_data *ts)
 
 void sic_ts_init_prod_test(struct sic_ts_data *ts)
 {
-	mutex_lock(&ts->pdata->thread_lock);
 	touch_disable_irq(ts->client->irq);
 	return;
 }
@@ -2383,8 +2550,8 @@ void sic_ts_exit_prod_test(struct sic_ts_data *ts)
 	sic_ts_power(ts->client, POWER_ON);
 	msleep(ts->pdata->role->booting_delay);
 	DO_SAFE(sic_ts_init(ts->client), error);
+	atomic_set(&ts->state->device_init, INIT_DONE);
 	touch_enable_irq(ts->client->irq);
-	mutex_unlock(&ts->pdata->thread_lock);
 	return;
 error:
 	TOUCH_E("%s\n", __func__);
@@ -2399,6 +2566,8 @@ static ssize_t show_sd(struct i2c_client *client, char *buf)
 	int openshort_ret = 0;
 	int rawdata_ret = 0;
 	int ret = 0;
+	int offset_ret = 0;
+
 	/* file create , time log */
 	write_file(NULL, "", 1, 1);
 
@@ -2412,14 +2581,75 @@ static ssize_t show_sd(struct i2c_client *client, char *buf)
 	}
 	/* firmware version log */
 	firmware_version_log(ts);
+	mutex_lock(&ts->pdata->thread_lock);
 	sic_ts_init_prod_test(ts);
 
-	write_file(NULL,
-			"[RAWDATA_TEST]\n", 0, 1);
+	write_file(NULL, "[RAWDATA_TEST]\n", 0, 1);
+	offset_ret = production_test_offset(PRODUCTION_MODE);
 	rawdata_ret = production_test(client, RAWDATA_TEST);
-	write_file(NULL,
-			"[OPEN_SHORT_ALL_TEST]\n", 0, 1);
+
+	write_file(NULL, "[OPEN_SHORT_ALL_TEST]\n", 0, 1);
 	openshort_ret = production_test(client, OPEN_SHORT_ALL_TEST);
+
+	ret = snprintf(buf,
+		PAGE_SIZE,
+		"========RESULT=======\n");
+
+	if (!offset_ret && !rawdata_ret) {
+		ret += snprintf(buf + ret, PAGE_SIZE - ret,
+				"Raw Data : %s\n", "Pass");
+	} else {
+		ret += snprintf(buf + ret, PAGE_SIZE - ret,
+				"Raw Data : %s (%d/%d)\n",
+				"Fail", !offset_ret, !rawdata_ret);
+	}
+
+	if (openshort_ret == 0) {
+		ret += snprintf(buf + ret, PAGE_SIZE - ret,
+				"Channel Status : %s\n", "Pass");
+	} else {
+		ret += snprintf(buf + ret, PAGE_SIZE - ret,
+				"Channel Status : %s (%d/%d/%d)\n", "Fail",
+				(openshort_ret & 0x1) ?	0 : 1,
+				(openshort_ret & 0x2) ?	0 : 1,
+				(openshort_ret & 0x4) ?	0 : 1);
+	}
+
+	sic_ts_exit_prod_test(ts);
+	mutex_unlock(&ts->pdata->thread_lock);
+
+	write_file(NULL, "", 1, 1);
+
+	log_file_size_check();
+
+	return ret;
+}
+
+static ssize_t show_lpwg_sd(struct i2c_client *client, char *buf)
+{
+	struct sic_ts_data *ts =
+			(struct sic_ts_data *)get_touch_handle(client);
+
+	int lpwg_ret = 0;
+	int ret = 0;
+
+	/*Exception Handle of flat and curved state*/
+	if (mfts_mode == 2 || mfts_mode == 3) {
+		TOUCH_I("Can not execute lpwg_sd, mfts_mode = %d\n", mfts_mode);
+		ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			"LPWG RawData : Not Support\n");
+		return ret;
+	}
+
+	wake_lock(&ts->touch_rawdata);
+	/* file create , time log */
+	write_file(NULL, "", 1, 1);
+
+	mutex_lock(&ts->pdata->thread_lock);
+	sic_ts_init_prod_test(ts);
+
+	write_file(NULL, "[LPWG_RAWDATA_TEST]\n", 0, 1);
+	lpwg_ret = production_test(client, RAWDATA_DOZE2);
 
 	ret = snprintf(buf,
 		PAGE_SIZE,
@@ -2427,19 +2657,16 @@ static ssize_t show_sd(struct i2c_client *client, char *buf)
 
 	ret += snprintf(buf + ret,
 			PAGE_SIZE - ret,
-			"Raw Data : %s",
-			(rawdata_ret == 0) ? "Pass\n" : "Fail\n");
-
-
-	ret += snprintf(buf + ret,
-			PAGE_SIZE - ret,
-			"Channel Status : %s",
-			(openshort_ret == 0) ?
-			"Pass\n" : "Fail\n");
+			"LPWG RawData : %s\n",
+			lpwg_ret ? "Fail" : "Pass");
 
 	sic_ts_exit_prod_test(ts);
+	mutex_unlock(&ts->pdata->thread_lock);
 
 	write_file(NULL, "", 1, 1);
+	wake_unlock(&ts->touch_rawdata);
+
+	log_file_size_check();
 
 	return ret;
 }
@@ -2452,19 +2679,20 @@ static ssize_t show_rawdata(struct i2c_client *client, char *buf)
 	int ret2 = 0;
 	u8 type = RAWDATA_TEST;
 
-	if (doze_state == DOZE2_STATUS) {
-		ret = snprintf(buf + ret,
-				PAGE_SIZE - ret,
-				"state=[suspend]. we cannot use I2C, now. Test Result: Fail\n");
-		return ret;
+	if (atomic_read(&ts->lpwg_ctrl.is_suspend)) {
+		TOUCH_I("Doze 2 rawdata\n");
+		type = RAWDATA_DOZE2;
 	}
 
+	production_test_offset(NORMAL_MODE);
+	mutex_lock(&ts->pdata->thread_lock);
 	sic_ts_init_prod_test(ts);
 
 	ret2 = write_test_mode(client, type);
 	if (ret2 < 0) {
 		TOUCH_E("Test fail (Check if LCD is OFF)\n");
 		sic_ts_exit_prod_test(ts);
+		mutex_unlock(&ts->pdata->thread_lock);
 		return ret;
 	}
 
@@ -2472,6 +2700,7 @@ static ssize_t show_rawdata(struct i2c_client *client, char *buf)
 	ret = prd_compare_rawdata(client, buf, NORMAL_MODE);
 
 	sic_ts_exit_prod_test(ts);
+	mutex_unlock(&ts->pdata->thread_lock);
 	return ret;
 }
 
@@ -2491,10 +2720,9 @@ static ssize_t store_rawdata(struct i2c_client *client,
 	if (sscanf(buf, "%d", &value) <= 0)
 		return count;
 
-	if (doze_state == DOZE2_STATUS) {
-		TOUCH_E(
-			"state=[suspend]. we cannot use I2C, now. Test Result: Fail\n");
-		return count;
+	if (atomic_read(&ts->lpwg_ctrl.is_suspend)) {
+		TOUCH_I("Doze 2 rawdata\n");
+		type = RAWDATA_DOZE2;
 	}
 
 	read_buf = kzalloc(sizeof(u8)*PAGE_SIZE, GFP_KERNEL);
@@ -2505,6 +2733,7 @@ static ssize_t store_rawdata(struct i2c_client *client,
 	snprintf(data_path, PATH_SIZE, "/sdcard/%d.csv", value);
 	TOUCH_I("data_path : %s\n", data_path);
 
+	mutex_lock(&ts->pdata->thread_lock);
 	sic_ts_init_prod_test(ts);
 	ret = write_test_mode(client, type);
 	if (ret < 0) {
@@ -2522,6 +2751,7 @@ static ssize_t store_rawdata(struct i2c_client *client,
 	write_file(data_path, read_buf, 0, 0);
 error:
 	sic_ts_exit_prod_test(ts);
+	mutex_unlock(&ts->pdata->thread_lock);
 
 	if (read_buf != NULL)
 		kfree(read_buf);
@@ -2665,12 +2895,14 @@ static ssize_t show_open_short(struct i2c_client *client, char *buf)
 		return ret;
 	}
 
+	mutex_lock(&ts->pdata->thread_lock);
 	sic_ts_init_prod_test(ts);
 
 	ret2 = write_test_mode(client, type);
 	if (ret2 < 0) {
 		TOUCH_E("Test fail (Check if LCD is OFF)\n");
 		sic_ts_exit_prod_test(ts);
+		mutex_unlock(&ts->pdata->thread_lock);
 		return ret;
 	}
 
@@ -2678,45 +2910,26 @@ static ssize_t show_open_short(struct i2c_client *client, char *buf)
 		tc_tsp_test_mode_pf_result,
 		(u8 *)&result, sizeof(result)), error);
 
-	TOUCH_I("[result = %s (%d, %d, %d)]\n",
-		result ? "fail":"pass",
-		(result & 0x1) ? 1 : 0,
-		(result & 0x2) ? 1 : 0,
-		(result & 0x4) ? 1 : 0);
-
 	/* if fail, show f/p result of each node */
 	if (result) {
-		ret = prd_os_xline_result_read(client, buf, NORMAL_MODE);
-		ret += snprintf(buf + ret, PAGE_SIZE - ret,
-			"[open_short test Fail]\n");
-	} else {
-		ret += snprintf(buf + ret, PAGE_SIZE - ret,
-			"[open_short test Pass]\n");
+		ret = prd_os_xline_result_read(client, buf,
+			NORMAL_MODE, result);
 	}
+	ret += snprintf(buf + ret, PAGE_SIZE - ret,
+		"[Open Short All Test] - %s (%d/%d/%d)\n",
+		(result == 0) ?	"Pass" : "Fail",
+		(result & 0x1) ? 0 : 1,
+		(result & 0x2) ? 0 : 1,
+		(result & 0x4) ? 0 : 1);
+	TOUCH_I("[Open Short All Test] - %s (%d/%d/%d)\n",
+			(result == 0) ?	"Pass" : "Fail",
+			(result & 0x1) ? 0 : 1,
+			(result & 0x2) ? 0 : 1,
+			(result & 0x4) ? 0 : 1);
 error:
 	sic_ts_exit_prod_test(ts);
+	mutex_unlock(&ts->pdata->thread_lock);
 	return ret;
-}
-
-static ssize_t show_mfts_mode(struct i2c_client *client, char *buf)
-{
-	int ret = 0;
-	ret = snprintf(buf, PAGE_SIZE, "%d\n", sic_mfts_mode);
-	return ret;
-}
-
-static ssize_t store_mfts_mode(struct i2c_client *client,
-		const char *buf, size_t count)
-{
-	int value;
-
-	if (sscanf(buf, "%d", &value) <= 0)
-		return count;
-
-	sic_mfts_mode = value;
-	TOUCH_I("mfts_mode:%d\n", sic_mfts_mode);
-
-	return count;
 }
 
 static ssize_t show_debug_mode(struct i2c_client *client, char *buf)
@@ -2762,6 +2975,7 @@ static ssize_t store_fw_dump(struct i2c_client *client,
 	u32 wdata = 0;
 	mm_segment_t old_fs = get_fs();
 
+	return count;
 	TOUCH_I("F/W Dumping...\n");
 
 	touch_disable_irq(ts->client->irq);
@@ -2895,6 +3109,193 @@ error:
 	return count;
 }
 
+static int offset_calibration(struct i2c_client *client, int is_lcd_on)
+{
+	struct sic_ts_data *ts =
+		(struct sic_ts_data *) get_touch_handle(client);
+	u32 wdata = 0;
+	u32 rdata = 0;
+	u32 trim_addr[7] = {0x6015, 0x601D, 0x601E,
+				0x6020, 0x6000, 0x6003, 0x6004};
+	u32 trim_value[7] = {0, };
+	u32 run_info = 0;
+	u32 cal_status = 0;
+	u32 right_offset = 0;
+	u32 left_offset = 0;
+	u16 reg_doze = 0;
+
+	int i = 0;
+	int result = 0;
+	int retry_count = 3;
+
+	/* 0. Disable irq */
+	sic_ts_init_prod_test(ts);
+
+	/* Doze2 Calibration need IC Reset before cal */
+	if (is_lcd_on == 0) {
+		sic_ts_power(ts->client, POWER_OFF);
+		sic_ts_power(ts->client, POWER_ON);
+		msleep(ts->pdata->role->booting_delay);
+	}
+
+	/* 1. Read flash info */
+	TOUCH_I("System Hold for calibration\n");
+	wdata = 2;
+	DO_SAFE(sic_i2c_write(ts->client, spr_rst_ctl,
+			(u8 *)&wdata, sizeof(u32)), error);
+
+	/* trim value read */
+	wdata = 0x1 << 3;	/* for READ */
+	for (i = 0; i < 7; i++) {
+		DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+				(u8 *)&trim_addr[i], sizeof(u32)), error);
+		DO_SAFE(sic_i2c_write(ts->client, fc_ctl,
+				(u8 *)&wdata, sizeof(u32)), error);
+		DO_SAFE(sic_i2c_read(ts->client, fc_rdata,
+				(u8 *)&trim_value[i], sizeof(u32)), error);
+	}
+
+	/* 2. erase flash */
+	wdata = 0x6000;
+	DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+			(u8 *)&wdata, sizeof(u32)), error);
+	wdata = 0x1;	/* for Erase */
+	DO_SAFE(sic_i2c_write(ts->client, fc_ctl,
+			(u8 *)&wdata, sizeof(u32)), error);
+	msleep(50);
+
+	/* 3. write flash */
+	/* trim value write */
+	for (i = 0; i < 7; i++)	{
+		DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+				(u8 *)&trim_addr[i], sizeof(u32)), error);
+		DO_SAFE(sic_i2c_write(ts->client, fc_wdata,
+				(u8 *)&trim_value[i], sizeof(u32)), error);
+	}
+
+	/* 4. reset */
+	sic_ts_power(ts->client, POWER_OFF);
+	sic_ts_power(ts->client, POWER_ON);
+	msleep(ts->pdata->role->booting_delay);
+
+	/* 5. read runinfo */
+	DO_SAFE(sic_i2c_read(ts->client, 0xD01F,
+			(u8 *)&rdata, sizeof(u32)), error);
+	run_info = rdata & 0xFFFFFFFF;
+	TOUCH_I("run_info = %d\n", run_info);
+
+	/* 6. offset cal */
+	if (is_lcd_on) {
+		wdata = 1;
+		reg_doze = 0xD01B;
+	} else {
+		wdata = 2;
+		reg_doze = 0xD01C;
+	}
+	DO_SAFE(sic_i2c_write(ts->client, 0xD01A,
+			(u8 *)&wdata, sizeof(u32)), error);
+	do {
+		msleep(2300);
+		DO_SAFE(sic_i2c_read(ts->client, 0xD01A,
+			(u8 *)&cal_status, sizeof(u32)), error);
+	} while ((cal_status != 0) && (retry_count--));
+
+	DO_SAFE(sic_i2c_read(ts->client, reg_doze,
+			(u8 *)&rdata, sizeof(u32)), error);
+	TOUCH_I("rdata = 0x%x\n", rdata);
+
+	right_offset = rdata & 0xFFFF;
+	left_offset = (rdata >> 16) & 0xFFFF;
+
+	right_offset = ((right_offset & 0xFF) << 8) |
+			((right_offset & 0xFF00) >> 8);
+	left_offset = ((left_offset & 0xFF) << 8) |
+			((left_offset & 0xFF00) >> 8);
+
+	/* 7. runinfo & cal value write */
+	TOUCH_I("System Hold for calibration\n");
+	wdata = 2;
+	DO_SAFE(sic_i2c_write(ts->client, spr_rst_ctl,
+			(u8 *)&wdata, sizeof(u32)), error);
+
+	/* doze2 left offset */
+	wdata = 0x6024;
+	DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+			(u8 *)&wdata, sizeof(u32)), error);
+	wdata = is_lcd_on ? (doze2Offset[0] & 0xFFFF) : left_offset;
+	DO_SAFE(sic_i2c_write(ts->client, fc_wdata,
+			(u8 *)&wdata, sizeof(u32)), error);
+
+	wdata = 0x6025;
+	DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+			(u8 *)&wdata, sizeof(u32)), error);
+	wdata = is_lcd_on ? (doze2Offset[1] & 0xFFFF) : right_offset;
+	DO_SAFE(sic_i2c_write(ts->client, fc_wdata,
+			(u8 *)&wdata, sizeof(u32)), error);
+	/* doze1 left offset	 */
+	wdata = 0x6026;
+	DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+			(u8 *)&wdata, sizeof(u32)), error);
+	wdata = is_lcd_on ? left_offset : (doze1Offset[0] & 0xFFFF);
+	DO_SAFE(sic_i2c_write(ts->client, fc_wdata,
+			(u8 *)&wdata, sizeof(u32)), error);
+
+	wdata = 0x6027;
+	DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+			(u8 *)&wdata, sizeof(u32)), error);
+	wdata = is_lcd_on ? right_offset : (doze1Offset[1] & 0xFFFF);
+	DO_SAFE(sic_i2c_write(ts->client, fc_wdata,
+			(u8 *)&wdata, sizeof(u32)), error);
+
+	wdata = 0x6028;
+	DO_SAFE(sic_i2c_write(ts->client, fc_addr,
+			(u8 *)&wdata, sizeof(u32)), error);
+	wdata = run_info;
+	DO_SAFE(sic_i2c_write(ts->client, fc_wdata,
+			(u8 *)&wdata, sizeof(u32)), error);
+	result = 1;
+
+error:
+	/* 99. reset */
+	ts->is_probed = 0;
+	sic_ts_exit_prod_test(ts);
+	return result;
+}
+
+static ssize_t show_doze1_calibration(struct i2c_client *client, char *buf)
+{
+	int ret = 0;
+	int result = 0;
+
+	return ret;
+	/* 1 is doze1 calibration */
+	result = offset_calibration(client, 1);
+
+	ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			"Doze1 Calibration Result : %s\n",
+			result ? "PASS" : "FAIL");
+
+	return ret;
+}
+
+static ssize_t show_doze2_calibration(struct i2c_client *client, char *buf)
+{
+	int ret = 0;
+	int result = 0;
+
+	return ret;
+	/* 0 is doze2 calibration */
+	if (doze_state == DOZE2_STATUS || doze_state == DOZE2_DEBUG_STATUS)
+		result = offset_calibration(client, 0);
+
+	ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			"Doze2 Calibration Result : %s\n",
+			result ? "PASS" : "FAIL");
+
+	return ret;
+}
+
+
 static LGE_TOUCH_ATTR(firmware, S_IRUGO | S_IWUSR, show_firmware, NULL);
 static LGE_TOUCH_ATTR(testmode_ver, S_IRUGO | S_IWUSR, show_atcmd_fw_ver, NULL);
 static LGE_TOUCH_ATTR(version, S_IRUGO | S_IWUSR,
@@ -2919,9 +3320,14 @@ static LGE_TOUCH_ATTR(swipe_mode, S_IRUGO | S_IWUSR,
 			show_swipe_mode, store_swipe_mode);
 static LGE_TOUCH_ATTR(bootmode, S_IRUGO | S_IWUSR, NULL, store_boot_mode);
 static LGE_TOUCH_ATTR(sd, S_IRUGO | S_IWUSR, show_sd, NULL);
-static LGE_TOUCH_ATTR(mfts, S_IRUGO | S_IWUSR,
-		show_mfts_mode, store_mfts_mode);
+static LGE_TOUCH_ATTR(lpwg_sd, S_IRUGO | S_IWUSR, show_lpwg_sd, NULL);
 static LGE_TOUCH_ATTR(fw_dump, S_IRUSR | S_IWUSR, NULL, store_fw_dump);
+static LGE_TOUCH_ATTR(doze1_calibration, S_IRUSR | S_IWUSR,
+		show_doze1_calibration, NULL);
+static LGE_TOUCH_ATTR(doze2_calibration, S_IRUSR | S_IWUSR,
+		show_doze2_calibration, NULL);
+
+
 #if USE_ABT_MONITOR_APP
 static LGE_TOUCH_ATTR(abt_monitor, S_IRUGO | S_IWUGO,
 			show_abtApp, store_abtApp);
@@ -2945,11 +3351,13 @@ static struct attribute *sic_ts_attribute_list[] = {
 	&lge_touch_attr_swipe_fail_reason.attr,
 	&lge_touch_attr_bootmode.attr,
 	&lge_touch_attr_sd.attr,
+	&lge_touch_attr_lpwg_sd.attr,
 	&lge_touch_attr_open_short.attr,
-	&lge_touch_attr_mfts.attr,
 	&lge_touch_attr_swipe_param.attr,
 	&lge_touch_attr_swipe_mode.attr,
 	&lge_touch_attr_fw_dump.attr,
+	&lge_touch_attr_doze1_calibration.attr,
+	&lge_touch_attr_doze2_calibration.attr,
 #if USE_ABT_MONITOR_APP
 	&lge_touch_attr_abt_monitor.attr,
 	&lge_touch_attr_raw_report.attr,
@@ -3244,8 +3652,15 @@ int check_tci_debug_result(struct sic_ts_data *ts, u8 wake_up_type)
 	count1 = ((rdata >> 16) & 0xFFFF);
 	count_max = (count0 > count1) ? (count0) : (count1);
 
-	if (count_max == 0)
+	if (count_max == 0) {
 		return 0;
+	} else if (count_max > LPWG_FAIL_BUFFER_MAX_NUM) {
+		count_max = LPWG_FAIL_BUFFER_MAX_NUM;
+		if (count0 > LPWG_FAIL_BUFFER_MAX_NUM)
+			count0 = LPWG_FAIL_BUFFER_MAX_NUM;
+		if (count1 > LPWG_FAIL_BUFFER_MAX_NUM)
+			count1 = LPWG_FAIL_BUFFER_MAX_NUM;
+	}
 
 	addr = CMD_ABT_LPWG_TCI_FAIL_BUFFER;
 
@@ -3415,7 +3830,7 @@ enum error_type sic_ts_probe(struct i2c_client *client,
 #if USE_ABT_MONITOR_APP
 	mutex_init(&abt_i2c_comm_lock);
 #endif
-
+	wake_lock_init(&ts->touch_rawdata, WAKE_LOCK_SUSPEND, "touch_rawdata");
 	atomic_set(&ts->lpwg_ctrl.is_suspend, 0);
 	return NO_ERROR;
 error:
@@ -3439,7 +3854,7 @@ enum error_type sic_ts_remove(struct i2c_client *client)
 	if (abt_socket_mutex_flag == 1)
 		mutex_destroy(&abt_socket_lock);
 #endif
-
+	wake_lock_destroy(&ts->touch_rawdata);
 	return NO_ERROR;
 }
 
@@ -3480,11 +3895,12 @@ enum error_type sic_ts_init(struct i2c_client *client)
 	DO_SAFE(sic_i2c_write(client, tc_interrupt_ctl,
 				(u8 *)&wdata, sizeof(u32)), error);
 
+	ts->is_init = 1;
+	doze_state = DOZE1_STATUS;
+
 	/* set lpwg mode SIC TODO */
 	DO_SAFE(lpwg_control(ts, is_suspend ? mode : 0), error);
 
-	ts->is_init = 1;
-	doze_state = DOZE1_STATUS;
 	TOUCH_D(DEBUG_BASE_INFO, "%s end\n", __func__);
 	return NO_ERROR;
 error:
@@ -3571,6 +3987,11 @@ enum error_type sic_ts_get_data(struct i2c_client *client,
 #endif /* USE_ABT_MONITOR_APP */
 
 	TOUCH_TRACE();
+
+	if (power_state == POWER_OFF) {
+		TOUCH_I("IGNORE_EVENT - Power Off\n");
+		return IGNORE_EVENT;
+	}
 
 	if (!ts->is_init) {
 		ts_interrupt_clear(ts);
@@ -3941,6 +4362,7 @@ enum error_type sic_ts_get_data(struct i2c_client *client,
 					curr_data->total_num);
 			}
 		}
+		ts_interrupt_clear(ts);
 #endif /* USE_ABT_MONITOR_APP */
 	} else {
 		ts_interrupt_clear(ts);
@@ -3977,7 +4399,6 @@ enum error_type sic_ts_get_data_debug_mode(struct i2c_client *client,
 
 	struct T_TouchInfo *touchInfo = &ts->ts_data.report.touchInfo;
 	struct T_TouchData *t_Data = &ts->ts_data.report.touchData[0];
-	struct T_OnChipDebug *ocd = &ts->ts_data.report.ocd;
 
 	struct send_data_t *packet_ptr = &abt_comm.data_send;
 	struct debug_report_header *d_header =
@@ -3986,7 +4407,6 @@ enum error_type sic_ts_get_data_debug_mode(struct i2c_client *client,
 	u8 *d_data_ptr = (u8 *)d_header + d_header_size;
 	u32 TC_debug_data_ptr = CMD_GET_ABT_DEBUG_REPORT;
 	u32 i2c_pack_count = 0;
-	u16 frame_num = 0;
 	struct timeval t_stamp;
 
 	mutex_lock(&abt_i2c_comm_lock);
@@ -4107,7 +4527,6 @@ enum error_type sic_ts_get_data_debug_mode(struct i2c_client *client,
 			DO_SAFE(sic_i2c_read(ts->client, report_base+34,
 				(u8 *)d_data_ptr,
 				60), error);
-			memcpy((u8 *)d_data_ptr, (u8 *)ocd, sizeof(ocd));
 			d_data_ptr += 60;
 		}
 

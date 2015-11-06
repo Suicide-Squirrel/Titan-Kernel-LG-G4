@@ -1039,10 +1039,17 @@ config TOUCHSCREEN_SIC_FW_PATH
 	in firmware/sic
 	ex) TOUCHSCREEN_SIC_FW_PATH="g4"
 
+config TOUCHSCREEN_LGE_SIC_SPI
+	tristate "LGE SIC SPI touchscreen"
+	depends on SPI_MASTER
+	help
+	  Enables LGE SIC SPI Touch Screens
+
 config SECURE_TOUCH
 	bool "Secure Touch"
 	depends on (TOUCHSCREEN_ATMEL_MXT || TOUCHSCREEN_SYNAPTICS_I2C_RMI4 || \
-	  TOUCHSCREEN_SYNAPTICS_DSX_I2C_v21 || TOUCHSCREEN_ATMEL_MAXTOUCH_TS)
+	  TOUCHSCREEN_SYNAPTICS_DSX_I2C_v21 || TOUCHSCREEN_ATMEL_MAXTOUCH_TS || \
+	  TOUCHSCREEN_LGE_SIC_SPI)
 	help
 	  Say Y here to enable Secure Touch in supported drivers.
 

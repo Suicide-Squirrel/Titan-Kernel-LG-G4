@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -74,6 +74,7 @@ static const struct platform_device_id msm_vfe_dev_id[] = {
 static char stat_line[OVERFLOW_LENGTH];
 
 static struct msm_isp_buf_mgr vfe_buf_mgr;
+static struct dual_vfe_resource dualvfe;
 struct msm_isp_statistics stats;
 struct msm_isp_ub_info ub_info;
 static int msm_isp_enable_debugfs(struct vfe_device *vfe_dev,
@@ -348,16 +349,6 @@ void msm_isp_update_req_history(uint32_t client, uint64_t ab,
 }
 
 #ifdef CONFIG_COMPAT
-struct msm_isp_event_data32 {
-	struct compat_timeval timestamp;
-	struct compat_timeval mono_timestamp;
-	enum msm_vfe_input_src input_intf;
-	uint32_t frame_id;
-	union {
-		struct msm_isp_stats_event stats;
-		struct msm_isp_buf_event buf_done;
-	} u;
-};
 static long msm_isp_dqevent(struct file *file, struct v4l2_fh *vfh, void *arg)
 {
 	long rc;
@@ -389,7 +380,6 @@ static long msm_isp_dqevent(struct file *file, struct v4l2_fh *vfh, void *arg)
 				event_data->mono_timestamp.tv_sec;
 		event_data32->mono_timestamp.tv_usec =
 				event_data->mono_timestamp.tv_usec;
-		event_data32->input_intf = event_data->input_intf;
 		event_data32->frame_id = event_data->frame_id;
 		memcpy(&(event_data32->u), &(event_data->u),
 					sizeof(event_data32->u));
@@ -506,6 +496,12 @@ static int vfe_probe(struct platform_device *pdev)
 	ISP_DBG("%s: device id = %d\n", __func__, pdev->id);
 
 	vfe_dev->pdev = pdev;
+	vfe_dev->dual_vfe_res = &dualvfe;
+	vfe_dev->dual_vfe_res->axi_data[vfe_dev->pdev->id] =
+		&vfe_dev->axi_data;
+	vfe_dev->dual_vfe_res->stats_data[vfe_dev->pdev->id] =
+		&vfe_dev->stats_data;
+
 	rc = vfe_dev->hw_info->vfe_ops.core_ops.get_platform_data(vfe_dev);
 	if (rc < 0) {
 		pr_err("%s: failed to get platform resources\n", __func__);
@@ -517,6 +513,8 @@ static int vfe_probe(struct platform_device *pdev)
 	tasklet_init(&vfe_dev->vfe_tasklet,
 		msm_isp_do_tasklet, (unsigned long)vfe_dev);
 
+	/* init hardware will enable it back */
+	tasklet_disable(&vfe_dev->vfe_tasklet);
 	v4l2_subdev_init(&vfe_dev->subdev.sd, vfe_dev->hw_info->subdev_ops);
 	vfe_dev->subdev.sd.internal_ops =
 		vfe_dev->hw_info->subdev_internal_ops;
@@ -532,6 +530,8 @@ static int vfe_probe(struct platform_device *pdev)
 	mutex_init(&vfe_dev->buf_mgr_mutex);
 	spin_lock_init(&vfe_dev->tasklet_lock);
 	spin_lock_init(&vfe_dev->shared_data_lock);
+	spin_lock_init(&vfe_dev->reg_update_lock);
+        spin_lock_init(&vfe_dev->shared_cfg_reg_lock); //LGE_CHANGE, 20150609, Change spin_lock for watchodog case using shard_data_lock, changhwan.kang.kang
 	spin_lock_init(&req_history_lock);
 	media_entity_init(&vfe_dev->subdev.sd.entity, 0, NULL, 0);
 	vfe_dev->subdev.sd.entity.type = MEDIA_ENT_T_V4L2_SUBDEV;

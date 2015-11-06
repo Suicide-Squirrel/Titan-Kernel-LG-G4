@@ -1861,7 +1861,7 @@ static int diag_process_dci_pkt_rsp(unsigned char *buf, int len)
 				 */
 
 /* [VZW][OBDM] Temporary fix "mode change cmd(0x29) issue." */
-#ifdef CONFIG_MACH_MSM8992_P1
+#if defined(CONFIG_MACH_MSM8992_P1) || defined(CONFIG_MACH_MSM8992_PPLUS) || defined(CONFIG_MACH_MSM8992_P1A4WP)
 #define MODE_RESET 2
 
 				if (entry.cmd_code_lo == MODE_CMD &&

@@ -44,6 +44,7 @@
 #include <linux/sched/rt.h>
 #include <linux/notifier.h>
 #include <linux/reboot.h>
+#include <linux/suspend.h>
 #include <soc/qcom/msm-core.h>
 #include <linux/cpumask.h>
 
@@ -477,6 +478,25 @@ static int msm_thermal_reboot_callback(
 	}
 
 	return NOTIFY_DONE;
+}
+
+static int msm_thermal_suspend_callback(
+	struct notifier_block *nfb, unsigned long action, void *data)
+{
+	switch (action) {
+	case PM_POST_HIBERNATION:
+	case PM_POST_SUSPEND:
+		if (hotplug_task)
+			complete(&hotplug_notify_complete);
+		else
+			pr_debug("Hotplug task not initialized\n");
+		break;
+
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
 }
 
 static struct notifier_block msm_thermal_reboot_notifier = {
@@ -2480,19 +2500,21 @@ static int __ref update_offline_cores(int val)
 				continue;
 			trace_thermal_pre_core_online(cpu);
 			ret = cpu_up(cpu);
-			if (ret && ret == notifier_to_errno(NOTIFY_BAD))
+			if (ret && ret == notifier_to_errno(NOTIFY_BAD)) {
 				pr_debug("Onlining CPU%d is vetoed\n", cpu);
-			else if (ret)
+			} else if (ret) {
+				cpus_offlined |= BIT(cpu);
 				pr_err("Unable to online CPU%d. err:%d\n",
-						cpu, ret);
-			else
+					cpu, ret);
+			} else {
 #ifdef CONFIG_LGE_PM_DEBUG
-				pr_info("Allow Online CPU%d Temp: %ld\n",
-					cpu,
-					low_thresh->temp);
+                                pr_info("Allow Online CPU%d Temp: %ld\n",
+                                        cpu,
+                                        low_thresh->temp);
 #else
 				pr_debug("Onlined CPU%d\n", cpu);
 #endif
+			}
 			trace_thermal_post_core_online(cpu,
 				cpumask_test_cpu(cpu, cpu_online_mask));
 		}
@@ -2543,8 +2565,7 @@ static __ref int do_hotplug(void *data)
 				mask |= BIT(cpu);
 			mutex_unlock(&devices->hotplug_dev->clnt_lock);
 		}
-		if (mask != cpus_offlined)
-			update_offline_cores(mask);
+		update_offline_cores(mask);
 		mutex_unlock(&core_control_mutex);
 
 		if (devices && devices->hotplug_dev) {
@@ -3160,7 +3181,6 @@ static __ref int do_freq_mitigation(void *data)
 			;
 		INIT_COMPLETION(freq_mitigation_complete);
 
-		get_online_cpus();
 		for_each_possible_cpu(cpu) {
 			max_freq_req = (cpus[cpu].max_freq) ?
 					msm_thermal_info.freq_limit :
@@ -3227,7 +3247,6 @@ reset_threshold:
 			}
 		}
 		update_cluster_freq();
-		put_online_cpus();
 	}
 	return ret;
 }
@@ -4511,6 +4530,286 @@ done_mx_nodes:
 	return ret;
 }
 
+#ifdef CONFIG_LGE_PM
+static struct kobject *ktm_temp_kobj;
+static int32_t ktm_hotplug_temp_adjust = 105;
+static int32_t ktm_freq_temp_adjust = 100;
+static int32_t ktm_hysteresis_adjust = 50;
+static bool ktm_temp_adjust_enabled;
+
+static ssize_t show_ktm_hotplug_temp(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	pr_debug("show_ktm_hotplug_temp hotplug_temp:%d hotplug_temp_adjust: %d\n",
+			msm_thermal_info.big_hotplug_temp_degC, ktm_hotplug_temp_adjust);
+	return snprintf(buf, PAGE_SIZE, "%d\n", msm_thermal_info.big_hotplug_temp_degC);
+}
+
+static ssize_t __ref store_ktm_hotplug_temp(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+	uint32_t cpu = 0;
+	struct sensor_threshold *hi_thresh = NULL, *low_thresh = NULL;
+
+	ret = kstrtoint(buf, 10, &val);
+	if (ret) {
+		pr_err("Invalid input %s. err:%d\n", buf, ret);
+		goto done_store_ktm_hotplug_temp;
+	}
+
+	ktm_hotplug_temp_adjust = val;
+	if (msm_thermal_info.big_hotplug_temp_degC == ktm_hotplug_temp_adjust)
+		goto done_store_ktm_hotplug_temp;
+
+	mutex_lock(&core_control_mutex);
+	pr_debug("store_ktm_hotplug_temp input:%s\n", buf);
+	for_each_possible_cpu(cpu) {
+		cpus[cpu].sensor_id =
+			sensor_get_id((char *)cpus[cpu].sensor_type);
+		cpus[cpu].id_type = THERM_ZONE_ID;
+		if (!(msm_thermal_info.core_control_mask & BIT(cpus[cpu].cpu)))
+			continue;
+		hi_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_HIGH];
+		low_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_LOW];
+		msm_thermal_info.big_hotplug_temp_degC = ktm_hotplug_temp_adjust;
+		hi_thresh->temp = ktm_hotplug_temp_adjust;
+		hi_thresh->trip = THERMAL_TRIP_CONFIGURABLE_HI;
+		low_thresh->temp = ktm_hotplug_temp_adjust - ktm_hysteresis_adjust;
+		low_thresh->trip = THERMAL_TRIP_CONFIGURABLE_LOW;
+
+		hi_thresh->notify = low_thresh->notify = hotplug_notify;
+		hi_thresh->data = low_thresh->data = (void *)&cpus[cpu];
+
+		sensor_mgr_set_threshold(cpus[cpu].sensor_id, hi_thresh);
+		pr_debug("cpu:%d sensor_id:%u hotplug_temp:%d hotplug_temp_adjust:%d\n",
+					cpu,
+					cpus[cpu].sensor_id,
+					msm_thermal_info.big_hotplug_temp_degC,
+					ktm_hotplug_temp_adjust);
+	}
+	mutex_unlock(&core_control_mutex);
+done_store_ktm_hotplug_temp:
+	return count;
+}
+
+static ssize_t show_ktm_freq_temp(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	pr_debug("show_ktm_freq_temp freq_mitig_temp_degc:%d\n",
+					msm_thermal_info.freq_mitig_temp_degc);
+	return snprintf(buf, PAGE_SIZE, "%d\n", msm_thermal_info.freq_mitig_temp_degc);
+}
+
+static ssize_t __ref store_ktm_freq_temp(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+	uint32_t cpu = 0;
+	struct sensor_threshold *hi_thresh = NULL, *low_thresh = NULL;
+
+	ret = kstrtoint(buf, 10, &val);
+	if (ret) {
+		pr_err("Invalid input %s. err:%d\n", buf, ret);
+		goto done_store_ktm_freq_temp;
+	}
+
+	ktm_freq_temp_adjust = val;
+	if (msm_thermal_info.freq_mitig_temp_degc == ktm_freq_temp_adjust)
+		goto done_store_ktm_freq_temp;
+
+	mutex_lock(&core_control_mutex);
+	pr_debug("store_ktm_freq_temp input:%s cpu%u \n", buf, cpu);
+	for_each_possible_cpu(cpu) {
+		if (!(msm_thermal_info.freq_mitig_control_mask & BIT(cpu)))
+			continue;
+		hi_thresh = &cpus[cpu].threshold[FREQ_THRESHOLD_HIGH];
+		low_thresh = &cpus[cpu].threshold[FREQ_THRESHOLD_LOW];
+		msm_thermal_info.freq_mitig_temp_degc = ktm_freq_temp_adjust;
+		hi_thresh->temp = ktm_freq_temp_adjust;
+		hi_thresh->trip = THERMAL_TRIP_CONFIGURABLE_HI;
+		low_thresh->temp = msm_thermal_info.freq_mitig_temp_degc -
+			msm_thermal_info.freq_mitig_temp_hysteresis_degc;
+		low_thresh->trip = THERMAL_TRIP_CONFIGURABLE_LOW;
+
+		hi_thresh->notify = low_thresh->notify =
+			freq_mitigation_notify;
+		hi_thresh->data = low_thresh->data = (void *)&cpus[cpu];
+
+		sensor_mgr_set_threshold(cpus[cpu].sensor_id, hi_thresh);
+	}
+	mutex_unlock(&core_control_mutex);
+done_store_ktm_freq_temp:
+	return count;
+}
+
+static ssize_t show_ktm_temp_hysteresis(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n",
+			msm_thermal_info.big_hotplug_temp_hysteresis_degC);
+}
+
+static ssize_t __ref store_ktm_temp_hysteresis(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+
+	ret = kstrtoint(buf, 10, &val);
+	if (ret) {
+		pr_err("Invalid input %s. err:%d\n", buf, ret);
+		goto done_store_ktm_temp_hysteresis;
+	}
+	ktm_hysteresis_adjust = val;
+	pr_debug("ktm_hysteresis_adjust is %d\n",ktm_hysteresis_adjust);
+
+	msm_thermal_info.big_hotplug_temp_hysteresis_degC = ktm_hysteresis_adjust;
+
+done_store_ktm_temp_hysteresis:
+	return count;
+}
+
+static ssize_t show_adjust_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", ktm_temp_adjust_enabled);
+}
+
+static ssize_t __ref store_adjust_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+	uint32_t cpu = 0;
+	struct sensor_threshold *hi_thresh = NULL, *low_thresh = NULL;
+
+	ret = kstrtoint(buf, 10, &val);
+	if (ret) {
+		pr_err("Invalid input %s\n", buf);
+		goto done_store_adjust_enabled;
+	}
+
+	if (ktm_temp_adjust_enabled == !!val)
+		goto done_store_adjust_enabled;
+
+	ktm_temp_adjust_enabled = !!val;
+
+	mutex_lock(&core_control_mutex);
+	if(ktm_temp_adjust_enabled){
+		pr_info("enable ktm adjust ktm_hotplug_temp_adjust:%d \n",
+						ktm_hotplug_temp_adjust);
+		for_each_possible_cpu(cpu) {
+			cpus[cpu].sensor_id =
+				sensor_get_id((char *)cpus[cpu].sensor_type);
+			cpus[cpu].id_type = THERM_ZONE_ID;
+			if (!(msm_thermal_info.core_control_mask & BIT(cpus[cpu].cpu)))
+				continue;
+
+			hi_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_HIGH];
+			low_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_LOW];
+
+			hi_thresh->temp = ktm_hotplug_temp_adjust;
+			hi_thresh->trip = THERMAL_TRIP_CONFIGURABLE_HI;
+			low_thresh->temp = ktm_hotplug_temp_adjust - ktm_hysteresis_adjust;
+			low_thresh->trip = THERMAL_TRIP_CONFIGURABLE_LOW;
+			sensor_mgr_set_threshold(cpus[cpu].sensor_id, hi_thresh);
+		}
+	}
+	else{
+		pr_info("disable ktm adjust hotplug_temp_degC:%d \n",
+						msm_thermal_info.big_hotplug_temp_degC);
+		for_each_possible_cpu(cpu) {
+			cpus[cpu].sensor_id =
+				sensor_get_id((char *)cpus[cpu].sensor_type);
+			cpus[cpu].id_type = THERM_ZONE_ID;
+			if (!(msm_thermal_info.core_control_mask & BIT(cpus[cpu].cpu)))
+				continue;
+
+			hi_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_HIGH];
+			low_thresh = &cpus[cpu].threshold[HOTPLUG_THRESHOLD_LOW];
+			if (IS_IN_BIG_CLUSTER(cpu)) {
+				hi_thresh->temp = msm_thermal_info.big_hotplug_temp_degC;
+				hi_thresh->trip = THERMAL_TRIP_CONFIGURABLE_HI;
+				low_thresh->temp = msm_thermal_info.big_hotplug_temp_degC -
+					msm_thermal_info.big_hotplug_temp_hysteresis_degC;
+				low_thresh->trip = THERMAL_TRIP_CONFIGURABLE_LOW;
+			} else {
+				hi_thresh->temp = msm_thermal_info.hotplug_temp_degC;
+				hi_thresh->trip = THERMAL_TRIP_CONFIGURABLE_HI;
+				low_thresh->temp = msm_thermal_info.hotplug_temp_degC -
+					msm_thermal_info.hotplug_temp_hysteresis_degC;
+				low_thresh->trip = THERMAL_TRIP_CONFIGURABLE_LOW;
+			}
+			sensor_mgr_set_threshold(cpus[cpu].sensor_id, hi_thresh);
+		}
+	}
+	mutex_unlock(&core_control_mutex);
+
+done_store_adjust_enabled:
+	return count;
+}
+
+static __refdata struct kobj_attribute ktm_hotplug_temp_attr =
+__ATTR(ktm_hotplug_temp, 0644, show_ktm_hotplug_temp, store_ktm_hotplug_temp);
+
+static __refdata struct kobj_attribute ktm_freq_temp_attr =
+__ATTR(ktm_freq_temp, 0644, show_ktm_freq_temp, store_ktm_freq_temp);
+
+static __refdata struct kobj_attribute ktm_temp_hysteresis_attr =
+__ATTR(ktm_temp_hysteresis, 0644, show_ktm_temp_hysteresis, store_ktm_temp_hysteresis);
+
+static __refdata struct kobj_attribute adjust_enabled_attr =
+__ATTR(adjust_enabled, 0644, show_adjust_enabled, store_adjust_enabled);
+
+static __refdata struct attribute *ktm_temp_attrs[] = {
+	&ktm_hotplug_temp_attr.attr,
+	&ktm_freq_temp_attr.attr,
+	&ktm_temp_hysteresis_attr.attr,
+	&adjust_enabled_attr.attr,
+	NULL,
+};
+
+static __refdata struct attribute_group ktm_temp_attr_group = {
+	.attrs = ktm_temp_attrs,
+};
+
+static __init int msm_thermal_add_ktm_temp_nodes(void)
+{
+	struct kobject *module_kobj = NULL;
+	int ret = 0;
+
+	module_kobj = kset_find_obj(module_kset, KBUILD_MODNAME);
+	if (!module_kobj) {
+		pr_err("cannot find kobject\n");
+		ret = -ENOENT;
+		goto done_ktm_temp_nodes;
+	}
+
+	ktm_temp_kobj = kobject_create_and_add("ktm_control", module_kobj);
+	if (!ktm_temp_kobj) {
+		pr_err("cannot create ktm_temp kobj\n");
+		ret = -ENOMEM;
+		goto done_ktm_temp_nodes;
+	}
+
+	ret = sysfs_create_group(ktm_temp_kobj, &ktm_temp_attr_group);
+	if (ret) {
+		pr_err("cannot create sysfs group. err:%d\n", ret);
+		goto done_ktm_temp_nodes;
+	}
+
+	return 0;
+
+done_ktm_temp_nodes:
+	if (ktm_temp_kobj)
+		kobject_del(ktm_temp_kobj);
+	return ret;
+}
+#endif
+
 static void msm_thermal_panic_notifier_init(struct device *dev)
 {
 	int i;
@@ -4681,6 +4980,7 @@ int msm_thermal_init(struct msm_thermal_data *pdata)
 		pr_err("cannot register cpufreq notifier. err:%d\n", ret);
 
 	register_reboot_notifier(&msm_thermal_reboot_notifier);
+	pm_notifier(msm_thermal_suspend_callback, 0);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	schedule_delayed_work(&check_temp_work, 0);
 
@@ -6099,6 +6399,9 @@ int __init msm_thermal_late_init(void)
 	create_cpu_topology_sysfs();
 	create_thermal_debugfs();
 	msm_thermal_add_bucket_info_nodes();
+#ifdef CONFIG_LGE_PM
+	msm_thermal_add_ktm_temp_nodes();
+#endif
 	return 0;
 }
 late_initcall(msm_thermal_late_init);

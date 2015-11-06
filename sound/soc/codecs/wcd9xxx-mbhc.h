@@ -340,6 +340,10 @@ struct wcd9xxx_mbhc {
 
 	bool mbhc_micbias_switched;
 
+#if defined(CONFIG_SND_LGE_HIDDEN_AUX)
+	bool mbhc_aux_extend_status;
+#endif
+
 	u32 hph_status; /* track headhpone status */
 	u8 hphlocp_cnt; /* headphone left ocp retry */
 	u8 hphrocp_cnt; /* headphone right ocp retry */

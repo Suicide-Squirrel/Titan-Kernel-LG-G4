@@ -42,7 +42,7 @@ struct lge_monitor_thermal_data {
 	unsigned int hot_crit_temp;
 	unsigned int last_temp;
 	struct qpnp_vadc_chip *vadc_dev;
-	struct work_struct init_monitor_work_struct;
+	struct delayed_work init_monitor_work_struct;
 	struct delayed_work monitor_work_struct;
 };
 
@@ -146,8 +146,7 @@ static void poll_monitor_work(struct work_struct *work)
 
 	/* Check again before scheduling */
 	if (enable)
-		queue_delayed_work_on(0, monitor_wq,
-				&monitor_dd->monitor_work_struct, delay_time);
+		queue_delayed_work(monitor_wq, &monitor_dd->monitor_work_struct, delay_time);
 }
 
 static int lge_monitor_thermal_remove(struct platform_device *pdev)
@@ -167,16 +166,17 @@ static int lge_monitor_thermal_remove(struct platform_device *pdev)
 
 static void init_monitor_work(struct work_struct *work)
 {
-	struct lge_monitor_thermal_data *monitor_dd = container_of(work,
-					struct lge_monitor_thermal_data,
-					init_monitor_work_struct);
+	struct lge_monitor_thermal_data *monitor_dd =
+		container_of(to_delayed_work(work),
+				struct lge_monitor_thermal_data,
+				init_monitor_work_struct);
 	unsigned long delay_time;
 	int error;
 
 	delay_time = msecs_to_jiffies(monitor_dd->polling_time);
 
-	queue_delayed_work_on(0, monitor_wq, &monitor_dd->monitor_work_struct,
-								delay_time);
+	queue_delayed_work(monitor_wq,
+		&monitor_dd->monitor_work_struct, delay_time);
 
 	error = device_create_file(monitor_dd->dev, &dev_attr_disable);
 	if (error)
@@ -253,9 +253,9 @@ static int lge_monitor_thermal_probe(struct platform_device *pdev)
 
 	monitor_dd->dev = &pdev->dev;
 	platform_set_drvdata(pdev, monitor_dd);
-	INIT_WORK(&monitor_dd->init_monitor_work_struct, init_monitor_work);
+	INIT_DELAYED_WORK(&monitor_dd->init_monitor_work_struct, init_monitor_work);
 	INIT_DELAYED_WORK(&monitor_dd->monitor_work_struct, poll_monitor_work);
-	queue_work_on(0, monitor_wq, &monitor_dd->init_monitor_work_struct);
+	queue_delayed_work(monitor_wq, &monitor_dd->init_monitor_work_struct, 0);
 
 	return 0;
 err:

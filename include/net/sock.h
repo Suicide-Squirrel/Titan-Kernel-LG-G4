@@ -920,31 +920,30 @@ struct proto {
     int            (*compat_ioctl)(struct sock *sk,
                     unsigned int cmd, unsigned long arg);
 #endif
-    int            (*sendmsg)(struct kiocb *iocb, struct sock *sk,
-                       struct msghdr *msg, size_t len);
-    int            (*recvmsg)(struct kiocb *iocb, struct sock *sk,
-                       struct msghdr *msg,
-                       size_t len, int noblock, int flags,
-                       int *addr_len);
-    int            (*sendpage)(struct sock *sk, struct page *page,
-                    int offset, size_t size, int flags);
-    int            (*bind)(struct sock *sk,
-                    struct sockaddr *uaddr, int addr_len);
+	int			(*sendmsg)(struct kiocb *iocb, struct sock *sk,
+					   struct msghdr *msg, size_t len);
+	int			(*recvmsg)(struct kiocb *iocb, struct sock *sk,
+					   struct msghdr *msg,
+					   size_t len, int noblock, int flags,
+					   int *addr_len);
+	int			(*sendpage)(struct sock *sk, struct page *page,
+					int offset, size_t size, int flags);
+	int			(*bind)(struct sock *sk,
+					struct sockaddr *uaddr, int addr_len);
 
-    int            (*backlog_rcv) (struct sock *sk,
-                        struct sk_buff *skb);
+	int			(*backlog_rcv) (struct sock *sk,
+						struct sk_buff *skb);
 
-    void        (*release_cb)(struct sock *sk);
-    void        (*mtu_reduced)(struct sock *sk);
+	void		(*release_cb)(struct sock *sk);
 
-    /* Keeping track of sk's, looking them up, and port selection methods. */
-    void            (*hash)(struct sock *sk);
-    void            (*unhash)(struct sock *sk);
-    void            (*rehash)(struct sock *sk);
-    int            (*get_port)(struct sock *sk, unsigned short snum);
-    void            (*clear_sk)(struct sock *sk, int size);
+	/* Keeping track of sk's, looking them up, and port selection methods. */
+	void			(*hash)(struct sock *sk);
+	void			(*unhash)(struct sock *sk);
+	void			(*rehash)(struct sock *sk);
+	int			(*get_port)(struct sock *sk, unsigned short snum);
+	void			(*clear_sk)(struct sock *sk, int size);
 
-    /* Keeping track of sockets in use */
+	/* Keeping track of sockets in use */
 #ifdef CONFIG_PROC_FS
     unsigned int        inuse_idx;
 #endif
@@ -1728,12 +1727,12 @@ sk_dst_get(struct sock *sk)
 {
     struct dst_entry *dst;
 
-    rcu_read_lock();
-    dst = rcu_dereference(sk->sk_dst_cache);
-    if (dst)
-        dst_hold(dst);
-    rcu_read_unlock();
-    return dst;
+	rcu_read_lock();
+	dst = rcu_dereference(sk->sk_dst_cache);
+	if (dst && !atomic_inc_not_zero(&dst->__refcnt))
+		dst = NULL;
+	rcu_read_unlock();
+	return dst;
 }
 
 extern void sk_reset_txq(struct sock *sk);
@@ -1770,9 +1769,11 @@ __sk_dst_set(struct sock *sk, struct dst_entry *dst)
 static inline void
 sk_dst_set(struct sock *sk, struct dst_entry *dst)
 {
-    spin_lock(&sk->sk_dst_lock);
-    __sk_dst_set(sk, dst);
-    spin_unlock(&sk->sk_dst_lock);
+	struct dst_entry *old_dst;
+
+	sk_tx_queue_clear(sk);
+	old_dst = xchg((__force struct dst_entry **)&sk->sk_dst_cache, dst);
+	dst_release(old_dst);
 }
 
 static inline void
@@ -1784,9 +1785,7 @@ __sk_dst_reset(struct sock *sk)
 static inline void
 sk_dst_reset(struct sock *sk)
 {
-    spin_lock(&sk->sk_dst_lock);
-    __sk_dst_reset(sk);
-    spin_unlock(&sk->sk_dst_lock);
+	sk_dst_set(sk, NULL);
 }
 
 extern struct dst_entry *__sk_dst_check(struct sock *sk, u32 cookie);

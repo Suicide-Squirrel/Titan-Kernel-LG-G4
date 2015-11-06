@@ -82,6 +82,7 @@ bool lpwg_by_lcd_notifier;
 bool ghost_do_not_reset;
 int sp_link_touch;
 int incoming_call_state = 0;
+int delta_test_result = 2;
 
 /*static int ts_suspend = 0;
 int thermal_status = 0;
@@ -1359,6 +1360,7 @@ void matchUp_f54_regMap(struct synaptics_ts_data *ts)
 		ts->f54_reg.cid_im = 0x0A;
 		ts->f54_reg.freq_scan_im = 0x0B;
 		ts->f54_reg.incell_statistic = 0x10;
+		ts->f54_reg.general_control = 0x11;
 	} else if (is_product(ts, "PLG468", 6)) {
 		TOUCH_I("[%s] This is P1\n", __func__);
 
@@ -1970,6 +1972,56 @@ static void check_incalibration_crc(struct i2c_client *client)
 
 }
 
+static int check_delta(struct i2c_client *client)
+{
+	struct synaptics_ts_data *ts =
+			(struct synaptics_ts_data *)get_touch_handle(client);
+	int f54len = 0;
+	char f54buf[800] = {0};
+
+	TOUCH_I("[%s] Delta Test Start !\n", __func__);
+
+	if (ts->pdata->panel_id == 0 &&
+		(power_state == POWER_ON || power_state == POWER_WAKE))	{
+		if (need_scan_pdt) {
+			SCAN_PDT();
+			need_scan_pdt = false;
+		}
+		touch_disable_irq(ts->client->irq);
+		wake_lock(&ts->touch_rawdata);
+
+		f54len = snprintf(f54buf + f54len,
+				sizeof(f54buf) - f54len,
+				"JDI Delta Test Result\n");
+
+		delta_test_result = F54Test('m', 1, NULL);
+
+		if (delta_test_result) {
+			delta_test_result = 1;
+			f54len += snprintf(f54buf + f54len,
+					sizeof(f54buf) - f54len,
+					"Delta check TEST passed\n\n");
+		} else {
+			f54len += snprintf(f54buf + f54len,
+					sizeof(f54buf) - f54len,
+					"Delta check TEST failed\n\n");
+		}
+		touch_enable_irq(ts->client->irq);
+		wake_unlock(&ts->touch_rawdata);
+	} else {
+		TOUCH_I("[%s] state=[suspend]. cannot use I2C. panel id: %d\n",
+			__func__, ts->pdata->panel_id);
+		f54len += snprintf(f54buf + f54len,
+				sizeof(f54buf) - f54len,
+	"state=[suspend]. cannot use I2C. Test result : Fail, panel id: %d\n",
+				ts->pdata->panel_id);
+	}
+	swipe_delta_check = 0;
+	write_log(NULL, f54buf);
+	TOUCH_I("[%s] Delta Test End!\n", __func__);
+
+	return delta_test_result;
+}
 
 ssize_t _show_sd(struct i2c_client *client, char *buf)
 {
@@ -1982,8 +2034,8 @@ ssize_t _show_sd(struct i2c_client *client, char *buf)
 	int high_resistance = 0;
 	int adc_range = 0;
 	int sensor_speed = 0;
-	int noise_delta = 0;
-	int gnd = 0;
+	/*int noise_delta = 0;
+	int gnd = 0;*/
 	int Rsp_grp = 0;
 	int Rsp_short = 0;
 	int Rsp_im = 0;
@@ -2225,11 +2277,11 @@ ssize_t _show_sd(struct i2c_client *client, char *buf)
 			high_resistance = F54Test('g', 0, buf);
 			msleep(50);
 
-			noise_delta = F54Test('x', 0, buf);
+			/*noise_delta = F54Test('x', 0, buf);
 			msleep(100);
 
 			gnd = F54Test('y', 0, buf);
-			msleep(100);
+			msleep(100);*/
 
 			if (lower_sensor < 0 || upper_sensor < 0) {
 				TOUCH_I(
@@ -2473,12 +2525,11 @@ static ssize_t show_delta(struct i2c_client *client, char *buf)
 
 		if (is_product(ts, "PLG446", 6)) {
 			ret = F54Test('m', 0, buf);
-		}
-		else if(is_product(ts, "PLG468", 6)){
+		} else if(is_product(ts, "PLG468", 6)){
 			ret = F54Test('q', 2, buf);
 		} else {
-		TOUCH_I("[%s] -- Not support this test\n", __func__);
-		ret = snprintf(buf, PAGE_SIZE, "Not support this test\n");
+			TOUCH_I("[%s] -- Not support this test\n", __func__);
+			ret = snprintf(buf, PAGE_SIZE, "Not support this test\n");
 		}
 
 		touch_enable_irq(ts->client->irq);
@@ -2495,6 +2546,33 @@ static ssize_t show_delta(struct i2c_client *client, char *buf)
 				PAGE_SIZE - ret,
 				"ERROR: full_raw_cap failed.\n");
 
+	return ret;
+}
+
+static ssize_t show_delta_check(struct i2c_client *client, char *buf)
+{
+	int ret = 0;
+	int result = 0;
+
+	result = check_delta(client);
+	delta_test_result = 2;
+
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", result);
+
+	return ret;
+}
+
+static ssize_t store_delta_check(struct i2c_client *client,
+		const char *buf, size_t count)
+{
+	u32 value = 0;
+	int ret = 0;
+
+	if (sscanf(buf, "%d", &value) <= 0)
+		return count;
+
+	delta_test_result = value;
+	TOUCH_I("[%s] deltat_test_result: %d\n", __func__, delta_test_result);
 	return ret;
 }
 
@@ -4833,6 +4911,13 @@ static ssize_t show_lpwg_sd(struct i2c_client *client, char *buf)
 			wake_unlock(&ts->touch_rawdata);
 			mutex_unlock(&ts->pdata->thread_lock);
 		} else {
+			/*Block lpwg sd*/
+			if(true) {
+			    TOUCH_I("[PLG468] Can not execute lpwg_sd\n");
+			    ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			    "LPWG RawData : Not Support\n");
+			    return ret;
+			}
 			wake_lock(&ts->touch_rawdata);
 			lower_img = get_limit(TxChannelCount,
 					RxChannelCount,
@@ -4862,6 +4947,7 @@ static ssize_t show_lpwg_sd(struct i2c_client *client, char *buf)
 			}
 
 			/*Exception Handle of flat and curved state*/
+			/*
 			if(mfts_mode == 2 || mfts_mode == 3){
 			    TOUCH_I("Can not execute lpwg_sd, mfts_mode = %d\n",mfts_mode);
 			    ret += snprintf(buf + ret, PAGE_SIZE - ret,
@@ -4869,6 +4955,7 @@ static ssize_t show_lpwg_sd(struct i2c_client *client, char *buf)
 			    wake_unlock(&ts->touch_rawdata);
 			    return ret;
 			}
+			*/
 
 			msleep(1000);
 			SCAN_PDT();
@@ -4882,13 +4969,15 @@ static ssize_t show_lpwg_sd(struct i2c_client *client, char *buf)
 			ret = snprintf(buf,
 			PAGE_SIZE,
 			   "========RESULT=======\n");
-
-
+			/*
 			ret += snprintf(buf + ret, PAGE_SIZE - ret,
 			   "LPWG RawData : %s",
 			   (rsp_test == 1)
 			   ? "Pass\n"
 			   : "Fail\n");
+			*/
+			ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			   "LPWG RawData : Not Support\n");
 			mutex_unlock(&ts->pdata->thread_lock);
 			wake_unlock(&ts->touch_rawdata);
 
@@ -4975,6 +5064,9 @@ static LGE_TOUCH_ATTR(lpwg_disable, S_IRUGO | S_IWUSR,
 		show_lpwg_disable, store_lpwg_disable);
 static LGE_TOUCH_ATTR(lpwg_sd, S_IRUGO | S_IWUSR,
 		show_lpwg_sd, NULL);
+static LGE_TOUCH_ATTR(delta_check, S_IRUGO | S_IWUSR,
+		show_delta_check, store_delta_check);
+
 
 static struct attribute *synaptics_ts_attribute_list[] = {
 	&lge_touch_attr_firmware.attr,
@@ -5015,6 +5107,7 @@ static struct attribute *synaptics_ts_attribute_list[] = {
 	&lge_touch_attr_sp_link_touch_off.attr,
 	&lge_touch_attr_lpwg_disable.attr,
 	&lge_touch_attr_lpwg_sd.attr,
+	&lge_touch_attr_delta_check.attr,
 	NULL,
 };
 
@@ -5689,13 +5782,15 @@ enum error_type synaptics_ts_init(struct i2c_client *client)
 		DO_SAFE(synaptics_ts_page_data_read(client, LPWG_PAGE,
 					LPWG_PARTIAL_REG + 71,
 					1, &buf), error);
-		buf_array[0] = touch_ta_status ? 0x02 : 0x00;
+		buf_array[0] = (touch_ta_status || touch_wc_status)
+			? 0x02 : 0x00;
 		buf_array[1] = incoming_call_state ? 0x00 : 0x04;
-		TOUCH_I("%s: prev:0x%02X, next:0x%02X (TA: %d / Call: %d)\n",
+		TOUCH_I("%s: prev:0x%02X, next:0x%02X(TA:%d WC:%d Call:%d)\n",
 				__func__,
 				buf,
 				(buf & 0xF9) | (buf_array[0] | buf_array[1]),
-				touch_ta_status, incoming_call_state);
+				touch_ta_status, touch_wc_status,
+				incoming_call_state);
 		buf = (buf & 0xF9) | (buf_array[0] | buf_array[1]);
 		if (incoming_call_state) {
 			DO_SAFE(synaptics_ts_page_data_write(client, LPWG_PAGE,
@@ -6782,7 +6877,13 @@ enum error_type synaptics_ts_power(struct i2c_client *client, int power_ctrl)
 	case POWER_WAKE:
 		break;
 	case POWER_SLEEP_STATUS:
-		sleep_control(ts, ts->lpwg_ctrl.sensor, 0);
+		if (!ts->lpwg_ctrl.lpwg_mode &&
+				!ts->pdata->swipe_stat[1] && !mfts_mode) {
+			sleep_control(ts, 0, 1);
+			TOUCH_D(DEBUG_BASE_INFO, "LPWG Disabled : IC sleep\n");
+		} else {
+			sleep_control(ts, ts->lpwg_ctrl.sensor, 0);
+		}
 		power_ctrl = POWER_SLEEP;
 		break;
 	default:
@@ -7098,6 +7199,12 @@ enum error_type synaptics_ts_notify(struct i2c_client *client,
 		break;
 	case NOTIFY_PROXIMITY:
 		break;
+	case NOTIFY_WIRELESS_CHARGE:
+		if (is_product(ts, "PLG468", 6) && ts->lpwg_ctrl.screen) {
+			queue_delayed_work(touch_wq,
+					&ts->work_sleep, msecs_to_jiffies(0));
+		}
+		break;
 	default:
 		break;
 	}
@@ -7148,6 +7255,7 @@ enum error_type synaptics_ts_lpwg(struct i2c_client *client,
 {
 	int i;
 	u8 buffer[50] = {0};
+	u8 buf = 0;
 	struct synaptics_ts_data *ts =
 		(struct synaptics_ts_data *)get_touch_handle(client);
 	u8 mode = ts->lpwg_ctrl.lpwg_mode;
@@ -7354,6 +7462,23 @@ enum error_type synaptics_ts_lpwg(struct i2c_client *client,
 						DEVICE_CONTROL_NORMAL_OP
 						| DEVICE_CONTROL_CONFIGURED),
 					error);
+			/* Delta Test in MFTS */
+			if (mfts_mode) {
+				DO_SAFE(synaptics_ts_page_data_read(client,
+							ANALOG_PAGE,
+						ts->f54_reg.general_control,
+							1, &buf), error);
+				TOUCH_D(DEBUG_BASE_INFO, "no relax = 0x%02X\n",
+						buf);
+
+				buf = (buf & 0xFE) | 0x01;
+
+				DO_SAFE(synaptics_ts_page_data_write(client,
+							ANALOG_PAGE,
+						ts->f54_reg.general_control,
+							1, &buf), error);
+				swipe_delta_check = 1;
+			}
 		}
 		/* normal */
 		tci_control(ts, REPORT_MODE_CTRL, 0);
@@ -7558,18 +7683,19 @@ static void synaptics_change_sleepmode(struct i2c_client *client)
 		DO_SAFE(synaptics_ts_page_data_read(client, LPWG_PAGE,
 				LPWG_PARTIAL_REG + 71,
 				1, curr), error);
-		TOUCH_I("%s: prev:0x%02X, next:0x%02X (TA :%d)\n",
+		TOUCH_I("%s: prev:0x%02X, next:0x%02X (TA :%d WC :%d)\n",
 				__func__,
 				curr[0],
-				touch_ta_status ? (curr[0] & 0xff) | 0x02 :
-							(curr[0] & 0xff) & 0xfd,
-				touch_ta_status);
-		if (touch_ta_status)
+				(touch_ta_status || touch_wc_status)
+				? (curr[0] & 0xff) | 0x02 :
+				(curr[0] & 0xff) & 0xfd,
+				touch_ta_status, touch_wc_status);
+		if (touch_ta_status || touch_wc_status)
 			curr[0] = (curr[0] & 0xff) | 0x02;
 		else
 			curr[0] = (curr[0] & 0xff) & 0xfd;
 		DO_SAFE(synaptics_ts_page_data_write(client, LPWG_PAGE,
-				LPWG_PARTIAL_REG + 71,
+					LPWG_PARTIAL_REG + 71,
 				1, curr), error);
 	} else if (is_product(ts, "PLG446", 6)) {
 		if (touch_ta_status == 2 || touch_ta_status == 3) {

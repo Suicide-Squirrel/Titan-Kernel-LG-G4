@@ -64,6 +64,7 @@ struct unified_wlc_chip {
 	int					enabled;
 	bool				wlc_state;
 	struct mutex	wlc_rx_off_lock;
+	bool			wlc_rx_enabled;
 #ifdef CONFIG_LGE_PM_UNIFIED_WLC_ALIGNMENT
 	struct mutex align_lock;
 	unsigned int align_values;
@@ -272,11 +273,18 @@ static int pm_power_get_property_wireless(struct power_supply *psy,
 			if (!val->intval) {
 				mutex_lock(&chip->wlc_rx_off_lock);
 				gpio_set_value(chip->wlc_rx_off, 1);
-				msleep(100);
-				gpio_set_value(chip->wlc_rx_off, 0);
 				mutex_unlock(&chip->wlc_rx_off_lock);
+				chip->wlc_rx_enabled = 0;
 			}
 		}
+
+		if ((chip->wlc_rx_enabled == 0) && (usb_present == 0)) {
+			mutex_lock(&chip->wlc_rx_off_lock);
+			gpio_set_value(chip->wlc_rx_off, 0);
+			mutex_unlock(&chip->wlc_rx_off_lock);
+			chip->wlc_rx_enabled = 1;
+		}
+
 		break;
 #ifdef CONFIG_LGE_PM_UNIFIED_WLC_ALIGNMENT
 	case POWER_SUPPLY_PROP_ALIGNMENT:
@@ -542,6 +550,7 @@ static int unified_wlc_hw_init(struct unified_wlc_chip *chip)
 		pr_err("[WLC] failed to request gpio wlc_rx_off\n");
 		goto err_request_gpio1_failed;
 	}
+	chip->wlc_rx_enabled = 1;
 
 	return 0;
 /*

@@ -98,6 +98,9 @@ struct hdmi_edid_ctrl {
 	u8 spkr_alloc_data_block[MAX_SPKR_ALLOC_DATA_BLOCK_SIZE];
 	int sadb_size;
 	u8 edid_buf[MAX_EDID_BLOCK_SIZE];
+#ifdef CONFIG_SLIMPORT_4K_IMPROVEMENT
+	int has_4k_30p;
+#endif
 
 	struct hdmi_edid_sink_data sink_data;
 	struct hdmi_edid_init_data init_data;
@@ -140,9 +143,31 @@ static ssize_t hdmi_edid_sysfs_rda_audio_data_block(struct device *dev,
 
 	return ret;
 }
+
+#ifdef CONFIG_SLIMPORT_4K_IMPROVEMENT
+static ssize_t hdmi_tx_sysfs_rda_verify_4k_resolution(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct hdmi_edid_ctrl *edid_ctrl =
+		hdmi_get_featuredata_from_sysfs_dev(dev, HDMI_TX_FEAT_EDID);
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return -EINVAL;
+	}
+
+	return sprintf(buf, "%d\n", edid_ctrl->has_4k_30p);
+}
+#endif
+
 static DEVICE_ATTR(audio_data_block, S_IRUGO,
 	hdmi_edid_sysfs_rda_audio_data_block,
 	NULL);
+
+#ifdef CONFIG_SLIMPORT_4K_IMPROVEMENT
+static DEVICE_ATTR(verify_4k_30, S_IRUGO,
+		hdmi_tx_sysfs_rda_verify_4k_resolution, NULL);
+#endif
 
 static ssize_t hdmi_edid_sysfs_rda_spkr_alloc_data_block(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -471,6 +496,9 @@ static struct attribute *hdmi_edid_fs_attrs[] = {
 	&dev_attr_edid_audio_latency.attr,
 	&dev_attr_edid_video_latency.attr,
 	&dev_attr_res_info.attr,
+#ifdef CONFIG_SLIMPORT_4K_IMPROVEMENT
+	&dev_attr_verify_4k_30.attr,
+#endif
 	NULL,
 };
 
@@ -1157,6 +1185,7 @@ void limit_supported_video_format(u32 *video_format)
 	}
 }
 #endif
+
 static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 	u32 video_format)
 {
@@ -1174,6 +1203,12 @@ static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 		}
 #endif
 
+#ifdef CONFIG_SLIMPORT_4K_IMPROVEMENT
+	if (video_format == HDMI_VFRMT_3840x2160p30_16_9){
+		edid_ctrl->has_4k_30p = 1;
+		pr_err("%s : has_4k_30p == 1", __func__);
+	}
+#endif
 	if (video_format >= HDMI_VFRMT_MAX) {
 		DEV_ERR("%s: video format: %s is not supported\n", __func__,
 			msm_hdmi_mode_2string(video_format));
@@ -1776,6 +1811,9 @@ int hdmi_edid_read(void *input)
 		sizeof(edid_ctrl->spkr_alloc_data_block));
 	edid_ctrl->adb_size = 0;
 	edid_ctrl->sadb_size = 0;
+#ifdef CONFIG_SLIMPORT_4K_IMPROVEMENT
+	edid_ctrl->has_4k_30p = 0;
+#endif
 
 	hdmi_reset_resv_timing_info();
 
@@ -1996,6 +2034,7 @@ void hdmi_edid_set_video_resolution(void *input, u32 resolution)
 		DEV_ERR("%s: invalid input\n", __func__);
 		return;
 	}
+
 
 	edid_ctrl->video_resolution = resolution;
 

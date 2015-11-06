@@ -17,10 +17,76 @@
 #include <linux/rtc.h>
 #include <linux/sched.h>
 #include "rtc-core.h"
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+#include <linux/syscalls.h>
+#endif
 
 static dev_t rtc_devt;
 
 #define RTC_DEV_MAX 16 /* 16 RTCs should be enough for everyone... */
+
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+bool poweron_alarm;
+struct rtc_wkalrm g_poalarm;
+
+#define FTM_BLOCK_SIZE		2048
+#define FTM_RTC_OFFSET		200
+#define FTM_RTC_WRITE_SIZE	64
+
+static const char *ftmdev = "/dev/block/platform/f9824900.sdhci/by-name";
+
+void write_rtc_pwron_in_misc(struct rtc_wkalrm *alarm)
+{
+	int fd;
+	mm_segment_t old_fs;
+	int offset = 0;
+	char buf[FTM_RTC_WRITE_SIZE];
+	unsigned long rtc_time;
+
+	pr_info("[%s %d] write_rtc_pwron_in_misc start\n", __func__, __LINE__);
+
+	old_fs = get_fs();
+	set_fs(get_ds());
+
+	fd = sys_open(ftmdev, O_WRONLY, 0);
+	if (fd < 0) {
+		pr_err("[%s %d] sys_open error(%d)\n", __func__, __LINE__, fd);
+	}
+	else {
+		typedef struct {
+		uint32_t time;
+		uint8_t enabled;
+		uint8_t padding[3];
+		} alarm_info_type;
+
+		alarm_info_type alarm_info;
+
+		memset(&alarm_info, 0, sizeof(alarm_info_type));
+		rtc_tm_to_time(&alarm->time, &rtc_time);
+		alarm_info.time = rtc_time;
+		alarm_info.enabled = alarm->enabled;
+
+
+		memset(buf, 0, FTM_RTC_WRITE_SIZE);
+		offset = FTM_BLOCK_SIZE * FTM_RTC_OFFSET;
+		memcpy(buf, &alarm_info, sizeof(alarm_info_type));
+
+		sys_lseek(fd, offset, 0);
+
+		if (sys_write(fd, buf, sizeof(alarm_info_type)) != FTM_RTC_WRITE_SIZE)
+			pr_err("[%s %d] sys_write error\n", __func__, __LINE__);
+		else
+			pr_info("[%s %d] write rtc pwnon %s\n", __func__, __LINE__, buf);
+
+		sys_close(fd);
+	}
+
+	set_fs(old_fs);
+	pr_info("[%s %d] write_rtc_pwron_in_misc end\n", __func__, __LINE__);
+
+}
+EXPORT_SYMBOL_GPL(write_rtc_pwron_in_misc);
+#endif
 
 static int rtc_dev_open(struct inode *inode, struct file *file)
 {
@@ -359,10 +425,30 @@ static long rtc_dev_ioctl(struct file *file,
 
 	case RTC_AIE_ON:
 		mutex_unlock(&rtc->ops_lock);
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+		if(poweron_alarm == 0) {
+			poweron_alarm = 1;
+		}
+
+		pr_info("[%s %d] RTC_AIE_ON (%d),poweron_alarm (%d)\n",
+					__func__, __LINE__,	g_poalarm.enabled, poweron_alarm);
+#endif
 		return rtc_alarm_irq_enable(rtc, 1);
 
 	case RTC_AIE_OFF:
 		mutex_unlock(&rtc->ops_lock);
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+		if(poweron_alarm == 1) {
+			poweron_alarm = 0;
+		}
+
+		pr_info("[%s %d] RTC_AIE_OFF (%d),poweron_alarm (%d)\n",
+					__func__, __LINE__,	g_poalarm.enabled, poweron_alarm);
+		if (g_poalarm.enabled) {
+			g_poalarm.enabled = 0;
+			rtc_set_po_alarm(rtc, &g_poalarm);
+		}
+#endif
 		return rtc_alarm_irq_enable(rtc, 0);
 
 	case RTC_UIE_ON:
@@ -387,6 +473,23 @@ static long rtc_dev_ioctl(struct file *file,
 			return -EFAULT;
 
 		return rtc_set_alarm(rtc, &alarm);
+
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+	case RTC_DEVICE_UP:
+		mutex_unlock(&rtc->ops_lock);
+		if (copy_from_user(&g_poalarm, uarg, sizeof(g_poalarm))) {
+			pr_err("[%s %d] copy error, RTC_DEVICE_UP\n", __func__, __LINE__);
+			return -EFAULT;
+		}
+
+		pr_info("[%s]:RTC_DEVICE_UP(%d)\n",__func__,g_poalarm.enabled);
+		pr_info("[%s] Alarm set time %d-%02d-%02d %02d:%02d:%02d\n", __func__,
+				g_poalarm.time.tm_year + 1900, g_poalarm.time.tm_mon + 1,
+				g_poalarm.time.tm_mday,	g_poalarm.time.tm_hour,
+				g_poalarm.time.tm_min, g_poalarm.time.tm_sec);
+
+		return rtc_set_po_alarm(rtc, &g_poalarm);
+#endif
 
 	case RTC_WKALM_RD:
 		mutex_unlock(&rtc->ops_lock);
@@ -502,6 +605,10 @@ void __init rtc_dev_init(void)
 	err = alloc_chrdev_region(&rtc_devt, 0, RTC_DEV_MAX, "rtc");
 	if (err < 0)
 		pr_err("failed to allocate char dev region\n");
+
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+	memset(&g_poalarm, 0, sizeof(g_poalarm));
+#endif
 }
 
 void __exit rtc_dev_exit(void)

@@ -45,6 +45,9 @@
 #include <linux/ratelimit.h>
 #include "multiuser.h"
 
+/* the file system magic number */
+#define SDCARDFS_SUPER_MAGIC   0xb550ca10
+
 /* the file system name */
 #define SDCARDFS_NAME "sdcardfs"
 
@@ -109,7 +112,7 @@ typedef enum {
 	PERM_INHERIT,
 	/* This node is one level above a normal root; used for legacy layouts
 	 * which use the first level to represent user_id. */
-	PERM_LEGACY_PRE_ROOT,
+    PERM_PRE_ROOT,
 	/* This node is "/" */
 	PERM_ROOT,
 	/* This node is "/Android" */
@@ -118,20 +121,14 @@ typedef enum {
 	PERM_ANDROID_DATA,
 	/* This node is "/Android/obb" */
 	PERM_ANDROID_OBB,
-	/* This node is "/Android/user" */
-	PERM_ANDROID_USER,
+	/* This node is "/Android/media" */
+	PERM_ANDROID_MEDIA,
 } perm_t;
-
-/* Permissions structure to derive */
-typedef enum {
-	DERIVE_NONE,
-	DERIVE_LEGACY,
-	DERIVE_UNIFIED,
-} derive_t;
 
 typedef enum {
 	LOWER_FS_EXT4,
 	LOWER_FS_FAT,
+    LOWER_FS_EXFAT,
 } lower_fs_t;
 
 struct sdcardfs_sb_info;
@@ -195,9 +192,10 @@ struct sdcardfs_dentry_info {
 struct sdcardfs_mount_options {
 	uid_t fs_low_uid;
 	gid_t fs_low_gid;
-	gid_t write_gid;
-	int split_perms;
-	derive_t derive;
+    gid_t  sdfs_gid;
+    mode_t sdfs_mask;
+    bool multi_user;
+	uid_t owner_user;
 	lower_fs_t lower_fs;
 	unsigned int reserved_mb;
 };
@@ -377,18 +375,19 @@ static inline void sdcardfs_put_real_lower(const struct dentry *dent,
 }
 
 /* for packagelist.c */
-extern int get_caller_has_rw_locked(void *pkgl_id, derive_t derive);
 extern appid_t get_appid(void *pkgl_id, const char *app_name);
 extern int check_caller_access_to_name(struct inode *parent_node, const char* name,
-                                        derive_t derive, int w_ok, int has_rw);
+                                        int w_ok);
 extern int open_flags_to_access_mode(int open_flags);
-extern void * packagelist_create(gid_t write_gid);
+extern void * packagelist_create(const char *dev_name);
 extern void packagelist_destroy(void *pkgl_id);
 extern int packagelist_init(void);
 extern void packagelist_exit(void);
 
 /* for derived_perm.c */
 extern void setup_derived_state(struct inode *inode, perm_t perm,
+			userid_t userid, uid_t uid, gid_t gid, mode_t mode);
+extern void setup_derived_state_for_multiuser_gid(struct inode *inode, perm_t perm,
 			userid_t userid, uid_t uid, gid_t gid, mode_t mode);
 extern void get_derived_permission(struct dentry *parent, struct dentry *dentry);
 extern void update_derived_permission(struct dentry *dentry);

@@ -28,14 +28,25 @@
 #include <linux/fips.h>
 
 /*
- * FIPS_CRYPTO_TEST 1 : aes-cbc self-test failure
- * FIPS_CRYPTO_TEST 2 : hmac-sha256 self-test failure
- * FIPS_CRYPTO_TEST 3 : continous PRNG test fail
- * FIPS_CRYPTO_TEST 4 : Add log for algorithm self-test
- * FIPS_CRYPTO_TEST 5 : zeroization test.
-*/
-//set number what you want test
-#define FIPS_CRYPTO_TEST 4
+ * FIPS functional test flags, for use in functional testing.
+ *
+ * FIPS_FUNC_TEST 1 will make all AES self-tests fail
+ * FIPS_FUNC_TEST 2 will make the hmac(sha256) algorithm self-test fail
+ * FIPS_FUNC_TEST 3 will make the integrity check fail by corrupting the
+ * kernel image in memory
+ * FIPS_FUNC_TEST 4 will log the necessary information for the zeroization test
+ * FIPS_FUNC_TEST 5 will make the continous PRNG test fail by forcing two 
+ * consecutive generated blocks of bits to be identical
+ *
+ * All other values will have the same effect as the default value 0, which is
+ * that FIPS self and integrity tests will proceed as normal and log all output.
+ */
+
+#ifdef CONFIG_CRYPTO_FIPS
+#define FIPS_FUNC_TEST 0
+#else
+#define FIPS_FUNC_TEST 0
+#endif
 
 /* Crypto notification events. */
 enum {
@@ -61,13 +72,17 @@ extern struct rw_semaphore crypto_alg_sem;
 extern struct blocking_notifier_head crypto_chain;
 
 #ifdef CONFIG_CRYPTO_FIPS
+int fips_error(void);
 void set_fips_error(void);
+void fips_integrity_check(void);
+unsigned char *fips_ic_expected(void);
 #endif
 
 #ifdef CONFIG_PROC_FS
 #ifdef CONFIG_CRYPTO_FIPS
 void fips_init_proc(void);
-void crypto_init_proc(int * fips_error, int * cc_mode);
+void crypto_init_proc(int *fips_error);
+int testmgr_crypto_proc_init(void);
 #else
 void __init crypto_init_proc(void);
 #endif

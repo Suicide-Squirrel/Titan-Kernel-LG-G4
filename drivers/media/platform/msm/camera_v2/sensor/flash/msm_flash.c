@@ -20,7 +20,7 @@
 #include "msm_cci.h"
 
 #undef CDBG
-#define CDBG(fmt, args...) pr_err(fmt, ##args)
+#define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
 DEFINE_MSM_MUTEX(msm_flash_mutex);
 
@@ -217,6 +217,21 @@ static int32_t msm_flash_i2c_init(
 		flash_ctrl->power_setting_array.power_setting =
 			compat_ptr(power_setting_array32->power_setting);
 
+		/* Validate power_up array size and power_down array size */
+		if ((!flash_ctrl->power_setting_array.size) ||
+			(flash_ctrl->power_setting_array.size >
+			MAX_POWER_CONFIG) ||
+			(!flash_ctrl->power_setting_array.size_down) ||
+			(flash_ctrl->power_setting_array.size_down >
+			MAX_POWER_CONFIG)) {
+
+			pr_err("failed: invalid size %d, size_down %d",
+				flash_ctrl->power_setting_array.size,
+				flash_ctrl->power_setting_array.size_down);
+			kfree(power_setting_array32);
+			power_setting_array32 = NULL;
+			return -EINVAL;
+		}
 		/* Copy the settings from compat struct to regular struct */
 		msm_flash_copy_power_settings_compat(
 			flash_ctrl->power_setting_array.power_setting_a,
@@ -1095,7 +1110,7 @@ static int32_t msm_flash_platform_probe(struct platform_device *pdev)
 	flash_ctrl->msm_sd.sd.devnode->fops = &msm_flash_v4l2_subdev_fops;
 
 	if (flash_ctrl->flash_driver_type == FLASH_DRIVER_PMIC)
-		rc = msm_torch_create_classdev(pdev, &flash_ctrl);
+		rc = msm_torch_create_classdev(pdev, flash_ctrl);
 
 	CDBG("probe success\n");
 	return rc;

@@ -19,33 +19,6 @@
 #include "mdss_mdp.h"
 
 /*
- * mdss_report_panel_dead() - Sends the PANEL_ALIVE=0 status to HAL layer.
- * @pstatus_data   : dsi status data
- *
- * This function is called if the panel fails to respond as expected to
- * the register read/BTA or if the TE signal is not coming as expected
- * from the panel. The function sends the PANEL_ALIVE=0 status to HAL
- * layer.
- */
-static void mdss_report_panel_dead(struct dsi_status_data *pstatus_data)
-{
-	char *envp[2] = {"PANEL_ALIVE=0", NULL};
-	struct mdss_panel_data *pdata =
-		dev_get_platdata(&pstatus_data->mfd->pdev->dev);
-	if (!pdata) {
-		pr_err("%s: Panel data not available\n", __func__);
-		return;
-	}
-
-	pdata->panel_info.panel_dead = true;
-	kobject_uevent_env(&pstatus_data->mfd->fbi->dev->kobj,
-		KOBJ_CHANGE, envp);
-	pr_err("%s: Panel has gone bad, sending uevent - %s\n",
-		__func__, envp[0]);
-	return;
-}
-
-/*
  * mdss_check_te_status() - Check the status of panel for TE based ESD.
  * @ctrl_pdata   : dsi controller data
  * @pstatus_data : dsi status data
@@ -55,9 +28,11 @@ static void mdss_report_panel_dead(struct dsi_status_data *pstatus_data)
  * after 'interval' milliseconds. If the TE IRQ is not ready, the workqueue
  * gets re-scheduled. Otherwise, report the panel to be dead due to ESD attack.
  */
-static void mdss_check_te_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
+static bool mdss_check_te_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		struct dsi_status_data *pstatus_data, uint32_t interval)
 {
+	bool ret;
+
 	/*
 	 * During resume, the panel status will be ON but due to race condition
 	 * between ESD thread and display UNBLANK (or rather can be put as
@@ -66,14 +41,14 @@ static void mdss_check_te_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 	 * first TE interrupt arrives after the TE IRQ line is enabled. For such
 	 * cases, re-schedule the ESD thread.
 	 */
-	if (!atomic_read(&ctrl_pdata->te_irq_ready)) {
+	ret = !atomic_read(&ctrl_pdata->te_irq_ready);
+	if (ret) {
 		schedule_delayed_work(&pstatus_data->check_status,
 			msecs_to_jiffies(interval));
 		pr_debug("%s: TE IRQ line not enabled yet\n", __func__);
-		return;
 	}
 
-	mdss_report_panel_dead(pstatus_data);
+	return ret;
 }
 
 /*
@@ -135,8 +110,10 @@ void mdss_check_dsi_ctrl_status(struct work_struct *work, uint32_t interval)
 	}
 
 	if (ctrl_pdata->status_mode == ESD_TE) {
-		mdss_check_te_status(ctrl_pdata, pstatus_data, interval);
-		return;
+		if (mdss_check_te_status(ctrl_pdata, pstatus_data, interval))
+			return;
+		else
+			goto status_dead;
 	}
 
 
@@ -193,6 +170,18 @@ void mdss_check_dsi_ctrl_status(struct work_struct *work, uint32_t interval)
 			schedule_delayed_work(&pstatus_data->check_status,
 				msecs_to_jiffies(interval));
 		else
-			mdss_report_panel_dead(pstatus_data);
+			goto status_dead;
 	}
+
+	if (pdata->panel_info.panel_force_dead) {
+		pr_debug("force_dead=%d\n", pdata->panel_info.panel_force_dead);
+		pdata->panel_info.panel_force_dead--;
+		if (!pdata->panel_info.panel_force_dead)
+			goto status_dead;
+	}
+
+	return;
+
+status_dead:
+	mdss_fb_report_panel_dead(pstatus_data->mfd);
 }

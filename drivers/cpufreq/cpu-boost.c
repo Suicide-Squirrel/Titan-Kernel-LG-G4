@@ -387,7 +387,7 @@ static int boost_mig_sync_thread(void *data)
 	return 0;
 }
 
-static __attribute__ ((aligned(4096))) int noinline boost_migration_notify(struct notifier_block *nb,
+static int boost_migration_notify(struct notifier_block *nb,
 				unsigned long unused, void *arg)
 {
 	struct migration_notify_data *mnd = arg;

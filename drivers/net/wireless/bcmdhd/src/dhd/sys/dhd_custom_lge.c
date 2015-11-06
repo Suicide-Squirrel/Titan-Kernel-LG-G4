@@ -449,27 +449,6 @@ int set_softap_params(dhd_pub_t *dhd)
 		dhd_dscpmap_enable = 1;
 #endif
 
-#ifndef BCM4339_CHIP
-		iovar_set = 0;
-		bcm_mkiovar("ampdu_rts", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
-#endif
-
-#ifdef BCM4339_CHIP
-		iovar_set = 6;
-		bcm_mkiovar("ampdu_retry_limit", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
-
-		iovar_set = 4;
-		bcm_mkiovar("ampdu_rr_retry_limit", (char *)&iovar_set, 4, iov_buf,
-		 sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
-#endif
-
-#ifdef BCM4334_CHIP
-		iovar_set = 1;
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_FAKEFRAG, (char *)&iov_buf, sizeof(iov_buf), TRUE, 0);
-
 		iovar_set = 10;
 		bcm_mkiovar("ampdu_retry_limit", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
 		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
@@ -477,7 +456,35 @@ int set_softap_params(dhd_pub_t *dhd)
 		iovar_set = 5;
 		bcm_mkiovar("ampdu_rr_retry_limit", (char *)&iovar_set, 4, iov_buf,
 		 sizeof(iov_buf));
+		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);	
+
+#if defined(BCM43455_CHIP) || defined(BCM4339_CHIP)
+		iovar_set = 13;
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_SRL, (char *)&iovar_set,
+			sizeof(iovar_set), TRUE, 0)) < 0) {
+			DHD_ERROR(("%s Set SRL failed  %d\n", __FUNCTION__, ret));
+		}
+
+		iovar_set = 13;
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_LRL, (char *)&iovar_set,
+			sizeof(iovar_set), TRUE, 0)) < 0) {
+			DHD_ERROR(("%s Set LRL failed  %d\n", __FUNCTION__, ret));
+		}
+
+		iovar_set = 0;
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_FAKEFRAG, (char *)&iovar_set,
+			sizeof(iovar_set), TRUE, 0)) < 0) {
+			DHD_ERROR(("%s Set frameburst failed  %d\n", __FUNCTION__, ret));
+		}
+#endif  /* defined(BCM43455_CHIP) || defined(BCM4339_CHIP) */
+
+#ifdef BCM4334_CHIP
+		iovar_set = 0;
+		bcm_mkiovar("ampdu_rts", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
 		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
+
+		iovar_set = 1;
+		dhd_wl_ioctl_cmd(dhd, WLC_SET_FAKEFRAG, (char *)&iov_buf, sizeof(iov_buf), TRUE, 0);
 #endif
 
 #if defined(BCM4335_CHIP) || defined(BCM4339_CHIP)

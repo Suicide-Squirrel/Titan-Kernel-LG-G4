@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,6 +23,7 @@ enum load_calc_quirks {
 	LOAD_CALC_NO_QUIRKS = 0,
 	LOAD_CALC_IGNORE_TURBO_LOAD = 1 << 0,
 	LOAD_CALC_IGNORE_THUMBNAIL_LOAD = 1 << 1,
+	LOAD_CALC_IGNORE_NON_REALTIME_LOAD = 1 << 2,
 };
 
 struct msm_vidc_core *get_vidc_core(int core_id);
@@ -86,4 +87,5 @@ int msm_comm_get_inst_load(struct msm_vidc_inst *inst,
 			enum load_calc_quirks quirks);
 int msm_comm_get_load(struct msm_vidc_core *core,
 			enum session_type type, enum load_calc_quirks quirks);
+bool msm_comm_turbo_session(struct msm_vidc_inst *inst);
 #endif

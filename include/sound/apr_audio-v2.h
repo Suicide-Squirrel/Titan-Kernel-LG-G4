@@ -7316,9 +7316,7 @@ struct afe_param_id_clip_bank_sel {
 #define Q6AFE_LPASS_OSR_CLK_DISABLE		     0x0
 
 /* Supported Bit clock values */
-#ifdef CONFIG_SND_USE_QUAT_MI2S
 #define Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ	0xBB8000
-#endif
 #define Q6AFE_LPASS_IBIT_CLK_8_P192_MHZ		0x7D0000
 #define Q6AFE_LPASS_IBIT_CLK_6_P144_MHZ		0x5DC000
 #define Q6AFE_LPASS_IBIT_CLK_4_P096_MHZ		0x3E8000
@@ -7627,6 +7625,12 @@ struct afe_port_cmd_set_aanc_acdb_table {
 #define CUSTOM_STEREO_INDEX_PARAM	0x0002
 #define Q14_GAIN_ZERO_POINT_FIVE	0x2000
 #define Q14_GAIN_UNITY			0x4000
+
+struct default_chmixer_param_id_coeff {
+	uint32_t	index;
+	uint16_t	num_output_channels;
+	uint16_t	num_input_channels;
+};
 
 struct afe_svc_cmd_set_clip_bank_selection {
 	struct apr_hdr hdr;

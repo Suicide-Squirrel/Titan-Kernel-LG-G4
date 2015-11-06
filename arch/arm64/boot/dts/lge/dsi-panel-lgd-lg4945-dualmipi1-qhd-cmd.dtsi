@@ -1,0 +1,310 @@
+/* Copyright (c) 2014, Code Aurora Forum. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	dsi_dual_lgd_sic_cmd_1: qcom,mdss_dsi_lgd_lg4945_1440p_mipi1_cmd {
+		qcom,mdss-dsi-panel-name = "LGD SIC LG4945 INCELL 1440p Dual 1 cmd mode dsi panel";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi1>;
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-destination = "display_2";
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-panel-width = <720>;
+		qcom,mdss-dsi-panel-height = <2720>;
+		qcom,mdss-dsi-h-front-porch = <60>;
+		qcom,mdss-dsi-h-back-porch = <88>;
+		qcom,mdss-dsi-h-pulse-width = <4>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-v-back-porch = <250>;
+		qcom,mdss-dsi-v-front-porch = <56>;
+		qcom,mdss-dsi-v-pulse-width = <1>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-dsi-traffic-mode = "burst_mode";
+		qcom,mdss-dsi-lane-map = "lane_map_0123";
+		qcom,mdss-dsi-lane-hs = <1>;
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,cmd-sync-wait-broadcast;
+		qcom,cmd-sync-wait-trigger;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-hor-line-idle = <0 40 256>,
+						<40 120 128>,
+						<120 240 64>;
+		qcom,mdss-dsi-panel-timings = [F7 3A 28 00 6E 72
+									2C 3E 31 03 04 00];
+		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
+		qcom,mdss-dsi-t-clk-post = <0x02>;
+		lge,mdss-dsi-t-clk-post_for_jdi_ab = <0x32>;
+		qcom,mdss-dsi-t-clk-pre = <0x2D>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,suspend-ulps-enabled;
+		qcom,mdss-dsi-tx-eot-append;
+		/* Partial update */
+		qcom,partial-update-enabled;
+		qcom,partial-update-roi-merge;
+		qcom,mdss-dsi-on-command = [ /*initset v0.7*/
+			/* Page Address Set */
+			39 01 00 00 00 00 05 2B 00 00 0A 9F
+			/* Manufacturer Command Protection */
+			15 01 00 00 00 00 02 B0 AC
+			/* Tearing Effect Line on */
+			15 01 00 00 00 00 02 35 00
+			/* Write Control Display */
+			15 01 00 00 00 00 02 53 24
+			/* Write Display Brightness */
+			15 01 00 00 00 00 02 51 FF
+			/* Write Content Adaptive Brightness Control */
+			15 01 00 00 00 00 02 55 81
+			/* Display Control 1 */
+			39 01 00 00 00 00 08 B3 0A 14 28 C8 1A 94 02
+			/* Display Control 2 */
+			39 01 00 00 00 00 0B B4 91 08 0A 0A 0A 0A 14 14 14 14
+			/* Display Control 3 */
+			39 01 00 00 00 00 0F B5 28 10 20 C8 22 09 09 09 09 00 68 E8 28 28
+			/* Display Control 4 */
+			39 01 00 00 00 00 06 B6 16 0F 00 08 0A
+			/* Panel Setting */
+			39 01 00 00 00 00 06 B8 60 91 A7 90 01
+			/* Power Control 1 */
+			39 01 00 00 00 00 06 C1 01 00 F0 C2 CF
+			/* Power Control 2 */
+			15 01 00 00 00 00 02 C2 CC
+			/* Power Control 3 */
+			39 01 00 00 00 00 06 C3 35 88 22 26 21
+			/* Power Control 5 */
+			39 01 00 00 00 00 08 C5 22 20 A0 2D 14 36 02
+			/* Abrupt Power Off Control */
+			15 01 00 00 00 00 02 C9 9F
+			/* U2 Control */
+			39 01 00 00 00 00 0C CB 86 56 0F 77 06 01 16 0F 08 0A 36
+			/* Touch Control */
+			39 01 00 00 00 00 10 CD F0 4C 0D 3F 4F 22 22 01 0A 01 01 54 AA 64 64
+			/* Positive Gamma Curve for Red */
+			39 01 00 00 00 00 0E D0 00 12 1D 2B 36 3E 54 4D 43 3A 30 2F 03
+			/* Negative Gamma Curve for Red */
+			39 01 00 00 00 00 0E D1 00 12 1D 2B 36 3E 54 4D 43 3A 30 2F 03
+			/* Positive Gamma Curve for  Green */
+			39 01 00 00 00 00 0E D2 00 12 1F 2C 37 3F 51 48 3B 2C 13 00 03
+			/* Negative Gamma Curve for Green */
+			39 01 00 00 00 00 0E D3 00 12 1F 2C 37 3F 51 48 3B 2C 13 00 03
+			/* Positive Gamma Curve for Blue */
+			39 01 00 00 00 00 0E D4 00 12 1F 2C 37 3F 51 48 3B 2C 13 00 03
+			/* Negative Gamma Curve for Blue */
+			39 01 00 00 00 00 0E D5 00 12 1F 2C 37 3F 51 48 3B 2C 13 00 03
+			/* Left Side GIP Pad Setting */
+			39 01 00 00 00 00 16 D6 22 2D 4C 6E 22 22 61 65 67 69 6B 22 71 55 55 55 03 55 55 55 03
+			/* Right Side GIP Pad Setting */
+			39 01 00 00 00 00 16 D7 22 2D 4C 6E 22 22 60 64 66 68 6a 22 71 55 55 55 03 55 55 55 03
+			/* Left Side MUX Pad Setting */
+			39 01 00 00 00 00 07 D8 78 77 76 75 74 73
+			/* Right Side MUX Pad Setting */
+			39 01 00 00 00 00 07 D9 78 77 76 75 74 73
+			/* LFD Control */
+			39 01 00 00 00 00 08 CA BD BD CC 0C 00 93 00
+			/* OTP1 */
+			39 01 00 00 00 00 04 E8 00 00 00
+			/* Image Enhancement Control 1 */
+			15 01 00 00 00 00 02 F0 40
+			/* Image Enhancement Control 2 */
+			39 01 00 00 00 00 18 F3 00 47 87 D0 FF A0 00 40 87 D0 FF E0 00 40 80 C0 FF 00 00 40 80 C0 FF
+			/* Backlight Control */
+			39 01 00 00 00 00 07 B9 23 67 70 78 7F 80
+			/* SRE Control */
+			39 01 00 00 00 00 19 FC 0F 60 75 87 A8 C0 E4 F0 00 40 70 90 A0 B0 C0 F0 00 20 40 60 80 A0 C0 E0
+			/* Switchable Power Domain Control */
+			39 01 00 00 00 00 03 C6 18 55
+			/* Display On */
+			05 01 00 00 00 00 01 29
+			/* Sleep Out */
+			05 01 00 00 64 00 01 11	// Delay 100ms
+			];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command = [
+			05 01 00 00 0A 00 02 28 00
+			05 01 00 00 55 00 02 10 00  /* 85ms */
+			];
+		qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+		qcom,cont-splash-enabled;
+		/* SRE cmds set START*/
+		qcom,sre-control-dsi-state = "dsi_lp_mode";
+		lge,sre-cmds-off = [
+			15 01 00 00 00 00 02 55 81
+		];
+		lge,sre-cmds-on = [
+			15 01 00 00 00 00 02 55 C1
+		];
+		/* SRE cmds set END*/
+
+		qcom,img-tune-control-dsi-state = "dsi_lp_mode";
+		lge,sharpness-cmds-on = [
+			15 01 00 00 00 00 02 F0 42
+			39 01 00 00 00 00 05 F2 01 00 00 00
+		];
+		lge,sharpness-cmds-off = [
+			39 01 00 00 00 00 05 F2 01 00 00 00
+			15 01 00 00 00 00 02 F0 40
+		];
+		lge,color_enhancement-cmds-on = [
+			15 01 00 00 00 00 02 F0 42
+			39 01 00 00 00 00 18 F3 00 47 87 D0 FF A0 00 40 87 D0 FF E0 00 40 80 C0 FF 00 00 40 80 C0 FF
+		];
+		lge,color_enhancement-cmds-off = [
+			39 01 00 00 00 00 18 F3 00 47 87 D0 FF A0 00 40 87 D0 FF E0 00 40 80 C0 FF 00 00 40 80 C0 FF
+			15 01 00 00 00 00 02 F0 40
+		];
+
+		/* Panel mode switch cmds set v0.5*/
+		qcom,mode-control-dsi-state = "dsi_lp_mode";
+		lge,mode-change-cmds-u1 = [ /* u3 ->u1 */
+			/* Write Content Adaptive Brightness Control */
+			15 01 00 00 00 00 02 55 81
+			/* Page Address Set */
+			39 01 00 00 00 00 05 2B 00 00 0A 9F
+			/* Partial Area */
+			39 01 00 00 00 00 05 30 00 A0 0A 9F
+			/* Partial Mode On */
+			05 01 00 00 00 00 01 12
+		];
+		lge,mode-change-cmds-u2 = [ /* u3 ->u2 */
+			/* Write Content Adaptive Brightness Control */
+			15 01 00 00 00 00 02 55 00
+			/* Tearing Effect Line Off */
+			05 01 00 00 00 00 01 34
+			/* Page Address Set */
+			39 01 00 00 00 00 05 2B 00 00 00 9F
+			/* Partial Area */
+			39 01 00 00 00 00 05 30 00 00 00 9F
+			/* Partial Mode On */
+			05 01 00 00 00 00 01 12
+		];
+		lge,mode-change-cmds-u3 = [ /* u1->u3 and u2->u3 */
+			/* Write Content Adaptive Brightness Control */
+			15 01 00 00 00 00 02 55 81
+			/* Page Address Set */
+			39 01 00 00 00 00 05 2B 00 00 0A 9F
+			/* Normmal DisplayMode On */
+			05 01 00 00 00 00 01 13
+		];
+		lge,mode-change-cmds-u3-ready = [ /* u2->u3 ready */
+			/*  Memory Enable*/
+			39 01 00 00 00 00 06 E7 00 00 00 30 00
+			/* Page Address Set */
+			39 01 00 00 00 00 05 2B 00 00 0A 9F
+		];
+		qcom,blmap-size = <256>;
+		qcom,blmap = <
+			  0
+			  105 105 105 105 105 105 105 105 105 105
+			  105 106 106 106 107 107 108 108 108 109
+			  109 109 110 110 112 114 115 117 119 121
+			  123 125 126 128 130 132 134 136 138 140
+			  142 144 145 147 149 151 153 155 157 163
+			  169 174 180 186 192 198 204 209 215 221
+			  221 222 222 223 223 224 224 225 225 226
+			  226 227 227 239 251 263 275 287 298 310
+			  322 334 346 358 366 374 381 389 397 405
+			  412 420 428 436 443 451 459 471 483 494
+			  506 518 530 541 553 565 577 588 600 610
+			  620 630 640 650 660 670 680 690 700 710
+			  720 732 745 757 770 782 794 807 819 832
+			  844 856 869 881 897 912 928 944 959 975
+			  991 1007 1022 1038 1054 1069 1085 1105 1124 1144
+			  1164 1184 1203 1223 1243 1262 1282 1301 1320 1339
+			  1358 1377 1396 1415 1434 1453 1472 1491 1510 1529
+			  1548 1568 1588 1609 1629 1649 1669 1689 1709 1730
+			  1750 1770 1790 1814 1838 1863 1887 1911 1935 1959
+			  1983 2008 2032 2056 2080 2103 2126 2149 2172 2195
+			  2218 2241 2264 2287 2310 2333 2356 2388 2420 2452
+			  2485 2517 2549 2581 2613 2645 2678 2710 2742 2774
+			  2806 2837 3869 2900 2932 2963 2995 3026 3058 3090
+			  3121 3153 3185 3217 3249 3281 3313 3345 3377 3409
+			  3441 3473 3505 3537 3577 3618 3658 3698 3738 3779
+			  3819 3859 3899 3940 3980
+		>;
+		qcom,mdss-pan-physical-width-dimension = <68>;
+		qcom,mdss-pan-physical-height-dimension = <121>;
+
+		lge,panel_power_sequence = <
+			0    /*pre_msm_dss_enable_vreg*/
+			0    /*post_msm_dss_enable_vreg*/
+			0    /*pre_mdss_dsi_panel_reset*/
+			0    /*post_mdss_dsi_panel_reset*/
+			1    /*pre_mdss_dsi_panel_power_ctrl*/
+			1    /*post_mdss_dsi_panel_power_ctrl*/
+			0    /*post_mdss_dsi_blank*/
+			1    /*post_mdss_dsi_panel_on*/
+			0    /*post_mdss_dsi_panel_off*/
+			1    /*lge_mdss_dsi_event_handler*/
+			1    /*lge_msm_dss_enable_vreg*/
+			1    /*lge_mdss_dsi_request_gpios*/
+			1    /*lge_mdss_dsi_panel_reset*/
+			0    /*lge_mdss_dsi_lane_config*/
+			1    /*lge_mdss_dsi_ctrl_probe*/
+			1    /*lge_dsi_panel_device_register*/
+			1    /*lge_mdss_panel_parse_dt*/
+			0    /*lge_panel_device_create*/
+			1    /*lge_mdss_fb_set_bl_brightness*/
+			1    /*lge_mdss_fb_blank_unblank*/
+			1    /*lge_mdss_dsi_cmdlist_commit*/
+			1    /*lge_mdss_dsi_panel_init*/
+			1    /*lge_dump_mdss_reg*/
+			1    /*lge_mdss_xlog_tout_handler_default*/
+			0    /*lge_mdss_create_xlog_debug*/
+			>;
+	};
+};
+
+&mdss_dsi1 {
+	qcom,dsi-pref-prim-pan = <&dsi_dual_lgd_sic_cmd_1>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 78 0>;
+	/* qcom,dsi-panel-bias-vreg; */
+	qcom,platform-vddio_en-gpio = <&msm_gpio 110 0>;
+	qcom,platform-avdd-gpio = <&msm_gpio 89 0>;
+
+	vpnl_touch-supply =  <&pm8994_l22>;
+
+	qcom,panel-supply-entries {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vpnl_touch";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+	};
+};

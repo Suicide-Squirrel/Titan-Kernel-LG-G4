@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -207,7 +207,7 @@ static void hfi_process_evt_release_buffer_ref(
 	callback(VIDC_EVENT_CHANGE, &cmd_done);
 }
 
-void hfi_process_sys_error(
+static void hfi_process_sys_error(
 		msm_vidc_callback callback, u32 device_id)
 {
 	struct msm_vidc_cb_cmd_done cmd_done = {0};

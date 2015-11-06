@@ -1270,13 +1270,13 @@ static void _qcrypto_tfm_complete(struct crypto_priv *cp, u32 type,
 	}
 again:
 	spin_lock_irqsave(&cp->lock, flags);
-	if (list_empty(plist)) {
+	if (!plist||list_empty(plist)) {
 		arsp = NULL; /* nothing to do */
 		pending_list = false;
 	} else {
 		arsp = list_first_entry(plist,
 				struct  qcrypto_resp_ctx, list);
-		if (arsp->res == -EINPROGRESS)
+		if (!arsp||arsp->res == -EINPROGRESS)
 			arsp = NULL;  /* still in progress */
 		else
 			list_del(&arsp->list); /* request is complete */

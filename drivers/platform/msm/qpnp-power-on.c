@@ -297,12 +297,10 @@ static int qpnp_pon_set_dbc(struct qpnp_pon *pon, u32 delay)
 	int rc = 0;
 	u32 delay_reg;
 
-	if (!pon->pon_input)
-		return -EINVAL;
-
-	mutex_lock(&pon->pon_input->mutex);
 	if (delay == pon->dbc)
-		goto unlock;
+		goto out;
+	if (pon->pon_input)
+		mutex_lock(&pon->pon_input->mutex);
 
 	if (delay < QPNP_PON_MIN_DBC_US)
 		delay = QPNP_PON_MIN_DBC_US;
@@ -321,7 +319,9 @@ static int qpnp_pon_set_dbc(struct qpnp_pon *pon, u32 delay)
 	pon->dbc = delay;
 
 unlock:
-	mutex_unlock(&pon->pon_input->mutex);
+	if (pon->pon_input)
+		mutex_unlock(&pon->pon_input->mutex);
+out:
 	return rc;
 }
 
@@ -1595,7 +1595,6 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 		return rc;
 	}
 
-	boot_reason = ffs(pon_sts);
 
 	index = ffs(pon_sts) - 1;
 	cold_boot = !qpnp_pon_is_warm_reset();
@@ -1751,6 +1750,8 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 		list_add(&pon->list, &spon_dev_list);
 		mutex_unlock(&spon_list_mutex);
 		pon->is_spon = true;
+	} else {
+		boot_reason = ffs(pon_sts);
 	}
 
 	/* config whether store the hard reset reason */

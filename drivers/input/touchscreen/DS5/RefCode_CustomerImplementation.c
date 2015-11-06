@@ -31,6 +31,9 @@
 #include <linux/uaccess.h>	/* for file access */
 #include <linux/firmware.h>
 
+#define MAX_LOG_FILE_SIZE	(10 * 1024 * 1024)	/* 10 MBytes */
+#define MAX_LOG_FILE_COUNT	(4)
+
 static char line[98304] = {0};
 int UpperImage[32][32];
 int LowerImage[32][32];
@@ -58,6 +61,91 @@ void delayMS(int val)
 	msleep(val);
 }
 
+void log_file_size_check(char *filename)
+{
+	struct file *file;
+	loff_t file_size = 0;
+	int i = 0;
+	char buf1[1024] = {0};
+	char buf2[1024] = {0};
+	mm_segment_t old_fs = get_fs();
+	int ret = 0;
+
+	set_fs(KERNEL_DS);
+
+	if (filename) {
+		file = filp_open(filename, O_RDONLY, 0666);
+		sys_chmod(filename, 0666);
+	} else {
+		TOUCH_E("%s : filename is NULL, can not open FILE\n",
+				__func__);
+		goto error;
+	}
+
+	if (IS_ERR(file)) {
+		TOUCH_I("%s : ERR(%ld) Open file error [%s]\n",
+				__func__, PTR_ERR(file), filename);
+		goto error;
+	}
+
+	file_size = vfs_llseek(file, 0, SEEK_END);
+	TOUCH_I("%s : [%s] file_size = %lld\n",
+			__func__, filename, file_size);
+
+	filp_close(file, 0);
+
+	if (file_size > MAX_LOG_FILE_SIZE) {
+		TOUCH_I("%s : [%s] file_size(%lld) > MAX_LOG_FILE_SIZE(%d)\n",
+				__func__, filename, file_size, MAX_LOG_FILE_SIZE);
+
+		for (i = MAX_LOG_FILE_COUNT - 1; i >= 0; i--) {
+			if (i == 0)
+				sprintf(buf1, "%s", filename);
+			else
+				sprintf(buf1, "%s.%d", filename, i);
+
+			ret = sys_access(buf1, 0);
+
+			if (ret == 0) {
+				TOUCH_I("%s : file [%s] exist\n", __func__, buf1);
+
+				if (i == (MAX_LOG_FILE_COUNT - 1)) {
+					if (sys_unlink(buf1) < 0) {
+						TOUCH_E(
+								"%s : failed to remove file [%s]\n",
+								__func__, buf1);
+						goto error;
+					}
+
+					TOUCH_I(
+							"%s : remove file [%s]\n",
+							__func__, buf1);
+				} else {
+					sprintf(buf2, "%s.%d", filename,
+							(i + 1));
+
+					if (sys_rename(buf1, buf2) < 0) {
+						TOUCH_E(
+								"%s : failed to rename file [%s] -> [%s]\n",
+								__func__, buf1, buf2);
+						goto error;
+					}
+
+					TOUCH_I(
+							"%s : rename file [%s] -> [%s]\n",
+							__func__, buf1, buf2);
+				}
+			} else {
+				TOUCH_I("%s : file [%s] does not exist (ret = %d)\n", __func__, buf1, ret);
+			}
+		}
+	}
+
+error:
+	set_fs(old_fs);
+	return;
+}
+
 int write_file(char *filename, char *data)
 {
 	struct file *file;
@@ -70,7 +158,7 @@ int write_file(char *filename, char *data)
 				filename);
 		return PTR_ERR(file);
 	}
-
+	sys_chmod(filename, 0666);
 	vfs_write(file, data, strlen(data), &pos);
 	filp_close(file, 0);
 
@@ -105,16 +193,19 @@ void _write_time_log(char *filename, char *data, int data_include)
 	if (filename == NULL) {
 		switch (mfts_mode) {
 		case 0:
-			fname = "/mnt/sdcard/touch_self_test.txt";
+			if (factory_boot)
+				fname = "/data/logger/touch_self_test.txt";
+			else
+				fname = "/sdcard/touch_self_test.txt";
 			break;
 		case 1:
-			fname = "/mnt/sdcard/touch_self_test_mfts_folder.txt";
+			fname = "/data/logger/touch_self_test_mfts_folder.txt";
 			break;
 		case 2:
-			fname = "/mnt/sdcard/touch_self_test_mfts_flat.txt";
+			fname = "/data/logger/touch_self_test_mfts_flat.txt";
 			break;
 		case 3:
-			fname = "/mnt/sdcard/touch_self_test_mfts_curved.txt";
+			fname = "/data/logger/touch_self_test_mfts_curved.txt";
 			break;
 		default:
 			TOUCH_I("%s : not support mfts_mode\n", __func__);
@@ -127,6 +218,7 @@ void _write_time_log(char *filename, char *data, int data_include)
 	if (fname) {
 		file = filp_open(fname,
 			O_WRONLY|O_CREAT|O_APPEND, 0666);
+		sys_chmod(fname, 0666);
 	} else {
 		TOUCH_E("%s : fname is NULL, can not open FILE\n", __func__);
 		return;
@@ -156,10 +248,11 @@ int _write_log(char *filename, char *data)
 	struct file *file;
 	loff_t pos = 0;
 	int flags;
-	char *fname = "/mnt/sdcard/touch_self_test.txt";
-	char *fname_mfts_folder = "/mnt/sdcard/touch_self_test_mfts_folder.txt";
-	char *fname_mfts_flat = "/mnt/sdcard/touch_self_test_mfts_flat.txt";
-	char *fname_mfts_curved = "/mnt/sdcard/touch_self_test_mfts_curved.txt";
+	char *fname = "/data/logger/touch_self_test.txt";
+	char *fname_normal_boot = "/sdcard/touch_self_test.txt";
+	char *fname_mfts_folder = "/data/logger/touch_self_test_mfts_folder.txt";
+	char *fname_mfts_flat = "/data/logger/touch_self_test_mfts_flat.txt";
+	char *fname_mfts_curved = "/data/logger/touch_self_test_mfts_curved.txt";
 	int cap_file_exist = 0;
 
 	if (f54_window_crack || f54_window_crack_check_mode == 0) {
@@ -171,7 +264,10 @@ int _write_log(char *filename, char *data)
 			flags |= O_APPEND;
 			switch (mfts_mode) {
 			case 0:
-				filename = fname;
+				if (factory_boot)
+					filename = fname;
+				else
+					filename = fname_normal_boot;
 				break;
 			case 1:
 				filename = fname_mfts_folder;
@@ -193,6 +289,7 @@ int _write_log(char *filename, char *data)
 
 		if (filename) {
 			file = filp_open(filename, flags, 0666);
+			sys_chmod(filename, 0666);
 		} else {
 			TOUCH_E("%s : filename is NULL, can not open FILE\n",
 				__func__);
@@ -209,6 +306,8 @@ int _write_log(char *filename, char *data)
 		vfs_write(file, data, strlen(data), &pos);
 		filp_close(file, 0);
 		set_fs(old_fs);
+
+		log_file_size_check(filename);
 	}
 	return cap_file_exist;
 }
@@ -349,10 +448,10 @@ int get_limit(unsigned char Tx, unsigned char Rx, struct i2c_client client,
 	int tx_num = 0;
 	const struct firmware *fwlimit = NULL;
 	char *found;
-	char *normal_path = "/mnt/sdcard/p1_limit.txt";
-	char *folder_path = "/mnt/sdcard/p1_limit_mfts_folder.txt";
-	char *flat_path = "/mnt/sdcard/p1_limit_mfts_flat.txt";
-	char *curved_path = "/mnt/sdcard/p1_limit_mfts_curved.txt";
+	char *normal_path = "/data/logger/p1_limit.txt";
+	char *folder_path = "/data/logger/p1_limit_mfts_folder.txt";
+	char *flat_path = "/data/logger/p1_limit_mfts_flat.txt";
+	char *curved_path = "/data/logger/p1_limit_mfts_curved.txt";
 	struct file *file;
 	int file_exist = 0;
 	loff_t pos = 0;
@@ -381,7 +480,7 @@ int get_limit(unsigned char Tx, unsigned char Rx, struct i2c_client client,
 		file = filp_open(normal_path, O_RDONLY, 0);
 		if (!IS_ERR(file)) {
 			TOUCH_I(
-			"normal_limit file is exist under /mnt/sdcard/\n");
+			"normal_limit file is exist under /data/logger/\n");
 			file_exist = 1;
 
 		} else {
@@ -398,7 +497,7 @@ int get_limit(unsigned char Tx, unsigned char Rx, struct i2c_client client,
 		file = filp_open(folder_path, O_RDONLY, 0);
 		if (!IS_ERR(file)) {
 			TOUCH_I(
-			"folder_limit file is exist under /mnt/sdcard/\n");
+			"folder_limit file is exist under /data/logger/\n");
 			file_exist = 1;
 		} else {
 			if (request_firmware(&fwlimit,
@@ -415,7 +514,7 @@ int get_limit(unsigned char Tx, unsigned char Rx, struct i2c_client client,
 		file = filp_open(flat_path, O_RDONLY, 0);
 		if (!IS_ERR(file)) {
 			TOUCH_I(
-			"flat_limit file is exist under /mnt/sdcard/\n");
+			"flat_limit file is exist under /data/logger/\n");
 			file_exist = 1;
 		} else {
 			if (request_firmware(&fwlimit,
@@ -432,7 +531,7 @@ int get_limit(unsigned char Tx, unsigned char Rx, struct i2c_client client,
 		file = filp_open(curved_path, O_RDONLY, 0);
 		if (!IS_ERR(file)) {
 			TOUCH_I(
-			"curved_limit file is exist under /mnt/sdcard/\n");
+			"curved_limit file is exist under /data/logger/\n");
 			file_exist = 1;
 		} else {
 			if (request_firmware(&fwlimit,

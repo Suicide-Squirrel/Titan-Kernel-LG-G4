@@ -45,6 +45,8 @@ static u32 qfprom_verification_blow_data(void);
 static u32 qfprom_read(u32 fuse_addr);
 static u32 qfprom_secdat_read(void);
 static u32 qfprom_verify_data(int ret_type);
+static u32 qfprom_version_check(u32 check_type);
+static u32 qfprom_is_version_enable(void);
 
 static u32 qfprom_address;
 static u32 qfprom_lsb_value;
@@ -210,6 +212,15 @@ static ssize_t qfprom_msb_store(struct device *dev, struct device_attribute *att
 }
 static DEVICE_ATTR(msb, S_IWUSR | S_IRUGO, qfprom_msb_show, qfprom_msb_store);
 
+static ssize_t qfprom_antirollback_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+  u32 ret = 0;
+  ret = qfprom_is_version_enable();
+  return sprintf(buf, "%d\n", ret);
+}
+
+static DEVICE_ATTR(antirollback, S_IWUSR | S_IRUGO, qfprom_antirollback_show, NULL);
+
 static struct attribute *qfprom_attributes[] = {
   &dev_attr_sec_read.attr,
   &dev_attr_qfusing.attr,
@@ -220,11 +231,62 @@ static struct attribute *qfprom_attributes[] = {
   &dev_attr_lsb.attr,
   &dev_attr_msb.attr,
   &dev_attr_read.attr,
+  &dev_attr_antirollback.attr,
   NULL
 };
 
 static const struct attribute_group qfprom_attribute_group = {
   .attrs = qfprom_attributes,
+};
+
+static ssize_t qfprom_read_version_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+  int i = 0, ret = -1;
+  qfprom_version_typename cur_info;
+  cur_info.type = -1;
+  if (strlen(attr->attr.name) > RV_IMAGE_NAME_SIZE) {
+    printk(KERN_INFO "[QFUSE]%s : Exceed image name size\n", __func__);
+    return sprintf(buf, "%d\n", RV_ERR_EXCEED_NAME_SIZE);
+  }
+  strncpy(cur_info.name, attr->attr.name, RV_IMAGE_NAME_SIZE);
+  cur_info.name[RV_IMAGE_NAME_SIZE-1] = '\0';
+
+  printk(KERN_INFO "[QFUSE]%s : Check rollback version\n", __func__);
+  if (qfprom_is_version_enable() == 0) {
+    return sprintf(buf, "%d\n", RV_ERR_DISABLED);
+  }
+
+  for (i = 0; i < ARRAY_SIZE(version_type); i++) {
+    if (!strcmp(version_type[i].name, cur_info.name))
+      cur_info.type = version_type[i].type;
+  }
+
+  if (cur_info.type == -1) {
+    printk(KERN_INFO "[QFUSE]%s : Not supported type <%s>\n", __func__, cur_info.name);
+    return sprintf(buf, "%d\n", RV_ERR_NOT_SUPPORTED);
+  }
+
+  printk(KERN_INFO "[QFUSE]%s : Selected version name <%s>\n", __func__, cur_info.name);
+  ret = qfprom_version_check(cur_info.type);
+  return sprintf(buf, "%d\n", ret);
+}
+
+static DEVICE_ATTR(sbl1, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+static DEVICE_ATTR(tz, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+static DEVICE_ATTR(rpm, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+static DEVICE_ATTR(appsbl, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+
+static struct attribute *qfprom_version_attributes[] = {
+  &dev_attr_sbl1.attr,
+  &dev_attr_tz.attr,
+  &dev_attr_rpm.attr,
+  &dev_attr_appsbl.attr,
+  NULL
+};
+
+static const struct attribute_group qfprom_version_attribute_group = {
+  .name = "versions",
+  .attrs = qfprom_version_attributes,
 };
 
 static u32 qfprom_verification_blow_data(void)
@@ -359,7 +421,7 @@ static u32 qfprom_result_check_data(void)
 static u32 qfprom_read(u32 fuse_addr)
 {
   void __iomem *value_addr;
-  u32	value;
+  u32 value;
 
   printk(KERN_INFO "[QFUSE]%s start\n", __func__);
 
@@ -480,6 +542,7 @@ static u32 qfprom_secdat_read(void)
       if(cnt != secdat.list_hdr.size){
         printk(KERN_ERR "[QFUSE]%s : fuseprov_pentry read error\n", __func__);
         kfree(secdat.pentry);
+        secdat.pentry = NULL;
         ret = RET_ERR;
         goto err_mem;
       }
@@ -614,6 +677,42 @@ static u32 qfprom_verify_data(int type)
   }
 }
 
+static u32 qfprom_is_version_enable(void)
+{
+  u32 ret = 0;
+  if (((qfprom_read(anti_rollback_enable.addr+0)&anti_rollback_enable.lsb) != anti_rollback_enable.lsb) ||
+      ((qfprom_read(anti_rollback_enable.addr+4)&anti_rollback_enable.msb) != anti_rollback_enable.msb)) {
+    printk(KERN_INFO "[QFUSE]%s : Anti-rollback fuse is not blowed\n", __func__);
+    ret = 0;
+  } else {
+    printk(KERN_INFO "[QFUSE]%s : Anti-rollback fuse is blowed\n", __func__);
+    ret = 1;
+  }
+  return ret;
+}
+
+static u32 qfprom_version_check(u32 check_type)
+{
+  int i = 0, j = 0;
+  u32 v_l = 0, v_m = 0, ret = 0;
+
+  for (i = 0; i < ARRAY_SIZE(version_bits); i++) {
+    if(version_bits[i].type == check_type) {
+      v_l = qfprom_read(version_bits[i].addr+0) & version_bits[i].lsb;
+      v_m = qfprom_read(version_bits[i].addr+4) & version_bits[i].msb;
+      for (j = 0; j < 32; j++) {
+        if ((v_l & (0x1 << j)) != 0)
+          ret++;
+        if ((v_m & (0x1 << j)) != 0)
+          ret++;
+      }
+    }
+  }
+
+  printk(KERN_INFO "[QFUSE]%s : Version - %d\n", __func__, ret);
+  return ret;
+}
+
 static int __exit lge_qfprom_interface_remove(struct platform_device *pdev)
 {
   if(secdat.pentry){
@@ -630,8 +729,16 @@ static int __init lge_qfprom_probe(struct platform_device *pdev)
   printk(KERN_INFO "[QFUSE]%s : qfprom init\n", __func__);
   mutex_init(&secdat_lock);
   err = sysfs_create_group(&pdev->dev.kobj, &qfprom_attribute_group);
-  if (err < 0)
-    printk(KERN_ERR "[QFUSE]%s: cant create attribute file\n", __func__);
+  if (err < 0) {
+    printk(KERN_ERR "[QFUSE]%s: cant create lge-qfprom attribute group\n", __func__);
+    return err;
+  }
+
+  err = sysfs_create_group(&pdev->dev.kobj, &qfprom_version_attribute_group);
+  if (err < 0) {
+    printk(KERN_ERR "[QFUSE]%s: cant create version attribute group\n", __func__);
+  }
+
   return err;
 }
 

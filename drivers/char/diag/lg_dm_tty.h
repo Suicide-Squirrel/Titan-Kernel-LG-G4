@@ -18,6 +18,7 @@ struct dm_tty {
     int id;
     int ctx;
     int num_tbl_entries;
+	spinlock_t lock;
     struct diag_buf_tbl_t *tbl;
     struct diag_mux_ops *ops;
 };

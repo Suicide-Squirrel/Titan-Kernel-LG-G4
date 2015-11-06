@@ -386,6 +386,9 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 
 #ifdef CONFIG_MACH_LGE
 	switch (ext_csd_rev) {
+		case 8:
+			str = "5.1";
+			break;
 	case 7:
 	       str = "5.0";
 	       break;

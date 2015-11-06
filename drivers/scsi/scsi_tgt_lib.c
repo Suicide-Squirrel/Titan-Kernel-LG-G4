@@ -74,7 +74,7 @@ struct scsi_tgt_queuedata {
  *
  * This should be called by target LLDs to get a command.
  */
-__attribute__ ((aligned(4096))) struct scsi_cmnd *scsi_host_get_command(struct Scsi_Host *shost,
+struct scsi_cmnd *scsi_host_get_command(struct Scsi_Host *shost,
 					enum dma_data_direction data_dir,
 					gfp_t gfp_mask)
 {

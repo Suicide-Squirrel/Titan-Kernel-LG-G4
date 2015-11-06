@@ -51,3 +51,19 @@ obj-$(CONFIG_FB_MSM_QPIC_ILI_QVGA_PANEL) += qpic_panel_ili_qvga.o
 
 obj-$(CONFIG_FB_MSM_MDSS) += mdss_fb.o mdss_util.o
 obj-$(CONFIG_COMPAT) += mdss_compat_utils.o
+
+lge-display-mdss-objs += lge/panel/oem_mdss_dsi_common.o lge/panel/oem_mdss_dsi.o lge/panel/oem_mdss_dsi_panel.o lge/panel/oem_mdss_dsi_host.o lge/panel/oem_mdss_mdp_overlay.o lge/panel/oem_mdss_debug_xlog.o
+
+ifeq ($(CONFIG_LGE_DISPLAY_TUNING),y)
+lge-display-mdss-objs += lge/common/lge_lcd_misc_ctrl.o
+endif
+
+ifeq ($(CONFIG_LGE_DISPLAY_DFPS),y)
+lge-display-mdss-objs += lge/common/dfps.o
+endif
+
+ifeq ($(CONFIG_LGE_DISPLAY_VSYNC_SKIP),y)
+lge-display-mdss-objs += lge/common/vsync_skip.o
+endif
+
+obj-$(CONFIG_FB_MSM_MDSS) += lge-display-mdss.o

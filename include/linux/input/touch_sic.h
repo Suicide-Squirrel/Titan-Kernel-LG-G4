@@ -145,6 +145,11 @@
 
 #define TCI_MAX_NUM		2
 #define LPWG_FAIL_BUFFER_MAX_NUM	10
+#define DOZE1_OFFSET_MIN	-1600
+#define DOZE1_OFFSET_MAX	1000
+#define DOZE2_OFFSET_MIN	-1900
+#define DOZE2_OFFSET_MAX	1000
+
 
 enum {
 	TOUCHSTS_IDLE = 0,
@@ -312,6 +317,8 @@ enum {
 	ADJACENCY_SHORT_TEST,
 	SAME_MUX_SHORT_TEST,
 	RAWDATA_TEST,
+	NOISE_TEST,
+	RAWDATA_DOZE2,
 };
 
 enum {
@@ -339,6 +346,7 @@ struct sic_ts_data {
 	struct state_info		*state;
 	struct swipe_data	swipe;
 	struct tci_ctrl_data tci_ctrl;
+	struct wake_lock		touch_rawdata;
 };
 
 enum error_type sic_ts_init(struct i2c_client *client);
@@ -347,6 +355,8 @@ enum error_type sic_ts_power(struct i2c_client *client, int power_ctrl);
 extern struct workqueue_struct *touch_wq;
 
 #if USE_ABT_MONITOR_APP
+extern u16 frame_num;
+
 extern int sic_i2c_write(struct i2c_client *client,	u16 reg,
 							u8 *data, u32 len);
 extern int sic_i2c_read(struct i2c_client *client, u16 reg,

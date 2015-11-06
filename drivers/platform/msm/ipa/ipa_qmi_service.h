@@ -84,6 +84,8 @@ void wan_ioctl_enable_qmi_messages(void);
 
 void wan_ioctl_deinit(void);
 
+void ipa_qmi_stop_workqueues(void);
+
 int rmnet_ipa_poll_tethering_stats(struct wan_ioctl_poll_tethering_stats *data);
 int rmnet_ipa_set_data_quota(struct wan_ioctl_set_data_quota *data);
 void ipa_broadcast_quota_reach_ind(uint32_t mux_id);

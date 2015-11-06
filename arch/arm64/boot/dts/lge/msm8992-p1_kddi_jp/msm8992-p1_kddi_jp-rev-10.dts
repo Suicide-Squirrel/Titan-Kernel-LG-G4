@@ -30,18 +30,18 @@
 	charger_controller: charger_controller {
 		lge,no-init-cable = <0 0 0>;
 		lge,cable-mhl-1k = <5000 500 500>;
-		lge,cable-u-28p7k = <200000 1800 500>;
-		lge,cable-28p7k = <300000 1800 500>;
+		lge,cable-u-28p7k = <200000 1600 500>;
+		lge,cable-28p7k = <300000 1600 500>;
 		lge,cable-56k = <490000 1800 1800>;
-		lge,cable-100k = <650000 1800 500>;
+		lge,cable-100k = <650000 1600 500>;
 		lge,cable-130k = <780000 1800 1800>;
-		lge,cable-180k = <875000 1800 500>;
-		lge,cable-200k = <920000 1800 500>;
-		lge,cable-220k = <988000 1800 500>;
-		lge,cable-270k = <1077000 1800 500>;
-		lge,cable-330k = <1294000 1800 500>;
-		lge,cable-620k = <1418000 1800 500>;
+		lge,cable-180k = <875000 1600 500>;
+		lge,cable-200k = <920000 1600 500>;
+		lge,cable-220k = <988000 1600 500>;
+		lge,cable-270k = <1077000 1600 500>;
+		lge,cable-330k = <1294000 1600 500>;
+		lge,cable-620k = <1418000 1600 500>;
 		lge,cable-910k = <1600000 1800 1800>;
-		lge,cable-none = <1900000 1800  500>;
+		lge,cable-none = <1900000 1600  500>;
 	};
 };

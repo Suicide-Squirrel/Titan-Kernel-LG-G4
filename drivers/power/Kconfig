@@ -570,6 +570,14 @@ config LGE_PM_CHARGER_CONTROLLER
 	Say Y to enable charger-controller support,
 	which change current of charger input.
 
+config LGE_PM_LGE_CHARGER_CONTROLLER
+	bool "charger controller to change current of charger input current for pplus"
+	default n
+	depends on LGE_PM
+	depends on MACH_MSM8992_PPLUS
+	help
+	  LGE charger controller for pplus
+
 config LGE_PM_FACTORY_PSEUDO_BATTERY
 	tristate "Support LGE PM pseudo battery mode"
 	default n
@@ -629,6 +637,14 @@ config LGE_PM_BATTERY_ID_CHECKER
       problems as using non-standard or unexpected types. so cross-
       reference battery identification are useful to identify.
 
+config LGE_PM_MAXIM_EVP_CONTROL
+	bool "add evp control func."
+	default n
+	depends on QPNP_SMBCHARGER
+	depends on LGE_PM
+	help
+	  add evp control func.
+
 config LGE_PM_QC20_SCENARIO
     tristate "LGE charging senario of QC2.0 feature"
     depends on LGE_PM
@@ -665,7 +681,16 @@ config BATTERY_MAX17048
     help
       MAX17048 is fuel-gauge systems for lithium-ion (Li+) batteries
       in handheld and portable equipment. The MAX17048 is configured
-      to operate with a single lithium cell
+      to operate with a single lithium cell.
+
+config BATTERY_MAX17050
+    tristate "Maxim MAX17050 fuel gauge external driver"
+    depends on I2C
+    default n
+    help
+      MAX17050 is fuel-gauge systems for lithium-ion (Li+) batteries
+      in handheld and portable equipment. The MAX17048 is configured
+      to operate with a single lithium cell.
 
 config LGE_PM_CHARGE_INFO
     tristate "add chaarging information log"
@@ -680,6 +705,13 @@ config LGE_PM_CHARGING_TEMP_SCENARIO
     depends on LGE_PM
     help
       lge charging scenario feature
+
+config LGE_PM_PARALLEL_CHARGING
+    tristate "LGE parallel charging feature"
+    default n
+    depends on LGE_PM
+    help
+      lge parallel charging feature
 
 source "drivers/power/reset/Kconfig"
 

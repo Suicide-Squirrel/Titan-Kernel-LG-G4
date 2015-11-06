@@ -13,3 +13,13 @@ config SWITCH_GPIO
 	  Say Y here to enable GPIO based switch support.
 
 endif # SWITCH
+
+config INPUT_IM401
+	tristate "Fortemeida IM401 voice trigger IC support"
+	depends on MACH_LGE
+	default n
+	help
+	  This option enables device driver support for IM401, a voice trigger IC.
+
+	  To compile this driver as module, choose M here: the
+	  module will be called i2c_im401.

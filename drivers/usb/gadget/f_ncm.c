@@ -724,7 +724,7 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		value = w_length > sizeof ntb_parameters ?
 			sizeof ntb_parameters : w_length;
 		memcpy(req->buf, &ntb_parameters, value);
-#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+#ifdef CONFIG_LGE_USB_G_NCM
 		((struct usb_cdc_ncm_ntb_parameters *)(req->buf))->dwNtbOutMaxSize =
 			cpu_to_le32(NTB_OUT_SIZE-1);
 #endif
@@ -921,7 +921,7 @@ static int ncm_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 			 */
 			ncm->port.is_zlp_ok = !(
 				gadget_is_musbhdrc(cdev->gadget)
-#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+#ifdef CONFIG_LGE_USB_G_NCM
 				|| gadget_is_dwc3(cdev->gadget)
 #endif
 				);
@@ -1453,7 +1453,7 @@ int ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 		kfree(ncm);
 	return status;
 }
-#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+#ifdef CONFIG_LGE_USB_G_NCM
 static struct delayed_work start_work;
 
 static const struct file_operations ncm_fops = {

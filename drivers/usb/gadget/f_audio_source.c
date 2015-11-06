@@ -576,7 +576,7 @@ static void audio_disable(struct usb_function *f)
 	}
 }
 
-#ifdef CONFIG_USB_LGE_AUDIO_DOCK
+#ifdef CONFIG_LGE_USB_AUDIO_DOCK
 static void audio_pcm_playback_stop(struct audio_dev *audio);
 static void audio_pcm_playback_start(struct audio_dev *audio);
 
@@ -849,7 +849,7 @@ static struct audio_dev _audio_dev = {
 		.set_alt = audio_set_alt,
 		.setup = audio_setup,
 		.disable = audio_disable,
-#ifdef CONFIG_USB_LGE_AUDIO_DOCK
+#ifdef CONFIG_LGE_USB_AUDIO_DOCK
 		.suspend = audio_suspend,
 		.resume = audio_resume,
 #endif

@@ -19,17 +19,13 @@
 static struct class*            led_pattern_class      = NULL;
 static struct led_pattern_ops*  led_pattern_operations = NULL;
 
-
 static ssize_t led_pattern_select(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
-	if( lge_get_boot_mode() > LGE_BOOT_MODE_CHARGERLOGO )
-		return 0;
-
-	if( led_pattern_operations && led_pattern_operations->select )
-		return led_pattern_operations->select(buf, size);
-	else
-		return 0;
+	if( lge_get_boot_mode() <= LGE_BOOT_MODE_CHARGERLOGO )
+		if( led_pattern_operations && led_pattern_operations->select )
+			led_pattern_operations->select(buf, size);
+	return size;
 }
 static DEVICE_ATTR(setting, 0200, NULL, led_pattern_select);
 
@@ -37,9 +33,8 @@ static ssize_t led_pattern_input(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	if( led_pattern_operations && led_pattern_operations->input )
-		return led_pattern_operations->input(buf, size);
-	else
-		return 0;
+		led_pattern_operations->input(buf, size);
+	return size;
 }
 static DEVICE_ATTR(input_patterns, 0200, NULL, led_pattern_input);
 
@@ -47,9 +42,8 @@ static ssize_t led_pattern_blink(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	if( led_pattern_operations && led_pattern_operations->blink )
-		return led_pattern_operations->blink(buf, size);
-	else
-		return 0;
+		led_pattern_operations->blink(buf, size);
+	return size;
 }
 static DEVICE_ATTR(blink_patterns, 0200, NULL, led_pattern_blink);
 
@@ -57,9 +51,8 @@ static ssize_t led_pattern_onoff(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	if( led_pattern_operations && led_pattern_operations->onoff )
-		return led_pattern_operations->onoff(buf, size);
-	else
-		return 0;
+		led_pattern_operations->onoff(buf, size);
+	return size;
 }
 static DEVICE_ATTR(onoff_patterns, 0200, NULL, led_pattern_onoff);
 
@@ -67,12 +60,10 @@ static ssize_t led_pattern_scale(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	if( led_pattern_operations && led_pattern_operations->scale )
-		return led_pattern_operations->scale(buf, size);
-	else
-		return 0;
+		led_pattern_operations->scale(buf, size);
+	return size;
 }
 static DEVICE_ATTR(scale, 0200, NULL, led_pattern_scale);
-
 
 void led_pattern_register(struct led_pattern_ops *led_platform_operations)
 {

@@ -13,6 +13,9 @@ enum {
 #ifdef CONFIG_LGE_PM_QC20_SCENARIO
 	REQUEST_BY_QC20,
 #endif
+#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
+	REQUEST_BY_EVP,
+#endif
 };
 
 #ifdef CONFIG_LGE_PM_QC20_SCENARIO
@@ -54,6 +57,33 @@ struct qc20_info {
 	int current_status;
 	u32 iusb[QC20_CURRENT_MAX];
 	u32 ibat[QC20_CURRENT_MAX];
+};
+#endif
+
+#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
+#define EVP_LCD_STATE  BIT(0)
+#define EVP_THERMAL_STATE  BIT(1)
+
+enum qpnp_evp_current_status {
+	EVP_CURRENT_NORMAL,
+	EVP_CURRENT_LIMMITED,
+	EVP_CURRENT_MAX,
+};
+
+enum qpnp_evp_charging_status {
+	EVP_STATUS_NONE,
+	EVP_STATUS_LCD_ON,
+	EVP_STATUS_LCD_OFF,
+	EVP_STATUS_THERMAL_ON,
+	EVP_STATUS_THERMAL_OFF,
+};
+
+struct evp_info {
+	int is_evp;
+	int status;
+	int current_status;
+	u32 iusb[EVP_CURRENT_MAX];
+	u32 ibat[EVP_CURRENT_MAX];
 };
 #endif
 
@@ -110,6 +140,12 @@ int lge_battery_get_property(enum power_supply_property prop,
 void update_thermal_condition(int state_changed);
 void get_init_condition_theraml_engine(int batt_temp, int batt_volt);
 void set_iusb_limit_cc(int value);
+
+int restart_charging_check_cc(int raw_soc);
+
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+extern void update_status(int code, int value);
+#endif
 
 #ifdef CONFIG_LGE_PM_FACTORY_PSEUDO_BATTERY
 extern struct pseudo_batt_info_type pseudo_batt_info;

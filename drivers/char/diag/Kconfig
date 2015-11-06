@@ -41,6 +41,16 @@ config LGE_DM_APP
 	 LGE DM APP Support
 endmenu
 
+menu "LGE ACG Carrier Code"
+
+config LGE_ACG_CARRIER_CODE
+    bool "LGE ACG Carrier Code"
+    default n
+    depends on MACH_LGE
+    help
+     LGE ACG Carrier Code
+endmenu
+
 menu "LGE DIAG BYPASS Support"
 config LGE_DIAG_BYPASS
     tristate "Support LGE diag bypass for factory"

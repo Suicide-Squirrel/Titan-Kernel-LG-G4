@@ -108,7 +108,11 @@ static struct inode *sdcardfs_iget(struct super_block *sb,
 	/* initialize new inode */
 	info = SDCARDFS_I(inode);
 
+#ifdef CONFIG_SDCARD_FS_32BIT_INO
+	inode->i_ino = iunique(sb, 0);
+#else
 	inode->i_ino = lower_inode->i_ino;
+#endif
 	if (!igrab(lower_inode)) {
 		err = -ESTALE;
 		return ERR_PTR(err);
@@ -235,7 +239,7 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry, int flags,
 	if (sbi->options.lower_fs == LOWER_FS_EXT4) {
 		err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name,
 				LOOKUP_CASE_INSENSITIVE, &lower_path);
-	} else if (sbi->options.lower_fs == LOWER_FS_FAT) {
+    } else if (sbi->options.lower_fs == LOWER_FS_FAT || sbi->options.lower_fs == LOWER_FS_EXFAT) {
 		err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
 				&lower_path);
 	}
@@ -334,19 +338,17 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 	struct dentry *ret = NULL, *parent;
 	struct path lower_parent_path;
 	int err = 0;
-	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 	const struct cred *saved_cred = NULL;
 
 	parent = dget_parent(dentry);
 
-	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name,
-						sbi->options.derive, 0, 0)) {
+    if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name, 0)) {
 		ret = ERR_PTR(-EACCES);
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
                          "	dentry: %s, task:%s\n",
 						 __func__, dentry->d_name.name, current->comm);
 		goto out_err;
-        }
+    }
 
 	/* save current_cred and override it */
 	OVERRIDE_CRED_PTR(SDCARDFS_SB(dir->i_sb), saved_cred);

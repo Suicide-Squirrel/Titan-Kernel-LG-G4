@@ -741,6 +741,17 @@ void __cfg80211_disconnected(struct net_device *dev, const u8 *ie,
 		    wdev->iftype != NL80211_IFTYPE_P2P_CLIENT))
 		return;
 
+
+/*	LGE_CHANG_S, LPS_SUPPORT
+	To process LPS Event (GF fucntion), (in case of BRCM chip driver)
+	we have to separate EVENT using the reason(of "disconnected" event) from Kernel Driver */
+if (reason == 0x1000 || reason == 0x1001) {
+	printk(KERN_DEBUG "pno event disconnect \n");
+	nl80211_send_disconnected(rdev, dev, reason, ie, ie_len, from_ap);
+	return;
+}
+/* LGE_CHNAGE_E */
+
 #ifndef CONFIG_CFG80211_ALLOW_RECONNECT
 	if (wdev->sme_state != CFG80211_SME_CONNECTED)
 		return;

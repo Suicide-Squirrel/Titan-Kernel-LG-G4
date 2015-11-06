@@ -229,7 +229,6 @@
 			"csi3_pix_clk", "csi3_rdi_clk",
 			"vfe0_clk_src", "camss_vfe_vfe0_clk", "camss_csi_vfe0_clk",
 			"vfe1_clk_src", "camss_vfe_vfe1_clk", "camss_csi_vfe1_clk";
-		/*LGCHANGE_S,QCT Patch camif error 15.04.02*/
 		qcom,clock-rates = "-1",
 			"266670000", "0", "0", "0",
 			"266670000", "0", "0", "0",
@@ -328,22 +327,22 @@
 		ds-regs = <0xBD8 0xBDC 0xBE0 0xBE4 0xBE8
 			0xBEC 0xBF0 0xBF4 0xBF8 0xBFC 0xC00
 			0xC04 0xC08 0xC0C 0xC10 0xC14 0xC18>;
-		ds-settings = <0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
-			0x44441111
+		ds-settings = <0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
+			0xcccc1111
 			0x00000103>;
 		max-clk-nominal = <465000000>;
 		max-clk-turbo = <600000000>;

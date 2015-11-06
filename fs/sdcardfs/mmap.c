@@ -48,30 +48,6 @@ static int sdcardfs_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	return err;
 }
 
-static int sdcardfs_page_mkwrite(struct vm_area_struct *vma,
-								struct vm_fault *vmf)
-{
-	struct file *filp, *lower_filp;
-	const struct vm_operations_struct *lower_vm_ops;
-	struct vm_area_struct lower_vma;
-
-	memcpy(&lower_vma, vma, sizeof(lower_vma));
-	filp = lower_vma.vm_file;
-	lower_vm_ops = SDCARDFS_F(filp)->lower_vm_ops;
-	BUG_ON(!lower_vm_ops);
-
-	/* FIXME: make this function not called. when lower filesystem doesn't
-	 * have page_mkwrite
-	 */
-	if (lower_vm_ops->page_mkwrite) {
-		lower_filp = sdcardfs_lower_file(filp);
-		lower_vma.vm_file = lower_filp;
-		return lower_vm_ops->page_mkwrite(&lower_vma, vmf);
-	} else {
-		return 0;
-	}
-}
-
 /* XXX: to support direct I/O, a_ops->direct_IO shouldn't be null.
  */
 static ssize_t sdcardfs_direct_IO(int rw, struct kiocb *iocb,
@@ -93,5 +69,4 @@ const struct address_space_operations sdcardfs_aops = {
 
 const struct vm_operations_struct sdcardfs_vm_ops = {
 	.fault			= sdcardfs_fault,
-	.page_mkwrite	= sdcardfs_page_mkwrite
 };

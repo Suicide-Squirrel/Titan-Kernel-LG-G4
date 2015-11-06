@@ -16,10 +16,16 @@
 #include <linux/ktime.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
+#include <linux/dma-buf.h>
 
 #include "mdss.h"
 #include "mdss_mdp.h"
 #include "mdss_debug.h"
+
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_POWER_SEQUENCE)
+#include "lge/panel/oem_mdss_dsi_common.h"
+extern unsigned int reg_dump_enable;
+#endif
 
 #ifdef CONFIG_FB_MSM_MDSS_XLOG_DEBUG
 #define XLOG_DEFAULT_ENABLE 1
@@ -27,15 +33,13 @@
 #define XLOG_DEFAULT_ENABLE 0
 #endif
 
-#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
-#define XLOG_DEFAULT_PANIC 0
-#define XLOG_DEFAULT_REGDUMP_ENABLE 0
-#else
+#if !IS_ENABLED(CONFIG_LGE_DISPLAY_POWER_SEQUENCE)
 #define XLOG_DEFAULT_PANIC 1
 #endif
 #define XLOG_DEFAULT_REGDUMP 0x2 /* dump in RAM */
+#define XLOG_DEFAULT_DBGBUSDUMP 0x3 /* dump in LOG & RAM */
 
-#define MDSS_XLOG_ENTRY	256
+#define MDSS_XLOG_ENTRY        256
 #define MDSS_XLOG_MAX_DATA 6
 #define MDSS_XLOG_BUF_MAX 512
 #define MDSS_XLOG_BUF_ALIGN 32
@@ -51,6 +55,7 @@ struct tlog {
 	int pid;
 };
 
+
 struct mdss_dbg_xlog {
 	struct tlog logs[MDSS_XLOG_ENTRY];
 	u32 first;
@@ -59,14 +64,14 @@ struct mdss_dbg_xlog {
 	u32 xlog_enable;
 	u32 panic_on_err;
 	u32 enable_reg_dump;
+	u32 enable_dbgbus_dump;
 	struct work_struct xlog_dump_work;
 	struct mdss_debug_base *blk_arr[MDSS_DEBUG_BASE_MAX];
 	bool work_panic;
+	bool work_dbgbus;
+	u32 *dbgbus_dump; /* address for the debug bus dump */
 } mdss_dbg_xlog;
 
-#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
-unsigned int reg_dump_enable;
-#endif
 
 static inline bool mdss_xlog_is_enabled(u32 flag)
 {
@@ -211,15 +216,83 @@ u32 get_dump_range(struct dump_offset *range_node, size_t max_offset)
 	return length;
 }
 
-static void mdss_dump_reg(u32 reg_dump_flag,
-	char *addr, int len, u32 *dump_mem)
+static void mdss_dump_debug_bus(u32 bus_dump_flag,
+	u32 **dump_mem)
 {
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	bool in_log, in_mem;
 	u32 *dump_addr = NULL;
+	u32 status = 0;
+	struct debug_bus *head;
+	phys_addr_t phys = 0;
+	int list_size = mdata->dbg_bus_size;
 	int i;
 
-	in_log = (reg_dump_flag & MDSS_REG_DUMP_IN_LOG);
-	in_mem = (reg_dump_flag & MDSS_REG_DUMP_IN_MEM);
+	if (!(mdata->dbg_bus && list_size))
+		return;
+
+	/* will keep in memory 4 entries of 4 bytes each */
+	list_size = (list_size * 4 * 4);
+
+	in_log = (bus_dump_flag & MDSS_DBG_DUMP_IN_LOG);
+	in_mem = (bus_dump_flag & MDSS_DBG_DUMP_IN_MEM);
+
+	if (in_mem) {
+		if (!(*dump_mem))
+			*dump_mem = dma_alloc_coherent(&mdata->pdev->dev,
+				list_size, &phys, GFP_KERNEL);
+
+		if (*dump_mem) {
+			dump_addr = *dump_mem;
+			pr_info("bus dump_addr:%p size:%d\n",
+				dump_addr, list_size);
+		} else {
+			in_mem = false;
+			pr_err("dump_mem: allocation fails\n");
+		}
+	}
+
+	pr_info("======== Debug bus DUMP =========\n");
+
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+	for (i = 0; i < mdata->dbg_bus_size; i++) {
+		head = mdata->dbg_bus + i;
+		writel_relaxed(TEST_MASK(head->block_id, head->test_id),
+				mdss_res->mdp_base + head->wr_addr);
+		wmb(); /* make sure test bits were written */
+		status = readl_relaxed(mdss_res->mdp_base +
+			head->wr_addr + 0x4);
+
+		if (in_log)
+			pr_err("waddr=0x%x blk=%d tst=%d val=0x%x\n",
+				head->wr_addr, head->block_id, head->test_id,
+				status);
+
+		if (dump_addr && in_mem) {
+			dump_addr[i*4]     = head->wr_addr;
+			dump_addr[i*4 + 1] = head->block_id;
+			dump_addr[i*4 + 2] = head->test_id;
+			dump_addr[i*4 + 3] = status;
+		}
+
+	}
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
+
+	pr_info("========End Debug bus=========\n");
+
+}
+
+static void mdss_dump_reg(u32 reg_dump_flag,
+	char *addr, int len, u32 **dump_mem)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	bool in_log, in_mem;
+	u32 *dump_addr = NULL;
+	phys_addr_t phys = 0;
+	int i;
+
+	in_log = (reg_dump_flag & MDSS_DBG_DUMP_IN_LOG);
+	in_mem = (reg_dump_flag & MDSS_DBG_DUMP_IN_MEM);
 
 	pr_info("reg_dump_flag=%d in_log=%d in_mem=%d\n", reg_dump_flag, in_log,
 		in_mem);
@@ -229,11 +302,12 @@ static void mdss_dump_reg(u32 reg_dump_flag,
 	len /= 16;
 
 	if (in_mem) {
-		if (!dump_mem)
-			dump_mem = kzalloc(len * 16, GFP_KERNEL);
+		if (!(*dump_mem))
+			*dump_mem = dma_alloc_coherent(&mdata->pdev->dev,
+				len * 16, &phys, GFP_KERNEL);
 
-		if (dump_mem) {
-			dump_addr = dump_mem;
+		if (*dump_mem) {
+			dump_addr = *dump_mem;
 			pr_info("start_addr:%p end_addr:%p reg_addr=%p\n",
 				dump_addr, dump_addr + (u32)len * 16,
 				addr);
@@ -294,7 +368,7 @@ static void mdss_dump_reg_by_ranges(struct mdss_debug_base *dbg,
 				addr, xlog_node->offset.start,
 				xlog_node->offset.end);
 			mdss_dump_reg(reg_dump_flag, addr, len,
-				xlog_node->reg_dump);
+				&xlog_node->reg_dump);
 		}
 	} else {
 		/* If there is no list to dump ranges, dump all registers */
@@ -302,7 +376,7 @@ static void mdss_dump_reg_by_ranges(struct mdss_debug_base *dbg,
 		pr_info("base:0x%p len:0x%zu\n", dbg->base, dbg->max_offset);
 		addr = dbg->base;
 		len = dbg->max_offset;
-		mdss_dump_reg(reg_dump_flag, addr, len, dbg->reg_dump);
+		mdss_dump_reg(reg_dump_flag, addr, len, &dbg->reg_dump);
 	}
 }
 
@@ -368,7 +442,7 @@ struct mdss_debug_base *get_dump_blk_addr(const char *blk_name)
 }
 
 static void mdss_xlog_dump_array(struct mdss_debug_base *blk_arr[],
-	u32 len, bool dead, const char *name)
+	u32 len, bool dead, const char *name, bool dump_dbgbus)
 {
 	int i;
 
@@ -378,7 +452,12 @@ static void mdss_xlog_dump_array(struct mdss_debug_base *blk_arr[],
 				mdss_dbg_xlog.enable_reg_dump);
 	}
 
-	mdss_xlog_dump_all();
+	if (mdss_xlog_is_enabled(MDSS_XLOG_DEFAULT))
+		mdss_xlog_dump_all();
+
+	if (dump_dbgbus)
+		mdss_dump_debug_bus(mdss_dbg_xlog.enable_dbgbus_dump,
+			&mdss_dbg_xlog.dbgbus_dump);
 
 	if (dead && mdss_dbg_xlog.panic_on_err)
 		panic(name);
@@ -389,36 +468,31 @@ static void xlog_debug_work(struct work_struct *work)
 
 	mdss_xlog_dump_array(mdss_dbg_xlog.blk_arr,
 		ARRAY_SIZE(mdss_dbg_xlog.blk_arr),
-		mdss_dbg_xlog.work_panic, "xlog_workitem");
+		mdss_dbg_xlog.work_panic, "xlog_workitem",
+		mdss_dbg_xlog.work_dbgbus);
 }
 
-#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
-extern int panel_not_connected;
-#endif
-
-void mdss_xlog_tout_handler_default(bool queue, const char *name, ...)
+void mdss_xlog_tout_handler_default(bool enforce_dump, bool queue,
+	const char *name, ...)
 {
 	int i, index = 0;
 	bool dead = false;
+	bool dump_dbgbus = false;
 	va_list args;
 	char *blk_name = NULL;
 	struct mdss_debug_base *blk_base = NULL;
 	struct mdss_debug_base **blk_arr;
 	u32 blk_len;
 
-#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
-	if(!reg_dump_enable)
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_POWER_SEQUENCE)
+	int rc;
+	if (lge_mdss_dsi.lge_mdss_xlog_tout_handler_default)
+		rc=lge_mdss_dsi.lge_mdss_xlog_tout_handler_default();
+	if(rc)
 		return;
 #endif
 
-#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
-	if(panel_not_connected) {
-		pr_debug("[%s] reg-dump skipped \n", __func__);
-		return;
-	}
-#endif
-
-	if (!mdss_xlog_is_enabled(MDSS_XLOG_DEFAULT))
+	if (!mdss_xlog_is_enabled(MDSS_XLOG_DEFAULT) && !enforce_dump)
 		return;
 
 	if (queue && work_pending(&mdss_dbg_xlog.xlog_dump_work))
@@ -441,6 +515,9 @@ void mdss_xlog_tout_handler_default(bool queue, const char *name, ...)
 			index++;
 		}
 
+		if (!strcmp(blk_name, "mdp_dbg_bus"))
+			dump_dbgbus = true;
+
 		if (!strcmp(blk_name, "panic"))
 			dead = true;
 	}
@@ -449,9 +526,10 @@ void mdss_xlog_tout_handler_default(bool queue, const char *name, ...)
 	if (queue) {
 		/* schedule work to dump later */
 		mdss_dbg_xlog.work_panic = dead;
+		mdss_dbg_xlog.work_dbgbus = dump_dbgbus;
 		schedule_work(&mdss_dbg_xlog.xlog_dump_work);
 	} else {
-		mdss_xlog_dump_array(blk_arr, blk_len, dead, name);
+		mdss_xlog_dump_array(blk_arr, blk_len, dead, name, dump_dbgbus);
 	}
 }
 
@@ -516,6 +594,9 @@ static const struct file_operations mdss_xlog_fops = {
 
 int mdss_create_xlog_debug(struct mdss_debug_data *mdd)
 {
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_POWER_SEQUENCE)
+	int rc;
+#endif
 	mdss_dbg_xlog.xlog = debugfs_create_dir("xlog", mdd->root);
 	if (IS_ERR_OR_NULL(mdss_dbg_xlog.xlog)) {
 		pr_err("debugfs_create_dir fail, error %ld\n",
@@ -535,16 +616,20 @@ int mdss_create_xlog_debug(struct mdss_debug_data *mdd)
 			    &mdss_dbg_xlog.panic_on_err);
 	debugfs_create_u32("reg_dump", 0644, mdss_dbg_xlog.xlog,
 			    &mdss_dbg_xlog.enable_reg_dump);
-#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
-	debugfs_create_bool("reg_dump_enable", 0644, mdss_dbg_xlog.xlog,
-				&reg_dump_enable);
+        debugfs_create_u32("dbgbus_dump", 0644, mdss_dbg_xlog.xlog,
+                            &mdss_dbg_xlog.enable_dbgbus_dump);
 
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_POWER_SEQUENCE)
+	if (lge_mdss_dsi.lge_mdss_create_xlog_debug)
+		rc=lge_mdss_dsi.lge_mdss_create_xlog_debug(mdd);
+	debugfs_create_bool("reg_dump_enable", 0644, mdss_dbg_xlog.xlog,
+			&reg_dump_enable);
 	reg_dump_enable = XLOG_DEFAULT_REGDUMP_ENABLE;
 #endif
-
 	mdss_dbg_xlog.xlog_enable = XLOG_DEFAULT_ENABLE;
 	mdss_dbg_xlog.panic_on_err = XLOG_DEFAULT_PANIC;
 	mdss_dbg_xlog.enable_reg_dump = 0x1;
+	mdss_dbg_xlog.enable_dbgbus_dump = XLOG_DEFAULT_DBGBUSDUMP;
 
 	pr_info("xlog_status: enable:%d, panic:%d, dump:%d\n",
 		mdss_dbg_xlog.xlog_enable, mdss_dbg_xlog.panic_on_err,

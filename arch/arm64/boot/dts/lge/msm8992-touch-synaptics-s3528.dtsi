@@ -195,6 +195,8 @@
 
 		/* 1:sd. 2:ref_rebase. 3:TX. 4:RX.*/
 		ref_chk_option = <0 0 1 1>;
+		/* P1:0 PPlus:1 */
+		touch_solution = <0>;
 
 		/* firmware & panel_spec path */
 		fw_image = "synaptics/p1/PLG446-V1.14-PR1860478-DS5.2.13.1014_4005518E.img",

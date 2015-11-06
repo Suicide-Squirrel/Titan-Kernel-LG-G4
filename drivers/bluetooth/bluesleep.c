@@ -332,6 +332,8 @@ static void bluesleep_outgoing_data(void)
 		bluesleep_sleep_wakeup();
 	}
 }
+EXPORT_SYMBOL(bluesleep_outgoing_data);
+
 #if !BT_BLUEDROID_SUPPORT
 /**
  * Handles HCI device events.
@@ -455,6 +457,8 @@ fail:
 	atomic_inc(&open_count);
 	return retval;
 }
+EXPORT_SYMBOL(bluesleep_start);
+
 /**
  * Stops the Sleep-Mode Protocol on the Host.
  */
@@ -488,6 +492,7 @@ static void bluesleep_stop(void)
 #endif
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
 }
+EXPORT_SYMBOL(bluesleep_stop);
 
 #ifdef CONFIG_MACH_MSM8992_P1
 void bluetooth_pm_sleep_stop_by_uart(void)
