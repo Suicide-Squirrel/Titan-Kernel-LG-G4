@@ -66,7 +66,6 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 #define CLOCK_REQUEST_AVAILABLE 	0
 #define CLOCK_REQUEST_UNAVAILABLE 	1
 struct uart_port * msm_hs_get_bt_uport(unsigned int line);
-int msm_hs_get_bt_uport_clock_state(struct uart_port *uport);
 #endif /* defined(CONFIG_LGE_BLUESLEEP) || defined(CONFIG_LGE_BLUETOOTH_PM) */
 //BT_E : [CONBT-966] Fix to Bluetooth sleep & uart driver
 //BT_S : [CONBT-966] Fix to HCI command timeout
