@@ -666,7 +666,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 	if(unlikely(!bdev->rfk)) {
 		pr_err("%s:  failed to alloc rfkill \n", __func__);
 		ret = -ENOMEM;
-		goto free_bt_ext_wake;
+		goto free_bt_reset;
 	}
 
 	rfkill_set_states(bdev->rfk, default_state, false);
@@ -677,7 +677,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 		pr_err("%s:  failed to register rfkill \n", __func__);
 		rfkill_destroy(bdev->rfk);
 		kfree(bdev->rfk);
-		goto free_bt_ext_wake;
+		goto free_bt_reset;
 	}
 	bsi->rfkill = bdev->rfk;
 #endif
