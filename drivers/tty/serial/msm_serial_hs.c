@@ -2139,6 +2139,26 @@ static struct msm_hs_port *msm_hs_get_hs_port(int port_index)
 	return NULL;
 }
 
+int msm_hs_get_pm_state_active(struct uart_port *uport)
+{
+    int ret;
+    unsigned long flags;
+    struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+    spin_lock_irqsave(&uport->lock, flags);
+    if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
+        MSM_HS_WARN("%s(): CLOCK_REQUEST_UNAVAILABLE\n", __func__);
+        ret = CLOCK_REQUEST_UNAVAILABLE;
+    }
+    else
+    {
+        ret =  CLOCK_REQUEST_AVAILABLE;
+        MSM_HS_WARN("%s(): CLOCK_REQUEST_AVAILABLE\n", __func__);
+    }
+    spin_unlock_irqrestore(&uport->lock, flags);
+    return ret;
+}
+EXPORT_SYMBOL(msm_hs_get_pm_state_active);
+
 void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 {
 	unsigned long flags;

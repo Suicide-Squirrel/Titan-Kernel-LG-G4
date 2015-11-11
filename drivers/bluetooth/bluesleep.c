@@ -74,7 +74,7 @@ enum {
 	DEBUG_BTWAKE = 1U << 2,
 	DEBUG_VERBOSE = 1U << 3,
 };
-static int debug_mask = DEBUG_USER_STATE;
+static int debug_mask = DEBUG_VERBOSE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 struct bluesleep_info {
 #ifdef CONFIG_MACH_MSM8992_P1
@@ -209,18 +209,18 @@ static int bluetooth_pm_rfkill_set_power(void *data, bool blocked)
 		spin_unlock_irqrestore(&rw_lock, irq_flags);
 	}
 
-	pr_info("%s:  bdev->gpio_bt_reset = %d\n",__func__, bdev->gpio_bt_reset);
-	pr_info("%s:  bdev->gpio_bt_host_wake = %d \n",__func__,bdev->gpio_bt_host_wake);
-	pr_info("%s:  bdev->gpio_bt_ext_wake = %d \n",__func__,bdev->gpio_bt_ext_wake);
+	BT_INFO("%s:  bdev->gpio_bt_reset = %d\n",__func__, bdev->gpio_bt_reset);
+	BT_INFO("%s:  bdev->gpio_bt_host_wake = %d \n",__func__,bdev->gpio_bt_host_wake);
+	BT_INFO("%s:  bdev->gpio_bt_ext_wake = %d \n",__func__,bdev->gpio_bt_ext_wake);
 
 	if (!blocked) { // BT ON
 		gpio_direction_output(bdev->gpio_bt_reset, 0);
 		msleep(30);
 		gpio_direction_output(bdev->gpio_bt_reset, 1);
-		pr_info("%s: Bluetooth RESET HIGH!!\n", __func__);
+		BT_INFO("%s: Bluetooth RESET HIGH!!\n", __func__);
 	} else {  // BT OFF
 		gpio_direction_output(bdev->gpio_bt_reset, 0);
-		pr_info("%s: Bluetooth RESET LOW!!\n", __func__);
+		BT_INFO("%s: Bluetooth RESET LOW!!\n", __func__);
 	}
 
 	return 0;
@@ -272,6 +272,13 @@ static void bluesleep_sleep_work(struct work_struct *work)
 				pr_info("already asleep\n");
 			return;
 		}
+#ifdef CONFIG_MACH_MSM8992_P1
+		if (msm_hs_get_pm_state_active(bsi->uport) == CLOCK_REQUEST_UNAVAILABLE) {
+			BT_ERR("uart port is already off!!!\n");
+			hsuart_power(1);
+			msleep(500);
+		}
+#endif
 		if (msm_hs_tx_empty(bsi->uport)) {
 			if (debug_mask & DEBUG_SUSPEND)
 				pr_info("going to sleep...\n");
@@ -283,7 +290,7 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			 */
 			wake_lock_timeout(&bsi->wake_lock, HZ / 2);
 		} else {
-		  mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
+			mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 			return;
 		}
 	} else if (test_bit(BT_EXT_WAKE, &flags)
