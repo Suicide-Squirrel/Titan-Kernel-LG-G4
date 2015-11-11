@@ -824,11 +824,7 @@ static ssize_t bluesleep_proc_write(struct file *file, const char *buf,
 			/* HCI_DEV_REG */
 			if (!has_lpm_enabled) {
 				has_lpm_enabled = true;
-#ifdef CONFIG_MACH_MSM8992_P1
-				bsi->uport = msm_hs_get_bt_uport(BT_PORT_ID);
-#else
 				bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-#endif
 				/* if bluetooth started, start bluesleep*/
 				bluesleep_start();
 			}
