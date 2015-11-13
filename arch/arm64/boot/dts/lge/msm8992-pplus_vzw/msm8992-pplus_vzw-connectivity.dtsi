@@ -39,4 +39,19 @@
 		pinctrl-5 = <&bt_ext_wake_suspend>;
      };
 /*[PPLUS_BRINGUP_E] Add Pin CTRL */
+
+	bt_sleep {
+		compatible = "bcm,bluesleep";
+		bt_host_wake = <&msm_gpio 95 0>;
+		bt_ext_wake = <&msm_gpio 105 0>;
+		status = "ok";
+	};
+
+	bt_bcm4335{
+		compatible = "bcm,bcm4335";
+		bcm,bt-reset-gpio = <&msm_gpio 25 0>; /* BT_EN */
+		bcm,bt-vdd-io-supply = <&pm8994_s4>;
+		bcm,bt-vdd-io-voltage-level = <1800000 1800000>;
+	};
+
 };
