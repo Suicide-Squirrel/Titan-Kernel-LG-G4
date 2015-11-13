@@ -60,6 +60,7 @@ void msm_hs_request_clock_on(struct uart_port *uport);
 struct uart_port *msm_hs_get_uart_port(int port_index);
 void msm_hs_set_mctrl(struct uart_port *uport,
 				    unsigned int mctrl);
+void msm_hs_set_clock(int port_index, int on);
 //[P1_BRINGUP_S]
 //BT_S : [CONBT-966] Fix to Bluetooth sleep & uart driver
 #if defined(CONFIG_LGE_BLUESLEEP) || defined(CONFIG_LGE_BLUETOOTH_PM)
