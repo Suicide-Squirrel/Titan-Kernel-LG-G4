@@ -1170,7 +1170,7 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	if (c_cflag & CRTSCTS) {
 		data |= UARTDM_MR1_CTS_CTL_BMSK;
 		data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
-		msm_uport->flow_control = true;
+		msm_uport->flow_control = false;
 	}
 	msm_hs_write(uport, UART_DM_MR1, data);
 
@@ -1605,6 +1605,14 @@ static void msm_serial_hs_rx_work(struct kthread_work *work)
 
 	spin_lock_irqsave(&uport->lock, flags);
 
+	/* Make sure the UART is ready when RX triggered. */
+	if (NULL == tty) {
+		MSM_HS_WARN("%s(): invalid tty", __func__);
+		spin_unlock_irqrestore(&uport->lock, flags);
+		msm_hs_resource_unvote(msm_uport);
+		return;
+	}
+
 	/*
 	 * Process all pending descs or if nothing is
 	 * queued - called from termios
@@ -1947,9 +1955,9 @@ void msm_hs_set_mctrl_locked(struct uart_port *uport,
 	set_rts = TIOCM_RTS & mctrl ? 0 : 1;
 
 	if (set_rts)
-		msm_hs_disable_flow_control(uport, false);
+		msm_hs_disable_flow_control(uport, true);
 	else
-		msm_hs_enable_flow_control(uport, false);
+		msm_hs_enable_flow_control(uport, true);
 }
 
 void msm_hs_set_mctrl(struct uart_port *uport,
@@ -2139,26 +2147,6 @@ static struct msm_hs_port *msm_hs_get_hs_port(int port_index)
 	return NULL;
 }
 
-int msm_hs_get_pm_state_active(struct uart_port *uport)
-{
-    int ret;
-    unsigned long flags;
-    struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-    spin_lock_irqsave(&uport->lock, flags);
-    if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-        MSM_HS_WARN("%s(): CLOCK_REQUEST_UNAVAILABLE\n", __func__);
-        ret = CLOCK_REQUEST_UNAVAILABLE;
-    }
-    else
-    {
-        ret =  CLOCK_REQUEST_AVAILABLE;
-        MSM_HS_WARN("%s(): CLOCK_REQUEST_AVAILABLE\n", __func__);
-    }
-    spin_unlock_irqrestore(&uport->lock, flags);
-    return ret;
-}
-EXPORT_SYMBOL(msm_hs_get_pm_state_active);
-
 void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 {
 	unsigned long flags;
@@ -2243,7 +2231,6 @@ void msm_hs_request_clock_off(struct uart_port *uport)
 	if (msm_uport->obs)
 		atomic_set(&msm_uport->client_req_state, 1);
 	msm_hs_resource_unvote(msm_uport);
-	__pm_relax(&msm_uport->ws);
 }
 EXPORT_SYMBOL(msm_hs_request_clock_off);
 
@@ -2252,7 +2239,6 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	msm_hs_resource_vote(UARTDM_TO_MSM(uport));
 
-	__pm_stay_awake(&msm_uport->ws);
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
 		MSM_HS_WARN("%s(): %p runtime PM callback not invoked",
 			__func__, uport->dev);
@@ -2264,6 +2250,22 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 		atomic_set(&msm_uport->client_req_state, 0);
 }
 EXPORT_SYMBOL(msm_hs_request_clock_on);
+
+void msm_hs_set_clock(int port_index, int on)
+{
+	struct uart_port *uport = msm_hs_get_uart_port(port_index);
+
+	MSM_HS_INFO("%s /dev/ttyHS%d clock: %s\n", __func__, port_index, on ? "ON" : "OFF");
+
+	if (on) {
+		msm_hs_request_clock_on(uport);
+		msm_hs_set_mctrl(uport, TIOCM_RTS);
+	} else {
+		msm_hs_set_mctrl(uport, 0);
+		msm_hs_request_clock_off(uport);
+	}
+}
+EXPORT_SYMBOL(msm_hs_set_clock);
 
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
@@ -2471,7 +2473,6 @@ static int msm_hs_startup(struct uart_port *uport)
 	struct msm_hs_rx *rx = &msm_uport->rx;
 	struct sps_pipe *sps_pipe_handle_tx = tx->cons.pipe_handle;
 	struct sps_pipe *sps_pipe_handle_rx = rx->prod.pipe_handle;
-	struct tty_struct *tty = msm_uport->uport.state->port.tty;
 
 	rfr_level = uport->fifosize;
 	if (rfr_level > 16)
@@ -2505,7 +2506,7 @@ static int msm_hs_startup(struct uart_port *uport)
 		}
 	}
 
-	wakeup_source_init(&msm_uport->ws, tty->name);
+
 	ret = msm_hs_config_uart_gpios(uport);
 	if (ret) {
 		MSM_HS_ERR("Uart GPIO request failed\n");
@@ -3441,7 +3442,6 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	else
 		disable_irq(uport->irq);
 
-	wakeup_source_trash(&msm_uport->ws);
 	msm_uport->wakeup.enabled = false;
 	/* make sure tx lh finishes */
 	flush_kthread_worker(&msm_uport->tx.kworker);
