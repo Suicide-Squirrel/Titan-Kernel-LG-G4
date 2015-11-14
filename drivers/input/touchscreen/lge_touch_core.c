@@ -79,7 +79,7 @@ static struct lge_touch_data *ts_data;
 bool touch_irq_mask = 1;
 int boot_mode = NORMAL_BOOT_MODE;
 int factory_boot = 0;
-
+static int lpwg_status = 0;
 
 #define SENSING_TEST_PATH "/data/logger/sensing_test.txt"
 
@@ -178,6 +178,11 @@ void send_uevent_lpwg(struct i2c_client *client, int type)
 			== UEVENT_IDLE) {
 		atomic_set(&ts->state.uevent, UEVENT_BUSY);
 		send_uevent(&client->dev, lpwg_uevent[type-1]);
+		if (type == LPWG_DOUBLE_TAP) {
+			input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
+			input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
+			input_sync(ts->input_dev);
+		}
 	}
 
 	return;
@@ -2843,6 +2848,11 @@ static ssize_t store_lpwg_data(struct i2c_client *client,
 	return count;
 }
 
+static ssize_t show_lpwg_notify(struct i2c_client *client, char *buf)
+{
+	return sprintf(buf, "%d\n", lpwg_status);
+}
+
 /* Sysfs - lpwg_notify (Low Power Wake-up Gesture)
  *
  * write
@@ -2891,6 +2901,9 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 				(ts->pdata->role->use_security_mode)
 				? value[0]
 				: 0;
+
+			lpwg_status = (value[0]) ? 1 : 0;
+
 			break;
 		case 2:
 			touch_device_func->lpwg(client,
@@ -2949,6 +2962,50 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 	}
 	return count;
 }
+
+/* Sysfs - tap2wake (double tap to wake gesture)
+ *
+ * Read:
+ * 1 = enabled
+ * 0 = disabled
+ *
+ * Write:
+ * 1 = enable
+ * 2 = disable
+ *
+*/
+static ssize_t show_tap2wake(struct i2c_client *client, char *buf)
+{
+	return sprintf(buf, "%d\n", lpwg_status);
+}
+
+static ssize_t store_tap2wake(struct i2c_client *client,
+		const char *buf, size_t count)
+{
+	struct lge_touch_data *ts = i2c_get_clientdata(client);
+	int value = 0;
+
+	if (mfts_mode && !ts->pdata->role->mfts_lpwg)
+		return count;
+
+	if (sscanf(buf, "%d", &value) <= 0)
+		return count;
+
+	TOUCH_D(DEBUG_BASE_INFO, "TAP2WAKE: value[%d]\n", value);
+
+	if (touch_device_func->lpwg) {
+		mutex_lock(&ts->pdata->thread_lock);
+
+		touch_device_func->lpwg(client, LPWG_ENABLE, (value) ? 1 : 0, NULL);
+		knock_mode = (ts->pdata->role->use_security_mode) ? value : 0;
+		lpwg_status = (value) ? 1 : 0;
+
+		mutex_unlock(&ts->pdata->thread_lock);
+	}
+
+	return count;
+}
+
 /* store_keyguard_info
  *
  * This function is related with Keyguard in framework.
@@ -3212,7 +3269,8 @@ static LGE_TOUCH_ATTR(fw_upgrade, S_IRUGO | S_IWUSR,
 static LGE_TOUCH_ATTR(fw_change, S_IRUGO | S_IWUSR, show_fw_change, NULL);
 static LGE_TOUCH_ATTR(lpwg_data,
 		S_IRUGO | S_IWUSR, show_lpwg_data, store_lpwg_data);
-static LGE_TOUCH_ATTR(lpwg_notify, S_IRUGO | S_IWUSR, NULL, store_lpwg_notify);
+static LGE_TOUCH_ATTR(lpwg_notify, S_IRUGO | S_IWUSR, show_lpwg_notify, store_lpwg_notify);
+static LGE_TOUCH_ATTR(tap2wake, S_IRUGO | S_IWUSR, show_tap2wake, store_tap2wake);
 static LGE_TOUCH_ATTR(keyguard, S_IRUGO | S_IWUSR, NULL, store_keyguard_info);
 static LGE_TOUCH_ATTR(ime_status, S_IRUGO | S_IWUSR,
 		show_ime_drumming_status, store_ime_drumming_status);
@@ -3237,6 +3295,7 @@ static struct attribute *lge_touch_attribute_list[] = {
 	&lge_touch_attr_fw_change.attr,
 	&lge_touch_attr_lpwg_data.attr,
 	&lge_touch_attr_lpwg_notify.attr,
+	&lge_touch_attr_tap2wake.attr,
 	&lge_touch_attr_keyguard.attr,
 	&lge_touch_attr_ime_status.attr,
 	&lge_touch_attr_quick_cover_status.attr,
@@ -4224,6 +4283,8 @@ static int touch_probe(struct i2c_client *client,
 
 	set_bit(EV_SYN, ts->input_dev->evbit);
 	set_bit(EV_ABS, ts->input_dev->evbit);
+	set_bit(EV_KEY, ts->input_dev->evbit);
+	set_bit(KEY_POWER, ts->input_dev->keybit);
 	set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
 
 	input_set_abs_params(ts->input_dev,
