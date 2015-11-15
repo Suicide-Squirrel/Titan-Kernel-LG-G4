@@ -55,7 +55,7 @@ static bool __power_supply_is_supplied_by(struct power_supply *supplier,
 	return false;
 }
 
-#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+#ifdef CONFIG_LGE_PM_VZW_REQ
 int power_supply_set_floated_charger(struct power_supply *psy,
 				int is_float)
 {

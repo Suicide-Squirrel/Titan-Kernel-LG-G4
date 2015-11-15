@@ -225,7 +225,7 @@ enum power_supply_event_type{
 	POWER_SUPPLY_PROP_WIRELESS_CHARGE_COMPLETED,
 	POWER_SUPPLY_PROP_WIRELESS_ONLINE,
 #endif
-#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+#ifdef CONFIG_LGE_PM_VZW_REQ
 	POWER_SUPPLY_PROP_FLOATED_CHARGER,
 #endif
 };
@@ -314,7 +314,7 @@ struct power_supply {
 	struct led_trigger *charging_blink_full_solid_trig;
 	char *charging_blink_full_solid_trig_name;
 #endif
-#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+#ifdef CONFIG_LGE_PM_VZW_REQ
 	int is_floated_charger;
 #endif
 };
@@ -339,7 +339,7 @@ struct power_supply_info {
 };
 
 #if defined(CONFIG_POWER_SUPPLY)
-#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+#ifdef CONFIG_LGE_PM_VZW_REQ
 int power_supply_set_floated_charger(struct power_supply *psy, int is_float);
 #endif
 extern struct power_supply *power_supply_get_by_name(const char *name);
