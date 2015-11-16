@@ -126,6 +126,7 @@ struct dwc3_charger {
 #endif
 	/* get the charger linestate */
 	u32	(*get_linestate)(struct dwc3_charger *charger);
+	bool			factory_mode;
 };
 
 /* for external charger driver */
