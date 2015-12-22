@@ -486,9 +486,6 @@ exit_timeout:
 				"   Total reserve is %ldkB\n" \
 				"   Total free pages is %ldkB\n" \
 				"   Total file cache is %ldkB\n" \
-				"   Slab Reclaimable is %ldkB\n" \
-				"   Slab UnReclaimable is %ldkB\n" \
-				"   Total Slab is %ldkB\n" \
 				"   GFP mask is 0x%x\n",
 			     global_page_state(NR_FREE_CMA_PAGES) *
 				(long)(PAGE_SIZE / 1024),
@@ -496,14 +493,6 @@ exit_timeout:
 			     global_page_state(NR_FREE_PAGES) *
 				(long)(PAGE_SIZE / 1024),
 			     global_page_state(NR_FILE_PAGES) *
-				(long)(PAGE_SIZE / 1024),
-			     global_page_state(NR_SLAB_RECLAIMABLE) *
-				(long)(PAGE_SIZE / 1024),
-			     global_page_state(NR_SLAB_UNRECLAIMABLE) *
-				(long)(PAGE_SIZE / 1024),
-			     global_page_state(NR_SLAB_RECLAIMABLE) *
-				(long)(PAGE_SIZE / 1024) +
-			     global_page_state(NR_SLAB_UNRECLAIMABLE) *
 				(long)(PAGE_SIZE / 1024),
 			     sc->gfp_mask);
 
