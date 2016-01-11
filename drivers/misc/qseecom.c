@@ -1576,7 +1576,17 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		}
 		entry->app_id = app_id;
 		entry->ref_cnt = 1;
-		strlcpy(entry->app_name, load_img_req.img_name,
+		/*
+		* keymaster app may be first loaded as "keymaste" by qseecomd,
+		* and then used as "keymaster" on some targets. To avoid app
+		* name checking error, register "keymaster" into app_list and
+		* thread private data.
+		*/
+		if (!strcmp(load_img_req.img_name, "keymaste"))
+			strlcpy(entry->app_name, "keymaster",
+					MAX_APP_NAME_SIZE);
+		else
+			strlcpy(entry->app_name, load_img_req.img_name,
 					MAX_APP_NAME_SIZE);
 		/* Deallocate the handle */
 		if (!IS_ERR_OR_NULL(ihandle))
@@ -1591,7 +1601,10 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		(char *)(load_img_req.img_name));
 	}
 	data->client.app_id = app_id;
-	strlcpy(data->client.app_name, load_img_req.img_name,
+	if (!strcmp(load_img_req.img_name, "keymaste"))
+		strlcpy(data->client.app_name, "keymaster", MAX_APP_NAME_SIZE);
+	else
+		strlcpy(data->client.app_name, load_img_req.img_name,
 					MAX_APP_NAME_SIZE);
 	load_img_req.app_id = app_id;
 	if (copy_to_user(argp, &load_img_req, sizeof(load_img_req))) {
@@ -1671,9 +1684,8 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		list_for_each_entry(ptr_app, &qseecom.registered_app_list_head,
 									list) {
 			if (ptr_app->app_id == data->client.app_id) {
-				if (!memcmp((void *)ptr_app->app_name,
-					(void *)data->client.app_name,
-					strlen(data->client.app_name))) {
+				if (!strcmp((void *)ptr_app->app_name,
+					(void *)data->client.app_name)) {
 					found_app = true;
 					if (app_crash || ptr_app->ref_cnt == 1)
 						unload = true;
@@ -2143,7 +2155,6 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 	unsigned long flags;
 	struct qseecom_registered_app_list *ptr_app;
 	bool found_app = false;
-	int name_len = 0;
 	struct sglist_info *table = data->sglistinfo_ptr;
 
 	reqd_len_sb_in = req->cmd_req_len + req->resp_len;
@@ -2151,11 +2162,8 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 	spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 	list_for_each_entry(ptr_app, &qseecom.registered_app_list_head,
 							list) {
-		name_len = min(strlen(data->client.app_name),
-				strlen(ptr_app->app_name));
 		if ((ptr_app->app_id == data->client.app_id) &&
-			 (!memcmp(ptr_app->app_name,
-				data->client.app_name, name_len))) {
+			 (!strcmp(ptr_app->app_name, data->client.app_name))) {
 			found_app = true;
 			break;
 		}
