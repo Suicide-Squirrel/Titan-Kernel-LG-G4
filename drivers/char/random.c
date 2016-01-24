@@ -293,9 +293,9 @@
  * /dev/random.  Should be enough to do a significant reseed.
  */
 #ifdef CONFIG_CRYPTO_FIPS
-static int random_read_wakeup_thresh = 256;
+static int random_read_wakeup_thresh = 512;
 #else
-static int random_read_wakeup_thresh = 64;
+static int random_read_wakeup_thresh = 128;
 #endif
 /*
  * If the entropy count falls under this number of bits, then we
@@ -303,9 +303,9 @@ static int random_read_wakeup_thresh = 64;
  * access to /dev/random.
  */
 #ifdef CONFIG_CRYPTO_FIPS
-static int random_write_wakeup_thresh = 320;
+static int random_write_wakeup_thresh = 384;
 #else
-static int random_write_wakeup_thresh = 128;
+static int random_write_wakeup_thresh = 160;
 #endif
 
 /*
