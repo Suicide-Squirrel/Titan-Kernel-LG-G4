@@ -44,9 +44,17 @@ Required properties for pwm play mode:
  - qcom,pwm-channel: pwm channel the led will operate on
  - qcom,period-us: pwm period in us
  - qcom,duty-us: pwm duty cycle in us
+ - qcom,ext-pwm-dtest-line: dtest line to used with pwm
 
 Optional properties for pwm play mode:
  - qcom,ext-pwm-freq-khz : frequency for external pwm in kilo HZ
+
+Optional properties when qcom,actuator-type is "lra"
+ - qcom,correct-lra-drive-freq : boolean, use this to ensure LRA is driven at correct resonant
+				 frequency, which may change due to operating conditions.
+ - qcom,misc-trim-error-rc19p2-clk-reg-present : boolean, use this if TRIM_ERROR_RC19P2_CLK
+				register is present in MISC module. This register holds
+				the frequency error in 19.2Mhz RC clock.
 
 Example:
 		qcom,haptic@c000 {

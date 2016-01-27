@@ -51,8 +51,8 @@
 		qcom,mdss-dsi-hor-line-idle = <0 40 256>,
 						<40 120 128>,
 						<120 240 64>;
-		qcom,mdss-dsi-panel-timings = [F7 3A 28 00 6E 72
-									2C 3E 31 03 04 00];
+		qcom,mdss-dsi-panel-timings = [F7 3A 28 00 6E 62
+						3E 3E 31 03 04 00];//Increase T_HS_prepre 20ns
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
 		qcom,mdss-dsi-t-clk-post = <0x02>;
 		lge,mdss-dsi-t-clk-post_for_jdi_ab = <0x32>;

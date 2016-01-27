@@ -82,20 +82,21 @@ static ssize_t sdcardfs_write(struct file *file, const char __user *buf,
 	return err;
 }
 
-static int sdcardfs_readdir(struct file *file, void *dirent, filldir_t filldir)
+//static int sdcardfs_readdir(struct file *file, void *dirent, filldir_t filldir)
+static int sdcardfs_readdir(struct file *file, void *ctx, filldir_t filldir)
 {
 	int err = 0;
 	struct file *lower_file = NULL;
-	struct dentry *dentry = file->f_path.dentry;
+    struct dentry *dentry = file->f_path.dentry;
 
 	lower_file = sdcardfs_lower_file(file);
 
 	lower_file->f_pos = file->f_pos;
-	err = vfs_readdir(lower_file, filldir, dirent);
+    err = iterate_dir(lower_file, ctx);
 	file->f_pos = lower_file->f_pos;
 	if (err >= 0)		/* copy the atime */
-		fsstack_copy_attr_atime(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+        fsstack_copy_attr_atime(dentry->d_inode,
+            lower_file->f_path.dentry->d_inode);
 	return err;
 }
 
@@ -250,7 +251,7 @@ static int sdcardfs_open(struct inode *inode, struct file *file)
 	else {
 		mutex_lock(&inode->i_mutex);
 		sdcardfs_copy_inode_attr(inode, sdcardfs_lower_inode(inode));
-		fix_derived_permission(inode);
+        fix_derived_permission(inode, sbi->options.sdfs_mask);
 		mutex_unlock(&inode->i_mutex);
 	}
 

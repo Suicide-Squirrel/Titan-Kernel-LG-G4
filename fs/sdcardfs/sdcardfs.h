@@ -71,12 +71,26 @@
 
 #define AID_PACKAGE_INFO  1027
 
-#define fix_derived_permission(x)	\
+#define fix_derived_permission(x, mask)	\
 	do {						\
 		(x)->i_uid = SDCARDFS_I(x)->d_uid;	\
 		(x)->i_gid = SDCARDFS_I(x)->d_gid;	\
-		(x)->i_mode = ((x)->i_mode & S_IFMT) | SDCARDFS_I(x)->d_mode;\
+        SDCARDFS_I(x)->d_mode = 0775 &  ~mask; \
+        if (SDCARDFS_I(x)->perm == PERM_PRE_ROOT) \
+        { \
+            SDCARDFS_I(x)->d_mode = 0711; \
+        } \
+        else if (SDCARDFS_I(x)->d_under_android) \
+        { \
+            if (SDCARDFS_I(x)->d_gid == AID_SDCARD_RW) { \
+                SDCARDFS_I(x)->d_mode = SDCARDFS_I(x)->d_mode & ~0006; \
+            } else { \
+                SDCARDFS_I(x)->d_mode = SDCARDFS_I(x)->d_mode & ~0007; \
+            } \
+        } \
+        (x)->i_mode = ((x)->i_mode & S_IFMT) | SDCARDFS_I(x)->d_mode; \
 	} while (0)
+
 
 /* OVERRIDE_CRED() and REVERT_CRED()
  *	OVERRID_CRED()
@@ -170,14 +184,12 @@ struct sdcardfs_file_info {
 /* sdcardfs inode data in memory */
 struct sdcardfs_inode_info {
 	struct inode *lower_inode;
-	/* state derived based on current position in hierachy
-	 * caution: d_mode does not include file types
-	 */
 	perm_t perm;
 	userid_t userid;
 	uid_t d_uid;
 	gid_t d_gid;
 	mode_t d_mode;
+    bool d_under_android;
 
 	struct inode vfs_inode;
 };
@@ -192,6 +204,7 @@ struct sdcardfs_dentry_info {
 struct sdcardfs_mount_options {
 	uid_t fs_low_uid;
 	gid_t fs_low_gid;
+    uid_t userid;
     gid_t  sdfs_gid;
     mode_t sdfs_mask;
     bool multi_user;
@@ -386,9 +399,9 @@ extern void packagelist_exit(void);
 
 /* for derived_perm.c */
 extern void setup_derived_state(struct inode *inode, perm_t perm,
-			userid_t userid, uid_t uid, gid_t gid, mode_t mode);
+            userid_t userid, uid_t uid, gid_t gid, bool under_android);
 extern void setup_derived_state_for_multiuser_gid(struct inode *inode, perm_t perm,
-			userid_t userid, uid_t uid, gid_t gid, mode_t mode);
+            userid_t userid, uid_t uid, gid_t gid, bool under_android);
 extern void get_derived_permission(struct dentry *parent, struct dentry *dentry);
 extern void update_derived_permission(struct dentry *dentry);
 extern int need_graft_path(struct dentry *dentry);

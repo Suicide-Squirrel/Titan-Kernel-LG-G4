@@ -161,8 +161,11 @@ void lgit_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
 #define		BIAS_CUR_AF_C003	0x02		//1.0mA		//LGIT 4th Act. 141208
 #define		AMP_GAIN_AF_C003	0x04		//x100		//LGIT 4th Act. 141208
 
-#define		BIAS_CUR_AF_C004	0x01		//0.5mA		//LGIT 4th Act. 150324
-#define		AMP_GAIN_AF_C004	0x04		//x100		//LGIT 4th Act. 150324
+#define		BIAS_CUR_AF_C004	0x01		//0.5mA		//LGIT 5th Act. 150324
+#define		AMP_GAIN_AF_C004	0x04		//x100		//LGIT 5th Act. 150324
+
+#define		BIAS_CUR_AF_C005	0x04		//3.0mA		//LGIT 5th Act(Type-G).
+#define		AMP_GAIN_AF_C005	0x04		//x100		//LGIT 5th Act(Type-G).
 
 #define		SXQ_INI_LGIT		0xBF800000
 #define		SYQ_INI_LGIT		0xBF800000
@@ -200,6 +203,7 @@ void lgit_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
 #define		SYQ_INI_MTM			0x3F800000
 
 #define		AFAG_INI		0x3F800000
+#define		AFAG_INI_LGIT_G		0x3FBF84C0	// 3.5dB UP --> LoopGain 3.5dB Down
 
 #define		GYROX_INI		0x43	// Gyro X axis select
 #define		GYROY_INI		0x45	// Gyro Y axis select
@@ -457,6 +461,7 @@ void lc898122a_auto_gain_con(uint8_t);	/* Auto Gain Control Sw */
 void StartUpGainContIni(void);
 
 uint8_t InitGainControl(uint8_t);
+void	SetDCoffsetContValue( unsigned char UcSelRange );
 #endif	//CATCHMODE
 
 void lc898122a_driver_mode(uint8_t UcDrvSw);	/* Driver Mode setting function */

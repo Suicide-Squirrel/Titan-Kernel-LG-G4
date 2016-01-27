@@ -173,6 +173,9 @@ enum power_supply_property {
 #ifdef CONFIG_LGE_PM_FACTORY_PSEUDO_BATTERY
 	POWER_SUPPLY_PROP_PSEUDO_BATT,
 #endif
+#ifdef CONFIG_LGE_PM_USB_CURRENT_MAX
+	POWER_SUPPLY_PROP_USB_CURRENT_MAX,
+#endif
 #ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
 	POWER_SUPPLY_PROP_ENABLE_EVP_CHG,
 #endif
@@ -189,7 +192,9 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_SAFETY_TIMER_ENABLE,
 	POWER_SUPPLY_PROP_CHARGE_DONE,
 	POWER_SUPPLY_PROP_FLASH_ACTIVE,
+	POWER_SUPPLY_PROP_FORCE_TLIM,
 	POWER_SUPPLY_PROP_ALLOW_DETECTION,
+	POWER_SUPPLY_PROP_CYCLE_COUNT_ID,
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_PROP_CHARGE_COUNTER_EXT,
 	/* Properties of type `const char *' */
@@ -225,7 +230,7 @@ enum power_supply_event_type{
 	POWER_SUPPLY_PROP_WIRELESS_CHARGE_COMPLETED,
 	POWER_SUPPLY_PROP_WIRELESS_ONLINE,
 #endif
-#ifdef CONFIG_LGE_PM_VZW_REQ
+#if defined (CONFIG_LGE_USB_CHARGING_SPEC_VZW) || defined(CONFIG_LGE_PM_VZW_REQ)
 	POWER_SUPPLY_PROP_FLOATED_CHARGER,
 #endif
 };
@@ -314,7 +319,7 @@ struct power_supply {
 	struct led_trigger *charging_blink_full_solid_trig;
 	char *charging_blink_full_solid_trig_name;
 #endif
-#ifdef CONFIG_LGE_PM_VZW_REQ
+#if defined (CONFIG_LGE_USB_CHARGING_SPEC_VZW) || defined(CONFIG_LGE_PM_VZW_REQ)
 	int is_floated_charger;
 #endif
 };
@@ -339,7 +344,7 @@ struct power_supply_info {
 };
 
 #if defined(CONFIG_POWER_SUPPLY)
-#ifdef CONFIG_LGE_PM_VZW_REQ
+#if defined (CONFIG_LGE_USB_CHARGING_SPEC_VZW) || defined(CONFIG_LGE_PM_VZW_REQ)
 int power_supply_set_floated_charger(struct power_supply *psy, int is_float);
 #endif
 extern struct power_supply *power_supply_get_by_name(const char *name);

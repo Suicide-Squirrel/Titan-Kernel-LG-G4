@@ -132,7 +132,7 @@ MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 #ifdef CONFIG_LGE_USB_G_ANDROID
 /* TXREFTUNE[3:0] from 1000 (+10%) to 0011 (Default)*/
 #if defined(CONFIG_MACH_MSM8992_P1) || defined(CONFIG_MACH_MSM8992_P1A4WP)
-#define DEFAULT_HSPHY_INIT			(0x00D3C9A4)
+#define DEFAULT_HSPHY_INIT			(0x00D3C7A4)
 #else
 #define DEFAULT_HSPHY_INIT			(0x00D187A4)
 #endif

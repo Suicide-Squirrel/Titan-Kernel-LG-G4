@@ -28,6 +28,7 @@
 enum {
 	Opt_uid,
 	Opt_gid,
+    Opt_userid,
     Opt_sdfs_gid,
     Opt_sdfs_mask,
     Opt_multi_user,
@@ -41,6 +42,7 @@ enum {
 static const match_table_t sdcardfs_tokens = {
 	{Opt_uid, "uid=%u"},
 	{Opt_gid, "gid=%u"},
+    {Opt_userid, "userid=%u"},
     {Opt_sdfs_gid, "sdfs_gid=%u"},
     {Opt_sdfs_mask, "sdfs_mask=%u"},
     {Opt_multi_user, "multi_user"},
@@ -62,6 +64,7 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	/* by default, we use AID_MEDIA_RW as uid, gid */
 	opts->fs_low_uid = AID_MEDIA_RW;
 	opts->fs_low_gid = AID_MEDIA_RW;
+    opts->userid = 0;
 	opts->owner_user = 0;
 	/* by default, we use LOWER_FS_EXT4 as lower fs type */
 	opts->lower_fs = LOWER_FS_EXT4;
@@ -94,6 +97,11 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 				return 0;
 			opts->fs_low_gid = option;
 			break;
+        case Opt_userid:
+            if (match_int(&args[0], &option))
+                return 0;
+            opts->userid = option;
+            break;
         case Opt_sdfs_gid:
 			if (match_int(&args[0], &option))
 				return 0;
@@ -150,6 +158,8 @@ invalid_option:
 							opts->fs_low_uid);
 		printk( KERN_INFO "sdcardfs : options - gid:%d\n",
 							opts->fs_low_gid);
+        printk( KERN_INFO "sdcardfs : options - userid:%d\n",
+                            opts->userid);
 	}
 
 	return 0;
@@ -278,18 +288,18 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
         if (sb_info->options.multi_user)
         {
             setup_derived_state_for_multiuser_gid(sb->s_root->d_inode,
-                    PERM_PRE_ROOT, 0, AID_ROOT, multiuser_get_uid(0,sb_info->options.sdfs_gid), 0711);
+                    PERM_PRE_ROOT, 0, AID_ROOT, multiuser_get_uid(0,sb_info->options.sdfs_gid), false);
             sb_info->obbpath_s = kzalloc(PATH_MAX, GFP_KERNEL);
 				snprintf(sb_info->obbpath_s, PATH_MAX, "%s/obb", dev_name);
         }
         else
         {
             setup_derived_state(sb->s_root->d_inode,
-                    PERM_ROOT, 0, AID_ROOT, multiuser_get_uid(0, sb_info->options.sdfs_gid), (0771 & ~sb_info->options.sdfs_mask));
+                    PERM_ROOT, 0, AID_ROOT, multiuser_get_uid(0, sb_info->options.sdfs_gid), false);
             sb_info->obbpath_s = kzalloc(PATH_MAX, GFP_KERNEL);
 				snprintf(sb_info->obbpath_s, PATH_MAX, "%s/Android/obb", dev_name);
         }
-		fix_derived_permission(sb->s_root->d_inode);
+        fix_derived_permission(sb->s_root->d_inode, sb_info->options.sdfs_mask);
 
 		if (!silent)
 			printk(KERN_INFO "sdcardfs: mounted on top of %s type %s\n",

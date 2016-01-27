@@ -346,7 +346,7 @@
 			label = "pmx_wlan_enable";
 			/* default state */
 			pmx_wlan_enable_default: default {
-				drive-strength = <8>;
+				drive-strength = <2>;
 				bias-pull-down;
 			};
 		};
@@ -358,7 +358,7 @@
 			label = "pmx_wlan_hostwake";
 			/* default state */
 			pmx_wlan_hostwake_default: default {
-				drive-strength = <8>;
+				drive-strength = <2>;
 				bias-pull-down;
 				input-debounce = <0>;
 			};
@@ -946,6 +946,11 @@
 			pcie0_wake_default: pcie0_wake_default {
 				drive-strength = <2>;
 				bias-pull-down;
+			};
+
+			pcie0_wake_sleep: pcie0_wake_sleep {
+				drive-strength = <2>;
+				bias-disable;
 			};
 		};
 

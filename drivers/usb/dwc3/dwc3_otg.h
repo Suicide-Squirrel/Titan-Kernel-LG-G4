@@ -38,6 +38,13 @@ extern int dcp_max_current;
 #ifdef CONFIG_LGE_PM_USB_ID
 #define DWC3_USB30_CHG_CURRENT 900
 #endif
+#ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
+enum usb_config_state {
+	VZW_USB_STATE_UNDEFINED = 0,
+	VZW_USB_STATE_CONNECTED,
+	VZW_USB_STATE_CONFIGURED,
+};
+#endif
 struct dwc3_charger;
 
 /**
@@ -113,6 +120,7 @@ struct dwc3_charger {
 #endif
 #ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
 	struct delayed_work	*drv_check_state_wq;
+	enum usb_config_state vzw_usb_config_state;
 #endif
 };
 

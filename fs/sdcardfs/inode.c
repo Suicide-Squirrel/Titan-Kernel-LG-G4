@@ -497,6 +497,9 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	struct path lower_old_path, lower_new_path;
 	const struct cred *saved_cred = NULL;
 
+    struct sdcardfs_sb_info *sbi;
+    int mask = 0;
+
     if(!check_caller_access_to_name(old_dir, old_dentry->d_name.name, 1) ||
         !check_caller_access_to_name(new_dir, new_dentry->d_name.name, 1)) {
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
@@ -543,11 +546,16 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	/* Copy attrs from lower dir, but i_uid/i_gid */
 	sdcardfs_copy_inode_attr(new_dir, lower_new_dir_dentry->d_inode);
 	fsstack_copy_inode_size(new_dir, lower_new_dir_dentry->d_inode);
-	fix_derived_permission(new_dir);
+    sbi = SDCARDFS_SB(lower_new_dir_dentry->d_sb);
+    mask = sbi->options.sdfs_mask;
+    fix_derived_permission(new_dir, mask);
 	if (new_dir != old_dir) {
 		sdcardfs_copy_inode_attr(old_dir, lower_old_dir_dentry->d_inode);
 		fsstack_copy_inode_size(old_dir, lower_old_dir_dentry->d_inode);
-		fix_derived_permission(old_dir);
+        sbi = SDCARDFS_SB(lower_old_dir_dentry->d_sb);
+        mask = sbi->options.sdfs_mask;
+        fix_derived_permission(old_dir, mask);
+
 		/* update the derived permission of the old_dentry
 		 * with its new parent
 		 */
@@ -555,7 +563,9 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		if(new_parent) {
 			if(old_dentry->d_inode) {
 				get_derived_permission(new_parent, old_dentry);
-				fix_derived_permission(old_dentry->d_inode);
+                sbi = SDCARDFS_SB(old_dentry->d_sb);
+                mask = sbi->options.sdfs_mask;
+                fix_derived_permission(old_dentry->d_inode, mask);
 			}
 			dput(new_parent);
 		}
@@ -690,6 +700,9 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	struct path lower_path;
 	struct dentry *parent;
 
+    struct sdcardfs_sb_info *sbi;
+    int mask = 0;
+
 	parent = dget_parent(dentry);
     if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name, 0)) {
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
@@ -713,7 +726,9 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	 * so, on this stage, its derived permission must be
 	 * rechecked from its private field.
 	 */
-	fix_derived_permission(inode);
+    sbi = SDCARDFS_SB(dentry->d_sb);
+    mask = sbi->options.sdfs_mask;
+    fix_derived_permission(inode, mask);
 	mutex_unlock(&inode->i_mutex);
 
 	generic_fillattr(inode, stat);
@@ -730,6 +745,9 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 	struct path lower_path;
 	struct iattr lower_ia;
 	struct dentry *parent;
+
+    struct sdcardfs_sb_info *sbi;
+    int mask = 0;
 
 	inode = dentry->d_inode;
 
@@ -806,7 +824,9 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 	/* get attributes from the lower inode */
 	sdcardfs_copy_inode_attr(inode, lower_inode);
 	/* update derived permission of the upper inode */
-	fix_derived_permission(inode);
+    sbi = SDCARDFS_SB(dentry->d_sb);
+    mask = sbi->options.sdfs_mask;
+    fix_derived_permission(inode, mask);
 
 	/*
 	 * Not running fsstack_copy_inode_size(inode, lower_inode), because

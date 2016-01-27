@@ -20,6 +20,14 @@ menuconfig USB_SUPPORT
 	  This option adds core support for Universal Serial Bus (USB).
 	  You will also need drivers from the following menu to make use of it.
 
+config USB_HOST_NOTIFY
+	boolean "USB notify layer"
+	depends on USB
+	---help---
+	  Added usb notify layer on gadget,host,otg drivers.
+	  The usb notify layer controls otg mode and vbus draw
+	  and vbus detect irq.
+
 if USB_SUPPORT
 
 config USB_COMMON

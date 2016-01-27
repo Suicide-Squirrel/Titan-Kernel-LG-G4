@@ -37,8 +37,14 @@
 int sysctl_max_syn_backlog = 256;
 EXPORT_SYMBOL(sysctl_max_syn_backlog);
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+int reqsk_queue_alloc(struct request_sock_queue *queue,
+		      unsigned int nr_table_entries,
+		      gfp_t flags)
+#else
 int reqsk_queue_alloc(struct request_sock_queue *queue,
 		      unsigned int nr_table_entries)
+#endif
 {
 	size_t lopt_size = sizeof(struct listen_sock);
 	struct listen_sock *lopt;
@@ -48,9 +54,19 @@ int reqsk_queue_alloc(struct request_sock_queue *queue,
 	nr_table_entries = roundup_pow_of_two(nr_table_entries + 1);
 	lopt_size += nr_table_entries * sizeof(struct request_sock *);
 	if (lopt_size > PAGE_SIZE)
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+		lopt = __vmalloc(lopt_size,
+			flags | __GFP_HIGHMEM | __GFP_ZERO,
+			PAGE_KERNEL);
+#else
 		lopt = vzalloc(lopt_size);
+#endif
 	else
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+		lopt = kzalloc(lopt_size, flags);
+#else
 		lopt = kzalloc(lopt_size, GFP_KERNEL);
+#endif
 	if (lopt == NULL)
 		return -ENOMEM;
 

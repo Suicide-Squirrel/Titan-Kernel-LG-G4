@@ -384,7 +384,11 @@ static int dccp_v6_conn_request(struct sock *sk, struct sk_buff *skb)
 	if (sk_acceptq_is_full(sk) && inet_csk_reqsk_queue_young(sk) > 1)
 		goto drop;
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+	req = inet_reqsk_alloc(&dccp6_request_sock_ops);
+#else
 	req = inet6_reqsk_alloc(&dccp6_request_sock_ops);
+#endif
 	if (req == NULL)
 		goto drop;
 

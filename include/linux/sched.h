@@ -1080,6 +1080,7 @@ struct ravg {
 #ifdef CONFIG_SCHED_FREQ_INPUT
 	u32 curr_window, prev_window;
 #endif
+	u32 demand_for_migration; /* LG Cancun Project */
 };
 
 struct sched_entity {

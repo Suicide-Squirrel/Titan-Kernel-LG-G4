@@ -126,6 +126,7 @@ enum mdss_hw_quirk {
 	MDSS_QUIRK_DOWNSCALE_HANG,
 	MDSS_QUIRK_DOWNSCALE_HFLIP_MDPCLK,
 	MDSS_QUIRK_SVS_PLUS_VOTING,
+	MDSS_QUIRK_BASE_FULLSCREEN,
 	MDSS_QUIRK_MAX,
 };
 
@@ -246,6 +247,7 @@ struct mdss_data_type {
 	u32 nrgb_pipes;
 	u32 ndma_pipes;
 	u32 max_target_zorder;
+	u32 cursor_stage;
 	u8  ncursor_pipes;
 	u32 max_cursor_size;
 
@@ -385,6 +387,12 @@ static inline void mdss_set_quirk(struct mdss_data_type *mdata,
 	enum mdss_hw_quirk bit)
 {
 	set_bit(bit, mdata->mdss_quirk_map);
+}
+
+static inline void mdss_clear_quirk(struct mdss_data_type *mdata,
+	enum mdss_hw_quirk bit)
+{
+	clear_bit(bit, mdata->mdss_quirk_map);
 }
 
 static inline bool mdss_has_quirk(struct mdss_data_type *mdata,

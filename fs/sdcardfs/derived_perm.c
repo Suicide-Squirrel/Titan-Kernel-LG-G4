@@ -30,12 +30,12 @@ static void inherit_derived_state(struct inode *parent, struct inode *child)
 	ci->userid = pi->userid;
 	ci->d_uid = pi->d_uid;
 	ci->d_gid = pi->d_gid;
-	ci->d_mode = pi->d_mode;
+    ci->d_under_android = pi->d_under_android;
 }
 
 /* helper function for derived state */
 void setup_derived_state(struct inode *inode, perm_t perm,
-                        userid_t userid, uid_t uid, gid_t gid, mode_t mode)
+                        userid_t userid, uid_t uid, gid_t gid, bool under_android)
 {
 	struct sdcardfs_inode_info *info = SDCARDFS_I(inode);
 
@@ -43,15 +43,15 @@ void setup_derived_state(struct inode *inode, perm_t perm,
 	info->userid = userid;
 	info->d_uid = uid;
 	info->d_gid = gid;
-	info->d_mode = mode;
+    info->d_under_android = under_android;
 }
 
 void setup_derived_state_for_multiuser_gid(struct inode *inode, perm_t perm,
-                        userid_t userid, uid_t uid, gid_t gid, mode_t mode)
+                        userid_t userid, uid_t uid, gid_t gid, bool under_android)
 {
 	struct sdcardfs_inode_info *info = SDCARDFS_I(inode);
 
-	setup_derived_state(inode, perm, userid, uid, gid, mode);
+    setup_derived_state(inode, perm, userid, uid, gid, under_android);
 	info->d_gid = multiuser_get_uid(userid, gid);
 }
 
@@ -85,26 +85,22 @@ void get_derived_permission(struct dentry *parent, struct dentry *dentry)
                 info->d_gid = sbi->options.sdfs_gid;
             else
                 info->d_gid = multiuser_get_uid(info->userid, sbi->options.sdfs_gid);
-            info->d_mode = 0771;
 			break;
 		case PERM_ROOT:
 			/* Assume masked off by default. */
-            info->d_mode = 0770;
 			if (!strcasecmp(dentry->d_name.name, "Android")) {
 				/* App-specific directories inside; let anyone traverse */
 				info->perm = PERM_ANDROID;
-                info->d_mode = 0771;
+                info->d_under_android = true;
             }
 			break;
 		case PERM_ANDROID:
 			if (!strcasecmp(dentry->d_name.name, "data")) {
 				/* App-specific directories inside; let anyone traverse */
 				info->perm = PERM_ANDROID_DATA;
-                info->d_mode = 0771;
 			} else if (!strcasecmp(dentry->d_name.name, "obb")) {
 				/* App-specific directories inside; let anyone traverse */
 				info->perm = PERM_ANDROID_OBB;
-                info->d_mode = 0771;
 				// FIXME : this feature will be implemented later.
 				/* Single OBB directory is always shared */
                 // ex. Fuse daemon..
@@ -113,7 +109,6 @@ void get_derived_permission(struct dentry *parent, struct dentry *dentry)
 			} else if (!strcasecmp(dentry->d_name.name, "media")) {
 				/* App-specific directories inside; let anyone traverse */
 				info->perm = PERM_ANDROID_MEDIA;
-                info->d_mode = 0771;
 			}
 			break;
 		/* same policy will be applied on PERM_ANDROID_DATA
@@ -125,17 +120,17 @@ void get_derived_permission(struct dentry *parent, struct dentry *dentry)
 			if (appid != 0) {
 				info->d_uid = multiuser_get_uid(parent_info->userid, appid);
 			}
-            info->d_mode = 0770;
 			break;
 	}
-
-    info->d_mode = info->d_mode & ~sbi->options.sdfs_mask;
 }
 
 /* main function for updating derived permission */
 inline void update_derived_permission(struct dentry *dentry)
 {
 	struct dentry *parent;
+
+    struct sdcardfs_sb_info *sbi;
+    int mask = 0;
 
 	if(!dentry || !dentry->d_inode) {
 		printk(KERN_ERR "sdcardfs: %s: invalid dentry\n", __func__);
@@ -154,7 +149,9 @@ inline void update_derived_permission(struct dentry *dentry)
 			dput(parent);
 		}
 	}
-	fix_derived_permission(dentry->d_inode);
+    sbi = SDCARDFS_SB(dentry->d_sb);
+    mask = sbi->options.sdfs_mask;
+    fix_derived_permission(dentry->d_inode, mask);
 }
 
 int need_graft_path(struct dentry *dentry)

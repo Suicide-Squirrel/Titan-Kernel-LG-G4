@@ -36,7 +36,7 @@
 static DEFINE_MUTEX(scm_lock);
 
 #define SCM_EBUSY_WAIT_MS 30
-#define SCM_EBUSY_MAX_RETRY 20
+#define SCM_EBUSY_MAX_RETRY 60
 
 #define N_EXT_SCM_ARGS 7
 #define FIRST_EXT_ARG_IDX 3

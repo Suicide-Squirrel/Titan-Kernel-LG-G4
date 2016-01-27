@@ -290,6 +290,7 @@ static void ipa_uc_event_handler(enum ipa_irq_type interrupt,
 	    IPA_HW_2_CPU_EVENT_ERROR) {
 		evt.raw32b = ipa_ctx->uc_ctx.uc_sram_mmio->eventParams;
 		IPADBG("uC evt errorType=%u\n", evt.params.errorType);
+		BUG();
 	} else if (ipa_ctx->uc_ctx.uc_sram_mmio->eventOp ==
 		IPA_HW_2_CPU_EVENT_LOG_INFO) {
 			IPADBG("uC evt log info ofst=0x%x\n",
@@ -386,6 +387,11 @@ static void ipa_uc_response_hdlr(enum ipa_irq_type interrupt,
 			IPA_HW_2_CPU_RESPONSE_INIT_COMPLETED) {
 		ipa_ctx->uc_ctx.uc_loaded = true;
 		IPAERR("IPA uC loaded\n");
+		/*
+		 * The proxy vote is held until uC is loaded to ensure that
+		 * IPA_HW_2_CPU_RESPONSE_INIT_COMPLETED is received.
+		 */
+		ipa_proxy_clk_unvote();
 		for (i = 0; i < IPA_HW_NUM_FEATURES; i++) {
 			if (uc_hdlrs[i].ipa_uc_loaded_hdlr)
 				uc_hdlrs[i].ipa_uc_loaded_hdlr();

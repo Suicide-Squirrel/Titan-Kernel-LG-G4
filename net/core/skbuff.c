@@ -464,7 +464,11 @@ static inline void skb_drop_fraglist(struct sk_buff *skb)
     skb_drop_list(&skb_shinfo(skb)->frag_list);
 }
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+void skb_clone_fraglist(struct sk_buff *skb)
+#else
 static void skb_clone_fraglist(struct sk_buff *skb)
+#endif
 {
     struct sk_buff *list;
 
@@ -886,7 +890,11 @@ static void skb_headers_offset_update(struct sk_buff *skb, int off)
     skb->inner_mac_header += off;
 }
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
+#else
 static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
+#endif
 {
 #ifndef NET_SKBUFF_DATA_USES_OFFSET
     /*
@@ -966,11 +974,22 @@ EXPORT_SYMBOL(skb_copy);
  *    The returned buffer has a reference count of 1.
  */
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb, int headroom,
+				   gfp_t gfp_mask, bool fclone)
+#else
 struct sk_buff *__pskb_copy(struct sk_buff *skb, int headroom, gfp_t gfp_mask)
+#endif
 {
     unsigned int size = skb_headlen(skb) + headroom;
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+    int flags = skb_alloc_rx_flag(skb) | (fclone ? SKB_ALLOC_FCLONE : 0);
+    struct sk_buff *n = __alloc_skb(size, gfp_mask, flags, NUMA_NO_NODE);
+#else
     struct sk_buff *n = __alloc_skb(size, gfp_mask,
                     skb_alloc_rx_flag(skb), NUMA_NO_NODE);
+#endif
+
 
     if (!n)
         goto out;
@@ -1010,7 +1029,11 @@ struct sk_buff *__pskb_copy(struct sk_buff *skb, int headroom, gfp_t gfp_mask)
 out:
     return n;
 }
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+EXPORT_SYMBOL(__pskb_copy_fclone);
+#else
 EXPORT_SYMBOL(__pskb_copy);
+#endif
 
 /**
  *    pskb_expand_head - reallocate header of &sk_buff

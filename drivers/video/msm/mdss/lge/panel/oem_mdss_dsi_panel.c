@@ -998,6 +998,8 @@ int lgd_qhd_command_mdss_panel_parse_dt(struct device_node *np,	struct mdss_dsi_
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->lge_pan_data->clk_off_cmds,
 		"lge,mdss-dsi-clk_off-command", "lge,mdss-dsi-clk_off-command-state");
 
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->lge_pan_data->rsp_nvm_write,
+		"lgd,rsp-write-nvm", "qcom,mdss-dsi-on-command-state");
 //LGE_UPDATE_S (june1014.lee@lge.com. 2015.03.04). SRE
 #if defined(CONFIG_LGE_P1_SRE_SUPPORTED)
 	sre_cmds_set = kzalloc(sizeof(struct sre_cmds_desc), GFP_KERNEL);

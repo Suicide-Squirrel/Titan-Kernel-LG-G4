@@ -19,6 +19,7 @@
 #define LGE_TOUCH_CORE_H
 #include <linux/wakelock.h>
 #include <linux/interrupt.h>
+#include <linux/input/lge_touch_notify.h>
 
 #define MAX_FINGER	10
 #define MAX_BUTTON	4
@@ -195,7 +196,7 @@ struct touch_platform_data {
 	struct swp_caps			*swp_down_caps;
 	struct swp_caps			*swp_up_caps;
 	const char *inbuilt_fw_name;
-	const char *inbuilt_fw_name_list[4];
+	const char *inbuilt_fw_name_list[5];
 	const char *panel_spec;
 	const char *panel_spec_mfts_folder;
 	const char *panel_spec_mfts_flat;

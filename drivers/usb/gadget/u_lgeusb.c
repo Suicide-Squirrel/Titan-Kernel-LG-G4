@@ -463,18 +463,17 @@ static int lgeusb_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_LGE_USB_DIAG_LOCK
 int user_diag_enable = 0;
-
-#if !defined(CONFIG_MACH_MSM8992_P1_SPR_US)
 #define DIAG_ENABLE 1
+
 int get_diag_enable(void)
 {
+#if !defined(CONFIG_LGE_USB_DIAG_LOCK_SPR)
 	if (lge_get_factory_boot())
 		user_diag_enable = DIAG_ENABLE;
-
+#endif
 	return user_diag_enable;
 }
 EXPORT_SYMBOL(get_diag_enable);
-#endif
 
 #ifdef CONFIG_LGE_USB_DIAG_LOCK_SPR
 int set_diag_enable(int enable)
@@ -483,6 +482,20 @@ int set_diag_enable(int enable)
 	return 0;
 }
 EXPORT_SYMBOL(set_diag_enable);
+
+static int __init get_diag_enable_cmdline(char *diag_enable)
+{
+	if(!strcmp(diag_enable,"true")) {
+		user_diag_enable = 1;
+	} else {
+		user_diag_enable = 0;
+	}
+
+	pr_info("[%s] read cmdline value = %d\n", __func__, user_diag_enable);
+
+	return 1;
+}
+__setup("usb.diag_enable=", get_diag_enable_cmdline);
 #endif
 
 static ssize_t read_diag_enable(struct device *dev,

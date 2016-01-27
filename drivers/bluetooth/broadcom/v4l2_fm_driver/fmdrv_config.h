@@ -76,6 +76,12 @@
 #define V4L2_FM_DEBUG TRUE
 #endif
 
+// BRCM LOCAL[CSP#990808] : After BT On and FM Radio Off, sleep current is high
+#ifndef V4L2_FM_ENABLE_DELAY
+#define V4L2_FM_ENABLE_DELAY             300     /* FM enable delay time, default set to 300 millisecond */
+#endif
+// BRCM LOCAL[CSP#990808]
+
 /* FM driver RDS debug flag. Set this to FALSE for Production release */
 #define V4L2_RDS_DEBUG TRUE
 

@@ -849,11 +849,8 @@ int parse_rds_data(struct fmdrv_ops *fmdev)
         rds_tupple[0] = rds_data[2]; /* LSB of V4L2 spec block */
         rds_tupple[1] = rds_data[1]; /* MSB of V4L2 spec block */
         parse_rds_tupple();
-        memcpy(&fmdev->rx.rds.cbuffer[fmdev->rx.rds.wr_index], &rds_tupple,
-               FM_RDS_TUPLE_LENGTH);
-        fmdev->rx.rds.wr_index =
-            (fmdev->rx.rds.wr_index +
-             FM_RDS_TUPLE_LENGTH) % fmdev->rx.rds.buf_size;
+        memcpy(&fmdev->rx.rds.cbuffer[fmdev->rx.rds.wr_index], &rds_tupple, FM_RDS_TUPLE_LENGTH);
+        fmdev->rx.rds.wr_index = (fmdev->rx.rds.wr_index + FM_RDS_TUPLE_LENGTH) % fmdev->rx.rds.buf_size;
 
         /* Check for overflow & start over */
         if (fmdev->rx.rds.wr_index == fmdev->rx.rds.rd_index) {
@@ -884,15 +881,17 @@ int parse_rds_data(struct fmdrv_ops *fmdev)
     if (fmdev->rx.rds.wr_index != fmdev->rx.rds.rd_index)
         wake_up_interruptible(&fmdev->rx.rds.read_queue);
 
-    V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(fmdrv) Now reset the mask");
+    if(fmdev->rx.rds.rds_flag == FM_RDS_ENABLE)
+    {
+        V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(fmdrv) Now reset the mask");
 
-    fmdev->rx.fm_rds_mask |= I2C_MASK_RDS_FIFO_WLINE_BIT;
+        fmdev->rx.fm_rds_mask |= I2C_MASK_RDS_FIFO_WLINE_BIT;
 
-    ret = __fm_send_cmd(fmdev, FM_REG_FM_RDS_MSK, &fmdev->rx.fm_rds_mask,
-                            2, REG_WR, NULL);
+        ret = __fm_send_cmd(fmdev, FM_REG_FM_RDS_MSK, &fmdev->rx.fm_rds_mask,
+                                2, REG_WR, NULL);
 
-    V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(fmdrv) Write to FM_REG_FM_RDS_MSK done : %d", ret);
-
+        V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(fmdrv) Write to FM_REG_FM_RDS_MSK done : %d", ret);
+    }
     kfree(skb);
     return 0;
 }
@@ -1116,7 +1115,7 @@ int fmc_set_scan_step(struct fmdrv_ops *fmdev, unsigned char scan_step)
 */
 void fmc_reset_rds_cache(struct fmdrv_ops *fmdev)
 {
-    fmdev->rx.rds.rds_flag = FM_RDS_DISABLE;
+    //fmdev->rx.rds.rds_flag = FM_RDS_DISABLE;
     fmdev->rx.rds.wr_index = 0;
     fmdev->rx.rds.rd_index = 0;
     fmdev->device_info.rxsubchans &= ~V4L2_TUNER_SUB_RDS;
@@ -1233,9 +1232,15 @@ int fmc_enable (struct fmdrv_ops *fmdev, unsigned char opt)
         return ret;
     }
     fmdev->rx.fm_func_mask = opt;
+// BRCM LOCAL[CSP#990808] : After BT On and FM Radio Off, sleep current is high
+//org
     /* wait for 50 ms before sending any more commands */
-    mdelay (50);
-
+    //mdelay (50);
+//new
+    /* should wait for a while after sending FM enable command. */
+    mdelay (V4L2_FM_ENABLE_DELAY);
+    V4L2_FM_DRV_ERR("(fmdrv): FM delay time for enable command : %d ms", V4L2_FM_ENABLE_DELAY);
+// BRCM LOCAL[CSP#990808]
     /* wrire rds control */
     rdbs_en_dis = (opt & FM_RBDS_BIT) ?
             FM_RDBS_ENABLE : FM_RDBS_DISABLE;

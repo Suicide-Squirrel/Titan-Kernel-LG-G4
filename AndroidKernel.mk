@@ -58,7 +58,11 @@ ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
 $(info Using uncompressed kernel)
 TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/Image
 else
+ifeq ($(KERNEL_ARCH),arm64)
 TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/Image.gz
+else
+TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/zImage
+endif
 endif
 
 ifeq ($(TARGET_KERNEL_APPEND_DTB), true)
@@ -138,32 +142,28 @@ ifeq ($(LGESP_ITSON), yes)
 	$(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.priv $(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.x509 \
 	$(ANDROID_BUILD_TOP)/device/lge/$(MYDEVICE)/$(TARGET_PRODUCT)/products/itson/systemassets/system/lib/modules/itson_module2.ko \
 	$(ANDROID_BUILD_TOP)/$(KERNEL_MODULES_OUT)/itson_module2.ko
-else
+endif
 
-ifeq ($(ITSON_ENABLED), yes)
-ifeq ($(TARGET_BUILD_VARIANT), user)
-	perl $(ANDROID_BUILD_TOP)/kernel/scripts/sign-file sha1 \
+ifeq ($(ITSON_ENABLED), true)
+	@mkdir -p $(ANDROID_BUILD_TOP)/$(ITSON_KERNEL_BUILD_PATH)/build
+	@mkdir -p $(ANDROID_BUILD_TOP)/$(TARGET_OUT)/vendor/itson
+	@cp -r $(ANDROID_BUILD_TOP)/$(ITSON_KERNEL_BUILD_PATH)/$(TARGET_ARCH) $(ANDROID_BUILD_TOP)/$(ITSON_KERNEL_BUILD_PATH)/build
+	@sh $(ANDROID_BUILD_TOP)/$(ITSON_KERNEL_BUILD_PATH)/build/$(TARGET_ARCH)/build-kernel.sh $(KERNEL_CROSS_COMPILE) $(ANDROID_BUILD_TOP)/$(KERNEL_OUT) $(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/itson 1500 $(TARGET_BUILD_VARIANT) system $(PLATFORM_VERSION)
+	@cp $(ANDROID_BUILD_TOP)/$(ITSON_KERNEL_BUILD_PATH)/$(TARGET_ARCH)/kernel.api $(ANDROID_BUILD_TOP)/$(TARGET_OUT)/vendor/itson/
+
+	perl  $(ANDROID_BUILD_TOP)/kernel/scripts/sign-file sha1 \
 	$(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.priv $(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.x509 \
-	$(ANDROID_BUILD_TOP)/$(ITSON_RESOURCE_PATH)/system/lib/modules/itson_module1_user.ko \
+	$(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/itson/$(TARGET_BUILD_VARIANT)/itson_module1.ko \
 	$(ANDROID_BUILD_TOP)/$(KERNEL_MODULES_OUT)/itson_module1.ko
 
-	perl $(ANDROID_BUILD_TOP)/kernel/scripts/sign-file sha1 \
+	perl  $(ANDROID_BUILD_TOP)/kernel/scripts/sign-file sha1 \
 	$(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.priv $(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.x509 \
-	$(ANDROID_BUILD_TOP)/$(ITSON_RESOURCE_PATH)/system/lib/modules/itson_module2_user.ko \
+	$(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/itson/$(TARGET_BUILD_VARIANT)/itson_module2.ko \
 	$(ANDROID_BUILD_TOP)/$(KERNEL_MODULES_OUT)/itson_module2.ko
-else
-	perl $(ANDROID_BUILD_TOP)/kernel/scripts/sign-file sha1 \
-	$(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.priv $(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.x509 \
-	$(ANDROID_BUILD_TOP)/$(ITSON_RESOURCE_PATH)/system/lib/modules/itson_module1_debug.ko \
-	$(ANDROID_BUILD_TOP)/$(KERNEL_MODULES_OUT)/itson_module1.ko
 
-	perl $(ANDROID_BUILD_TOP)/kernel/scripts/sign-file sha1 \
-	$(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.priv $(ANDROID_BUILD_TOP)/$(KERNEL_OUT)/signing_key.x509 \
-	$(ANDROID_BUILD_TOP)/$(ITSON_RESOURCE_PATH)/system/lib/modules/itson_module2_debug.ko \
-	$(ANDROID_BUILD_TOP)/$(KERNEL_MODULES_OUT)/itson_module2.ko
+	@rm -rf $(ANDROID_BUILD_TOP)/$(ITSON_KERNEL_BUILD_PATH)/build
 endif
-endif
-endif
+
 	$(mv-modules)
 	$(clean-module-folder)
 
@@ -171,9 +171,7 @@ $(KERNEL_HEADERS_INSTALL): $(KERNEL_OUT)
 	$(hide) if [ ! -z "$(KERNEL_HEADER_DEFCONFIG)" ]; then \
 			$(hide) rm -f ../$(KERNEL_CONFIG); \
 			$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=$(KERNEL_HEADER_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) $(KERNEL_HEADER_DEFCONFIG); \
-if test "$(TARGET_COMPILE_WITH_MSM_KERNEL)" = "true"; then \
-			$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=$(KERNEL_HEADER_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) headers_install; fi \
-fi
+			$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=$(KERNEL_HEADER_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) headers_install; fi
 	$(hide) if [ "$(KERNEL_HEADER_DEFCONFIG)" != "$(KERNEL_DEFCONFIG)" ]; then \
 			echo "Used a different defconfig for header generation"; \
 			$(hide) rm -f ../$(KERNEL_CONFIG); \

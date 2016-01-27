@@ -28,6 +28,10 @@
 #define to_mmc_driver(d)	container_of(d, struct mmc_driver, drv)
 #define RUNTIME_SUSPEND_DELAY_MS 10000
 
+#ifdef CONFIG_MACH_MSM8992_P1
+#define RUNTIME_SUSPEND_DELAY_MS_SD 90000
+#endif
+
 static ssize_t mmc_type_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -479,7 +483,15 @@ int mmc_add_card(struct mmc_card *card)
 			pr_err("%s: %s: creating runtime pm sysfs entry: failed: %d\n",
 			       mmc_hostname(card->host), __func__, ret);
 		/* Default timeout is 10 seconds */
+
+#ifdef CONFIG_MACH_MSM8992_P1
+		if(mmc_card_sd(card))
+			card->idle_timeout = RUNTIME_SUSPEND_DELAY_MS_SD;
+		else
+			card->idle_timeout = RUNTIME_SUSPEND_DELAY_MS;
+#else
 		card->idle_timeout = RUNTIME_SUSPEND_DELAY_MS;
+#endif
 	}
 
 	mmc_card_set_present(card);

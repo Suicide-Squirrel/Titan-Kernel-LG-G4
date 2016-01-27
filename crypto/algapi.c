@@ -985,6 +985,8 @@ static int __init crypto_algapi_init(void)
 {
 #ifndef CONFIG_CRYPTO_FIPS // otherwise, testmgr handles it
 	crypto_init_proc();
+#else
+	testmgr_crypto_proc_init();
 #endif
 	return 0;
 }

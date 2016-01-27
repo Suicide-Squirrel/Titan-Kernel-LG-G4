@@ -202,7 +202,8 @@
 		fw_image = "synaptics/p1/PLG446-V1.14-PR1860478-DS5.2.13.1014_4005518E.img",
 					"synaptics/p1/PLG468-V1.05-PR1801483-DS5.2.100.0.1005_50055185.img",
 					"synaptics/p1/PLG446-V1.27-PR1981623-DS5.2.18.1.1006_4005519B_v7_2.img", /*PLG446_BL7*/
-					"synaptics/p1/PLG468-V1.22-PR1982091-DS5.2.200.1.1002_50055196504C47343638.img"; /*PLG468_BL7*/
+					"synaptics/p1/PLG468-V1.23-PR1999550-DS5.2.200.1.1002_50055197504C47343638.img", /*PLG468_BL7_NVM_0*/
+					"synaptics/p1/PLG468-V1.24-PR2016601-DS5.2.200.1.1002_50055198504C47343638_Official.img"; /*PLG468_BL7_NVM_1*/
 		panel_spec = "synaptics/p1/p1_limit.txt";
 		panel_spec_mfts_flat = "synaptics/p1/p1_limit_mfts_flat.txt";
 		panel_spec_mfts_curved = "synaptics/p1/p1_limit_mfts_curved.txt";

@@ -1099,8 +1099,7 @@ int diag_check_common_cmd(struct diag_pkt_header_t *header)
 	return 0;
 }
 
-#if defined(CONFIG_LGE_USB_DIAG_LOCK) && \
-	!defined(CONFIG_MACH_MSM8992_P1_SPR_US)
+#if defined(CONFIG_LGE_USB_DIAG_LOCK)
 extern int get_diag_enable(void);
 #define DIAG_ENABLE			1
 #define DIAG_DISABLE			0
@@ -1121,6 +1120,7 @@ int is_filtering_command(char *buf)
 
 	switch(buf[0]) {
 		case COMMAND_PORT_LOCK :
+#if !defined(CONFIG_LGE_USB_DIAG_LOCK_SPR)
 		case COMMAND_WEB_DOWNLOAD :
 		case COMMAND_ASYNC_HDLC_FLAG :
 		case COMMAND_DLOAD_RESET :
@@ -1128,6 +1128,7 @@ int is_filtering_command(char *buf)
 		case COMMAND_TEST_MODE_RESET :
 #if defined(CONFIG_MACH_MSM8992_P1_VZW) || defined(CONFIG_MACH_MSM8992_PPLUS_VZW)
 		case COMMAND_VZW_AT_LOCK :
+#endif
 #endif
 			return 1;
 		default:
@@ -1153,8 +1154,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 	int result = 0;
 #endif
 
-#if defined(CONFIG_LGE_USB_DIAG_LOCK) && \
-	!defined(CONFIG_MACH_MSM8992_P1_SPR_US)
+#if defined(CONFIG_LGE_USB_DIAG_LOCK)
 	/* buf[0] : 0xA1(161) is a diag command for mdm port lock */
  if (!is_filtering_command(buf) && (get_diag_enable() == DIAG_DISABLE))
 		return 0;

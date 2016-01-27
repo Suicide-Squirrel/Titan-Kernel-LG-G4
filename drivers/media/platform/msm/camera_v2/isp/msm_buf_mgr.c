@@ -1044,6 +1044,28 @@ static int msm_isp_request_bufq(struct msm_isp_buf_mgr *buf_mgr,
 	return 0;
 }
 
+/*LGE_CHANGE, CST, flush share buffers*/
+static int msm_isp_flush_share_buf(struct msm_isp_buf_mgr *buf_mgr,
+	uint32_t bufq_handle)
+{
+	struct msm_isp_buffer *buf_info = NULL;
+	struct msm_isp_bufq *bufq =
+		msm_isp_get_bufq(buf_mgr, bufq_handle);
+	if (!bufq)
+		return -EINVAL;
+
+	if (bufq->buf_type == ISP_SHARE_BUF) {
+		while (!list_empty(&bufq->share_head)) {
+			buf_info = list_entry((&bufq->share_head)->next,
+				typeof(*buf_info), share_list);
+			list_del(&(buf_info->share_list));
+			if (buf_info->buf_reuse_flag)
+				kfree(buf_info);
+		 }
+	}
+	return 0;
+}
+
 static int msm_isp_release_bufq(struct msm_isp_buf_mgr *buf_mgr,
 	uint32_t bufq_handle)
 {
@@ -1061,6 +1083,7 @@ static int msm_isp_release_bufq(struct msm_isp_buf_mgr *buf_mgr,
 	msm_isp_buf_unprepare_all(buf_mgr, bufq_handle);
 
 	spin_lock_irqsave(&bufq->bufq_lock, flags);
+	msm_isp_flush_share_buf(buf_mgr, bufq_handle); /*LGE_CHANGE, CST, flush share buffers*/
 	kfree(bufq->bufs);
 	msm_isp_free_buf_handle(buf_mgr, bufq_handle);
 

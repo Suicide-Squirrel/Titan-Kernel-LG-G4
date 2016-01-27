@@ -58,6 +58,7 @@ static int get_ic_info(struct synaptics_ts_data *ts);
 static int read_page_description_table(struct i2c_client *client);
 static int get_type_bootloader(struct i2c_client *client);
 static void set_param_incoming_call(struct i2c_client *client, int call_state);
+static void synaptics_change_lpwg_freq(struct i2c_client *client);
 static void synaptics_change_sleepmode(struct i2c_client *client);
 static void synaptics_toggle_swipe(struct i2c_client *client);
 static int synaptics_ts_im_test(struct i2c_client *client);
@@ -1766,6 +1767,32 @@ static int get_binFW_version(struct synaptics_ts_data *ts)
 			&firmware[ts->pdata->fw_pid_addr], 6);
 	memcpy(ts->fw_info.img_version,
 			&firmware[ts->pdata->fw_ver_addr], 4);
+
+	release_firmware(fw_entry);
+
+	return rc;
+}
+
+static int get_FW_version(struct synaptics_ts_data *ts, int idx, u8* fw_ver)
+{
+	const struct firmware *fw_entry = NULL;
+	const u8 *firmware = NULL;
+	int rc = 0;
+
+	rc = request_firmware(&fw_entry,
+		ts->pdata->inbuilt_fw_name_list[idx],
+		&ts->client->dev);
+
+	if (rc != 0) {
+		TOUCH_E("[%s] request_firmware() failed %d\n", __func__, rc);
+		return -EIO;
+	}
+
+	firmware = fw_entry->data;
+
+	/*memcpy(ts->fw_info.img_product_id,
+		&firmware[ts->pdata->fw_pid_addr], 6);*/
+	memcpy(fw_ver, &firmware[ts->pdata->fw_ver_addr], 4);
 
 	release_firmware(fw_entry);
 
@@ -4996,6 +5023,151 @@ static ssize_t show_lpwg_sd(struct i2c_client *client, char *buf)
 
 }
 
+static ssize_t show_re_lpwg_calibration(struct i2c_client *client,
+		char *buf)
+{
+	struct synaptics_ts_data *ts =
+		(struct synaptics_ts_data *)get_touch_handle(client);
+	int ret = 0;
+	int cal_exist = 0;
+	u8 buffer = 0;
+	u8 calibration_on = 0x02;
+	u8 data = 0x01;
+
+	if (ts->pdata->panel_id != 1) {
+		TOUCH_I("Panel id : %d, Not supproted f/w calibration\n",
+				ts->pdata->panel_id);
+		ret += snprintf(buf + ret, PAGE_SIZE - ret,
+				"Not supproted f/w calibration\n");
+		return ret;
+	}
+
+	mutex_lock(&ts->pdata->thread_lock);
+
+	cal_exist  = check_cal_magic_key();
+	if (cal_exist  < 0) {
+		TOUCH_I("[%s] In Cal MAGIC Key Not Exist\n", __func__);
+		mutex_unlock(&ts->pdata->thread_lock);
+		return ret;
+	}
+
+	if (power_state == POWER_SLEEP) {
+		ret = synaptics_ts_page_data_read(client,
+				ANALOG_PAGE, CALIBRATION_FLAGS_REG,
+				1, &buffer);
+
+		if (ret < 0) {
+			TOUCH_E("Failed to read calibration_flag_reg\n");
+			goto error;
+		}
+		TOUCH_I("[%s] buffer = 0x%02x\n",
+				__func__, buffer);
+
+		if ((buffer & calibration_on)) {
+			TOUCH_E("Now Running Calibration....\n");
+			goto error;
+		}
+
+		buffer = buffer | calibration_on;
+
+		ret = synaptics_ts_page_data_write_byte(client,
+				ANALOG_PAGE, CALIBRATION_FLAGS_REG,
+				buffer);
+		if (ret < 0) {
+			TOUCH_E("Failed to write calibration_flag_reg value\n");
+			goto error;
+		}
+		TOUCH_I("Start LPWG Calibration\n");
+
+		ret = touch_notifier_call_chain(LCD_EVENT_TOUCH_PANEL_INFO_WRITE, (void *)&data);
+
+		TOUCH_I("Send LCD_EVENT_TOUCH_PANEL_INFO_WRITE\n");
+
+	} else {
+		TOUCH_E("state is suspend, Failed to Calibration because cannot use I2C\n");
+	}
+
+	mutex_unlock(&ts->pdata->thread_lock);
+	return ret;
+error:
+	mutex_unlock(&ts->pdata->thread_lock);
+	return ret;
+
+}
+
+static ssize_t show_fw_change_re_lpwg_cal_result(struct i2c_client *client,
+		char *buf)
+{
+	struct synaptics_ts_data *ts =
+		(struct synaptics_ts_data *)get_touch_handle(client);
+
+	int ret = 0;
+	int panel_info, fw_check = 0;
+	int rc = 0;
+	int idx = 0;
+	u8 img_ver[5] = {0};
+
+	if (ts->pdata->panel_id != 1) {
+		TOUCH_I("Panel id : %d, Not supproted\n", ts->pdata->panel_id);
+		ret += snprintf(buf + ret, PAGE_SIZE - ret, "Not supproted\n");
+		return ret;
+	}
+
+	mutex_lock(&ts->pdata->thread_lock);
+
+	panel_info = lge_get_rsp_nvm();		//change kernel func
+
+	if (panel_info == 1) {
+		idx = ts->pdata->panel_id + ts->pdata->role->fw_index + panel_info;
+		TOUCH_I("panel_info check result %d\n", panel_info);
+	} else {
+		goto result_print;
+	}
+
+	read_page_description_table(ts->client);
+	rc = get_ic_info(ts);
+	get_FW_version(ts, idx, img_ver);
+
+	if (strncmp(ts->fw_info.version, img_ver, 4)) {
+		TOUCH_I("version mismatch ! [V%d.%02d(curr) : V%d.%02d(img)]\n",
+			((ts->fw_info.version[3] & 0x80) ? 1 : 0),
+			ts->fw_info.version[3] & 0x7F,
+			(img_ver[3] & 0x80) ? 1 : 0,
+			img_ver[3] & 0x7F);
+		goto result_print;
+	} else {
+		ts->pdata->inbuilt_fw_name =
+			ts->pdata->inbuilt_fw_name_list[idx];
+		TOUCH_I("change inbuilt fw path %s\n", ts->pdata->inbuilt_fw_name);
+		fw_check = 1;
+	}
+
+	rc += get_binFW_version(ts);
+
+	mutex_unlock(&ts->pdata->thread_lock);
+
+	if (rc < 0) {
+		ret += snprintf(buf + ret, PAGE_SIZE - ret, "-1\n");
+		ret += snprintf(buf + ret, PAGE_SIZE - ret,
+				"Read Fail Touch IC Info or Touch Bin Info.\n");
+		return ret;
+	}
+
+result_print:
+	ret = snprintf(buf, PAGE_SIZE, "========RESULT=======\n");
+	ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			"Result : %s\n\n", (panel_info & fw_check) ? "OK" : "NG");
+	ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			"Panel info : %d\n", panel_info);
+	ret += snprintf(buf + ret, PAGE_SIZE - ret,
+			"FW state : [V%d.%02d : V%d.%02d]\n",
+			((ts->fw_info.version[3] & 0x80) ? 1 : 0),
+			ts->fw_info.version[3] & 0x7F,
+			((ts->fw_info.img_version[3] & 0x80) ? 1 : 0),
+			ts->fw_info.img_version[3] & 0x7F);
+
+	return ret;
+}
 
 static LGE_TOUCH_ATTR(firmware, S_IRUGO | S_IWUSR, show_firmware, NULL);
 static LGE_TOUCH_ATTR(sd, S_IRUGO | S_IWUSR, show_sd, NULL);
@@ -5066,7 +5238,10 @@ static LGE_TOUCH_ATTR(lpwg_sd, S_IRUGO | S_IWUSR,
 		show_lpwg_sd, NULL);
 static LGE_TOUCH_ATTR(delta_check, S_IRUGO | S_IWUSR,
 		show_delta_check, store_delta_check);
-
+static LGE_TOUCH_ATTR(re_lpwg_calibration, S_IRUGO | S_IWUSR,
+		show_re_lpwg_calibration, NULL);
+static LGE_TOUCH_ATTR(fw_change_re_lpwg_cal_result, S_IRUGO | S_IWUSR,
+		show_fw_change_re_lpwg_cal_result, NULL);
 
 static struct attribute *synaptics_ts_attribute_list[] = {
 	&lge_touch_attr_firmware.attr,
@@ -5108,6 +5283,8 @@ static struct attribute *synaptics_ts_attribute_list[] = {
 	&lge_touch_attr_lpwg_disable.attr,
 	&lge_touch_attr_lpwg_sd.attr,
 	&lge_touch_attr_delta_check.attr,
+	&lge_touch_attr_re_lpwg_calibration.attr,
+	&lge_touch_attr_fw_change_re_lpwg_cal_result.attr,
 	NULL,
 };
 
@@ -5597,8 +5774,7 @@ static int lpwg_update_all(struct synaptics_ts_data *ts, bool irqctrl)
 			}
 		}
 		atomic_set(&ts->lpwg_ctrl.is_suspend, 0);
-		if (ts->pdata->panel_id)
-			ghost_do_not_reset = false;
+		ghost_do_not_reset = false;
 	} else {
 		if (atomic_read(&ts->lpwg_ctrl.is_suspend) == 0) {
 			atomic_set(&ts->lpwg_ctrl.is_suspend, 1);
@@ -5610,8 +5786,7 @@ static int lpwg_update_all(struct synaptics_ts_data *ts, bool irqctrl)
 		}
 		TOUCH_I("%s : swipe_pwr_ctr = %d\n", __func__,
 				ts->pdata->swipe_pwr_ctr);
-		if (ts->pdata->panel_id)
-			ghost_do_not_reset = true;
+		ghost_do_not_reset = true;
 	}
 
 	if (ts->lpwg_ctrl.screen) { /* ON(1) */
@@ -5804,6 +5979,8 @@ enum error_type synaptics_ts_init(struct i2c_client *client)
 					1, &buf), error);
 		}
 
+		if (is_product(ts, "PLG468", 6) && touch_wc_status)
+			synaptics_change_lpwg_freq(client);
 	    if (ts->pdata->swipe_pwr_ctr == WAIT_TOUCH_PRESS) {
 		   DO_SAFE(synaptics_ts_page_data_read(client, LPWG_PAGE,
 			  ts->f51_reg.lpwg_partial_reg,
@@ -6582,8 +6759,7 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 				get_tci_data(ts, ts->pw_data.tap_count);
 				wake_lock(&ts->timer_wake_lock);
 				queue_delayed_work(touch_wq, &ts->work_timer,
-						msecs_to_jiffies(UEVENT_DELAY
-							- I2C_DELAY));
+						msecs_to_jiffies(0));
 			}
 		} else if ((ts->swipe.support_swipe)
 				&& (status & ts->swipe.gesture_mask)) {
@@ -7200,7 +7376,7 @@ enum error_type synaptics_ts_notify(struct i2c_client *client,
 	case NOTIFY_PROXIMITY:
 		break;
 	case NOTIFY_WIRELESS_CHARGE:
-		if (is_product(ts, "PLG468", 6) && ts->lpwg_ctrl.screen) {
+		if (is_product(ts, "PLG468", 6)) {
 			queue_delayed_work(touch_wq,
 					&ts->work_sleep, msecs_to_jiffies(0));
 		}
@@ -7226,6 +7402,7 @@ enum error_type synaptics_ts_suspend(struct i2c_client *client)
 		atomic_set(&ts->lpwg_ctrl.is_suspend, 1);
 	}
 	ts->lpwg_ctrl.screen = 0;
+
 
 	return NO_ERROR;
 error:
@@ -7498,6 +7675,11 @@ enum error_type synaptics_ts_lpwg(struct i2c_client *client,
 		error);
 		if (is_product(ts, "PLG446", 6))
 			mdelay(30);
+		if (is_product(ts, "PLG468", 6) && touch_wc_status) {
+			TOUCH_I("[%s] Delay statement is executed\n",
+				__func__);
+			synaptics_change_lpwg_freq(client);
+		}
 		break;
 	default:
 		break;
@@ -7673,6 +7855,47 @@ enum window_status synapitcs_check_crack(struct i2c_client *client)
 		return NO_CRACK;
 }
 
+static void synaptics_change_lpwg_freq(struct i2c_client *client)
+{
+	struct synaptics_ts_data *ts =
+		(struct synaptics_ts_data *)get_touch_handle(client);
+
+	bool is_official_fw = 0;
+	u8 fw_ver = 0;
+	u8 curr[2] = {0};
+	u8 temp[2] = {1, 0};
+
+	is_official_fw = ((ts->fw_info.version[3] & 0x80) >> 7);
+	fw_ver = (ts->fw_info.version[3] & 0x7F);
+
+	if ((is_official_fw && fw_ver == 23) || fw_ver == 63) {
+		if (touch_wc_status)
+			curr[0] = 2;
+		else
+			curr[0] = 0;
+
+		DO_SAFE(synaptics_ts_page_data_write(client, LPWG_PAGE,
+				LPWG_PARTIAL_REG + 92,
+				1, temp), error);
+		mdelay(1000);
+		DO_SAFE(synaptics_ts_page_data_write(client, LPWG_PAGE,
+				LPWG_PARTIAL_REG + 92,
+				1, curr), error);
+		DO_SAFE(synaptics_ts_page_data_read(client, LPWG_PAGE,
+				LPWG_PARTIAL_REG + 92,
+				1, curr), error);
+		TOUCH_I("%s : change lpwg frequency(%d)\n",
+				__func__, curr[0]);
+	} else {
+		TOUCH_I("%s : No change lpwg frequency\n", __func__);
+	}
+
+	return;
+error:
+	TOUCH_E("%s : failed to change lpwg frequency\n", __func__);
+	return;
+}
+
 static void synaptics_change_sleepmode(struct i2c_client *client)
 {
 	struct synaptics_ts_data *ts =
@@ -7690,10 +7913,11 @@ static void synaptics_change_sleepmode(struct i2c_client *client)
 				? (curr[0] & 0xff) | 0x02 :
 				(curr[0] & 0xff) & 0xfd,
 				touch_ta_status, touch_wc_status);
-		if (touch_ta_status || touch_wc_status)
+		if (touch_ta_status || touch_wc_status) {
 			curr[0] = (curr[0] & 0xff) | 0x02;
-		else
+		} else {
 			curr[0] = (curr[0] & 0xff) & 0xfd;
+		}
 		DO_SAFE(synaptics_ts_page_data_write(client, LPWG_PAGE,
 					LPWG_PARTIAL_REG + 71,
 				1, curr), error);

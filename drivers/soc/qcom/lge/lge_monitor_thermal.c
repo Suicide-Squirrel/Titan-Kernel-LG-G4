@@ -46,6 +46,10 @@ struct lge_monitor_thermal_data {
 	struct delayed_work monitor_work_struct;
 };
 
+/* [LGE_UPDATE_S] */
+static int vs_temp = 0;
+/* [LGE_UPDATE_E] */
+
 /*
  * On the kernel command line specify
  * lge_monitor_thermal.enable=1 to enable monitoring thermal node.
@@ -121,6 +125,8 @@ static void _poll_monitor(struct lge_monitor_thermal_data *monitor_dd)
 			pr_info("[XO_THERM] Result:%lld Raw:%d\n",
 					result.physical, result.adc_code);
 		}
+
+		pr_info("[VS_THERM] Result:%d\n",vs_temp); /* [LGE_UPDATE] */
 
 		monitor_dd->last_temp = (unsigned int)result.physical;
 	}
@@ -268,6 +274,24 @@ static const struct dev_pm_ops lge_monitor_thermal_dev_pm_ops = {
 	.suspend_noirq = lge_monitor_thermal_suspend,
 	.resume_noirq = lge_monitor_thermal_resume,
 };
+
+
+/* [LGE_UPDATE_S] */
+extern int lge_get_batt_temp(void);
+extern int lge_get_pmic_therm(void);
+extern int lge_get_pa_therm(void);
+
+static int get_lge_vs_temp(char *buffer, struct kernel_param *kp)
+{
+    if((lge_get_pmic_therm() - lge_get_pa_therm()) != 0)
+		vs_temp = (lge_get_batt_temp() / 10) + ((lge_get_pmic_therm() / 1000) - lge_get_pa_therm()) / 4;
+
+	return sprintf(buffer, "%d",vs_temp);
+}
+module_param_call(vs_temp, NULL,
+			get_lge_vs_temp,&vs_temp, 0644);
+/* [LGE_UPDATE_E] */
+
 
 static struct platform_driver lge_monitor_thermal_driver = {
 	.probe = lge_monitor_thermal_probe,

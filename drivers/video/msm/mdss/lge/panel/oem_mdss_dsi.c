@@ -173,6 +173,15 @@ static int lcd_notifier_callback(struct notifier_block *this,
 			}
 		}
 		break;
+	case LCD_EVENT_TOUCH_PANEL_INFO_READ:
+		pr_err("%s: LCD_EVENT_TOUCH_PANEL_INFO_READ received\n",
+							__func__);
+		break;
+	case LCD_EVENT_TOUCH_PANEL_INFO_WRITE:
+		pr_err("%s: LCD_EVENT_TOUCH_PANEL_INFO_WRITE received\n",
+							__func__);
+		ctrl_pdata->lge_pan_data->do_rsp_nvm_write = true;
+		break;
 	default:
 		break;
 	}
@@ -579,9 +588,11 @@ int jdi_qhd_command_pre_mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 		if (!ctrl_pdata->ndx) {
 			if (!ctrl_pdata->ndx)
 				if (ctrl_pdata->lge_pan_data->touch_driver_registered) {
-					if(jdi_deep_sleep == 0)
+					if(jdi_deep_sleep == 0) {
 						touch_notifier_call_chain(
 								LCD_EVENT_TOUCH_LPWG_OFF, NULL);
+						mdelay(30);
+					}
 				}
 			jdi_deep_sleep = 0;
 		}

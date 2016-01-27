@@ -807,6 +807,7 @@ static int64_t qpnp_adc_scale_ratiometric_calib(int32_t adc_code,
 	return adc_voltage;
 }
 
+int pmic_temp = 0; /* [LGE_UPDATE] */
 int32_t qpnp_adc_scale_pmic_therm(struct qpnp_vadc_chip *vadc,
 		int32_t adc_code,
 		const struct qpnp_adc_properties *adc_properties,
@@ -849,9 +850,21 @@ int32_t qpnp_adc_scale_pmic_therm(struct qpnp_vadc_chip *vadc,
 	adc_chan_result->measurement -= KELVINMIL_DEGMIL;
 	adc_chan_result->physical = (int32_t)adc_chan_result->measurement;
 
+	pmic_temp = adc_chan_result->physical; /* [LGE_UPDATE] */
+
 	return 0;
 }
 EXPORT_SYMBOL(qpnp_adc_scale_pmic_therm);
+
+
+/* [LGE_UPDATE_S] */
+int lge_get_pmic_therm(void)
+{
+     return pmic_temp;
+}
+EXPORT_SYMBOL(lge_get_pmic_therm);
+
+/* [LGE_UPDATE_E] */
 
 int32_t qpnp_adc_scale_millidegc_pmic_voltage_thr(struct qpnp_vadc_chip *chip,
 		struct qpnp_adc_tm_btm_param *param,
@@ -1130,6 +1143,8 @@ int32_t qpnp_adc_scale_therm_pu1(struct qpnp_vadc_chip *chip,
 }
 EXPORT_SYMBOL(qpnp_adc_scale_therm_pu1);
 
+
+int pa_temp = 0; /* [LGE_UPDATE] */
 int32_t qpnp_adc_scale_therm_pu2(struct qpnp_vadc_chip *chip,
 		int32_t adc_code,
 		const struct qpnp_adc_properties *adc_properties,
@@ -1145,9 +1160,19 @@ int32_t qpnp_adc_scale_therm_pu2(struct qpnp_vadc_chip *chip,
 		ARRAY_SIZE(adcmap_100k_104ef_104fb),
 		therm_voltage, &adc_chan_result->physical);
 
+	pa_temp = adc_chan_result->physical; /* [LGE_UPDATE] */
+
 	return 0;
 }
 EXPORT_SYMBOL(qpnp_adc_scale_therm_pu2);
+
+/* [LGE_UPDATE_S] */
+int lge_get_pa_therm(void)
+{
+   return pa_temp;
+}
+EXPORT_SYMBOL(lge_get_pa_therm);
+
 
 int32_t qpnp_adc_tm_scale_voltage_therm_pu2(struct qpnp_vadc_chip *chip,
 					uint32_t reg, int64_t *result)

@@ -44,6 +44,7 @@
 
 #define MSM_SLIM_AUTOSUSPEND		MSEC_PER_SEC
 
+#define SLIM_RX_MSGQ_TIMEOUT_VAL	0x10000
 /*
  * Messages that can be received simultaneously:
  * Client reads, LPASS master responses, announcement messages
@@ -256,7 +257,7 @@ struct msm_slim_ctrl {
 	struct clk		*rclk;
 	struct clk		*hclk;
 	struct mutex		tx_lock;
-	struct mutex		tx_buf_lock;
+	spinlock_t		tx_buf_lock;
 	u8			pgdla;
 	enum msm_slim_msgq	use_rx_msgqs;
 	enum msm_slim_msgq	use_tx_msgqs;
@@ -276,6 +277,9 @@ struct msm_slim_ctrl {
 	int			ipc_log_mask;
 	bool			sysfs_created;
 	void			*ipc_slimbus_log;
+	void (*rx_slim)(struct msm_slim_ctrl *dev, u8 *buf);
+	u32			current_rx_buf[10];
+	int			current_count;
 };
 
 struct msm_sat_chan {
@@ -386,8 +390,7 @@ int msm_slim_sps_init(struct msm_slim_ctrl *dev, struct resource *bam_mem,
 void msm_slim_sps_exit(struct msm_slim_ctrl *dev, bool dereg);
 
 int msm_slim_connect_endp(struct msm_slim_ctrl *dev,
-				struct msm_slim_endp *endpoint,
-				struct completion *notify);
+				struct msm_slim_endp *endpoint);
 void msm_slim_disconnect_endp(struct msm_slim_ctrl *dev,
 					struct msm_slim_endp *endpoint,
 					enum msm_slim_msgq *msgq_flag);

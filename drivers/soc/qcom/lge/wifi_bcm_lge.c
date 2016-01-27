@@ -35,10 +35,6 @@
 static int gpio_wlan_power = WLAN_POWER;
 static int gpio_wlan_hostwake = WLAN_HOSTWAKE;
 
-#ifdef SUPPORT_DTS
-static struct pinctrl *wifi_reg_on_pinctrl = NULL;
-#endif
-
 #define LGE_BCM_WIFI_DMA_QOS_CONTROL
 
 #if defined(CONFIG_BCM4335BT)
@@ -749,11 +745,6 @@ int bcm_wifi_init_gpio(struct platform_device *platdev)
 	int ret = 0;
 #ifdef SUPPORT_DTS
 	struct device_node *np = platdev->dev.of_node;
-
-	wifi_reg_on_pinctrl = devm_pinctrl_get(&platdev->dev);
-	if (IS_ERR_OR_NULL(wifi_reg_on_pinctrl)) {
-		printk("%s: target does not use pinctrl for wifi reg on\n", __func__);
-	}
 
 	gpio_wlan_power = of_get_named_gpio_flags(np, "wlan-en-gpio", 0, NULL);
 	printk(KERN_INFO "%s: gpio_wlan_power : %d\n", __FUNCTION__, gpio_wlan_power);

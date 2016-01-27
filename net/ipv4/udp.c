@@ -106,6 +106,7 @@
 #include <net/route.h>
 #include <net/checksum.h>
 #include <net/xfrm.h>
+#include <net/ip.h>
 #include <trace/events/udp.h>
 #include <linux/static_key.h>
 #include <trace/events/skb.h>
@@ -254,6 +255,11 @@ int udp_lib_get_port(struct sock *sk, unsigned short snum,
 	} else {
 		hslot = udp_hashslot(udptable, net, snum);
 		spin_lock_bh(&hslot->lock);
+
+		if (inet_is_reserved_local_port(snum) &&
+		    !sysctl_reserved_port_bind)
+			goto fail_unlock;
+
 		if (hslot->count > 10) {
 			int exist;
 			unsigned int slot2 = udp_sk(sk)->udp_portaddr_hash ^ snum;
@@ -1632,7 +1638,9 @@ static int __udp4_lib_mcast_deliver(struct net *net, struct sk_buff *skb,
 static inline int udp4_csum_init(struct sk_buff *skb, struct udphdr *uh,
 				 int proto)
 {
+#ifndef CONFIG_LGP_DATA_TCPIP_MPTCP
 	const struct iphdr *iph;
+#endif
 	int err;
 
 	UDP_SKB_CB(skb)->partial_cov = 0;
@@ -1644,6 +1652,10 @@ static inline int udp4_csum_init(struct sk_buff *skb, struct udphdr *uh,
 			return err;
 	}
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+	return skb_checksum_init_zero_check(skb, proto, uh->check,
+					    inet_compute_pseudo);
+#else
 	iph = ip_hdr(skb);
 	if (uh->check == 0) {
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
@@ -1660,6 +1672,7 @@ static inline int udp4_csum_init(struct sk_buff *skb, struct udphdr *uh,
 	 */
 
 	return 0;
+#endif
 }
 
 /*
@@ -2151,6 +2164,8 @@ static void udp4_format_sock(struct sock *sp, struct seq_file *f,
 	__u8 state = sp->sk_state;
 	if (up->encap_rcv)
 		state |= 0xF0;
+	else if (inet->transparent)
+		state |= 0x80;
 
 	seq_printf(f, "%5d: %08X:%04X %08X:%04X"
 		" %02X %08X:%08X %02X:%08lX %08X %5d %8d %lu %d %pK %d",

@@ -1069,8 +1069,9 @@ static void apps_ipa_packet_receive_notify(void *priv,
 	struct sk_buff *skb = (struct sk_buff *)data;
 	struct net_device *dev = (struct net_device *)priv;
 	int result;
+	unsigned int packet_len = skb->len;
 
-	IPAWANDBG("Tx packet was received");
+	IPAWANDBG("Rx packet was received");
 	if (evt != IPA_RECEIVE) {
 		IPAWANERR("A none IPA_RECEIVE event in wan_ipa_receive\n");
 		return;
@@ -1086,7 +1087,7 @@ static void apps_ipa_packet_receive_notify(void *priv,
 		dev->stats.rx_dropped++;
 	}
 	dev->stats.rx_packets++;
-	dev->stats.rx_bytes += skb->len;
+	dev->stats.rx_bytes += packet_len;
 	return;
 }
 
@@ -1928,7 +1929,7 @@ static int ipa_wwan_remove(struct platform_device *pdev)
 		IPAWANERR("Error deleting resource %d, ret=%d\n",
 		IPA_RM_RESOURCE_WWAN_0_PROD, ret);
 	cancel_work_sync(&ipa_tx_wakequeue_work);
-	cancel_delayed_work_sync(&ipa_tether_stats_poll_wakequeue_work);
+	cancel_delayed_work(&ipa_tether_stats_poll_wakequeue_work);
 	free_netdev(ipa_netdevs[0]);
 	ipa_netdevs[0] = NULL;
 	/* No need to remove wwan_ioctl during SSR */
@@ -2147,7 +2148,9 @@ static void tethering_stats_poll_queue(struct work_struct *work)
 {
 	rmnet_ipa_get_stats_and_update(false);
 
-	schedule_delayed_work(&ipa_tether_stats_poll_wakequeue_work,
+	/* Schedule again only if there's an active polling interval */
+	if (0 != ipa_rmnet_ctx.polling_interval)
+		schedule_delayed_work(&ipa_tether_stats_poll_wakequeue_work,
 			msecs_to_jiffies(ipa_rmnet_ctx.polling_interval*1000));
 }
 
@@ -2341,9 +2344,22 @@ void ipa_broadcast_quota_reach_ind(u32 mux_id)
  */
 void ipa_q6_handshake_complete(bool ssr_bootup)
 {
-	/* It is required to recover the network stats after SSR recovery */
-	if (ssr_bootup)
+	if (ssr_bootup) {
+		/*
+		 * In case the uC is required to be loaded by the Modem,
+		 * the proxy vote will be removed only when uC loading is
+		 * complete and indication is received by the AP. After SSR,
+		 * uC is already loaded. Therefore, proxy vote can be removed
+		 * once Modem init is complete.
+		 */
+		ipa_proxy_clk_unvote();
+
+		/*
+		 * It is required to recover the network stats after
+		 * SSR recovery
+		 */
 		rmnet_ipa_get_network_stats_and_update();
+	}
 }
 
 static int __init ipa_wwan_init(void)

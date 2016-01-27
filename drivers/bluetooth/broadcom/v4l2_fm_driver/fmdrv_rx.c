@@ -130,8 +130,8 @@ int fm_rx_set_rssi_threshold(struct fmdrv_ops *fmdev, short rssi_lvl_toset)
         return ret;
     }
 
-    fmdev->rx.curr_rssi= rssi_lvl_toset;
-
+    fmdev->rx.curr_rssi = rssi_lvl_toset;
+    V4L2_FM_DRV_DBG(V4L2_DBG_TX, "fm_rx_set_rssi_threshold: curr_rssi = %d, payload = %d",fmdev->rx.curr_rssi, payload);
     return 0;
 }
 
@@ -221,6 +221,61 @@ int fm_rx_set_mask(struct fmdrv_ops *fmdev, unsigned short mask)
             &fmdev->maintask_completion, NULL, NULL);
     FM_CHECK_SEND_CMD_STATUS(ret);
     return ret;
+}
+
+/* Function to turn On/Off RDS */
+int fm_rx_set_rds_mode(struct fmdrv_ops *fmdev, u8 rds_mode)
+{
+    unsigned char payload;
+    int ret;
+
+    if (fmdev->curr_fmmode != FM_MODE_RX)
+        return -EPERM;
+
+    if(fmdev->rx.rds.rds_flag == rds_mode)
+        return 0;
+
+    if((fmdev->rx.fm_func_mask & (FM_RDS_BIT | FM_RBDS_BIT)) && rds_mode == FM_RDS_ENABLE)
+    {
+        V4L2_FM_DRV_DBG(V4L2_DBG_TX, "(fmdrv) Turn On RDS mode");
+ 
+        payload = FM_RDS_UPD_TUPLE;
+        /* write RDS FIFO waterline in depth of RDS tuples */
+        ret = fmc_send_cmd(fmdev, FM_REG_RDS_WLINE, &payload, sizeof(payload),
+                            REG_WR, &fmdev->maintask_completion, NULL, NULL);
+        if(ret < 0)
+        {
+            V4L2_FM_DRV_ERR("(fmdrv) Error writing to RDS FIFO waterline register");
+            return ret;
+        }
+        /* drain RDS FIFO */
+        payload = FM_RDS_FIFO_MAX;
+        ret = fmc_send_cmd(fmdev, FM_REG_RDS_DATA, &payload, 1,
+                            REG_RD, &fmdev->maintask_completion, NULL, NULL);
+
+        if(ret < 0)
+        {
+            V4L2_FM_DRV_ERR("(fmdrv) Error writing to RDS DATA register");
+            return ret;
+        }
+        /* set new FM_RDS mask so that RDS read */
+        fmdev->rx.fm_rds_mask |= I2C_MASK_RDS_FIFO_WLINE_BIT;
+
+        fmdev->rx.rds.rds_flag = FM_RDS_ENABLE;
+    }
+    else if((fmdev->rx.fm_func_mask & (FM_RDS_BIT | FM_RBDS_BIT)) && rds_mode == FM_RDS_DISABLE)
+    {
+        V4L2_FM_DRV_DBG(V4L2_DBG_TX, "(fmdrv) Turn Off RDS mode");
+        fmdev->rx.fm_rds_mask &= ~I2C_MASK_RDS_FIFO_WLINE_BIT;
+
+        fmdev->rx.rds.rds_flag = FM_RDS_DISABLE;
+    }
+    fm_rx_set_mask(fmdev, fmdev->rx.fm_rds_mask);
+    /* Reset the fm_rds_flag here as for the first time we dont get
+        any interrupt during ENABLE to cleanup the bit */
+    fmdev->rx.fm_rds_flag &= ~FM_RDS_FLAG_CLEAN_BIT;
+
+    return 0;
 }
 
 /*
@@ -656,6 +711,33 @@ int fm_rx_seek_station(struct fmdrv_ops *fmdev, unsigned char direction_upward,
 
     V4L2_FM_DRV_ERR("(fmdrv) Unhandled case in Seek");
     return -EINVAL;
+}
+
+/*******************************************************************************
+**
+** Function         bta_fm_abort
+**
+** Description      Abort on-going scanning operation.
+**
+**
+** Returns          void
+*******************************************************************************/
+int fm_rx_seek_station_abort(struct fmdrv_ops *fmdev)
+{
+    unsigned char payload;
+    int ret;
+
+    payload = FM_TUNER_NORMAL_SCAN_MODE;
+
+    ret = fmc_send_cmd(fmdev, FM_REG_SCH_TUNE, &payload, sizeof(payload),
+            REG_WR, &fmdev->maintask_completion, NULL, NULL);
+
+    V4L2_FM_DRV_DBG(V4L2_DBG_TX,"return = %d",ret);
+
+    if (ret < 0)
+        return ret;
+
+    return 0;
 }
 
 /*
@@ -1181,6 +1263,7 @@ void fm_rx_enable_rds(struct fmdrv_ops *fmdev)
 
         /* set new FM_RDS mask so that RDS read */
         fmdev->rx.fm_rds_mask |= I2C_MASK_RDS_FIFO_WLINE_BIT;
+        fmdev->rx.rds.rds_flag = FM_RDS_ENABLE;
     }
     else
     {
@@ -1204,10 +1287,10 @@ int fm_rx_is_rds_data_available(struct fmdrv_ops *fmdev, struct file *file,
 {
     poll_wait(file, &fmdev->rx.rds.read_queue, pts);
     if (fmdev->rx.rds.rd_index != fmdev->rx.rds.wr_index) {
-        V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(fmdrv) Poll success. RDS data is "\
-            "available in buffer");
+        //V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(fmdrv) Poll success. RDS data is "\
+        //    "available in buffer");
         return 0;
     }
-    V4L2_FM_DRV_ERR("(fmdev) RDS Buffer is empty");
+    //V4L2_FM_DRV_ERR("(fmdev) RDS Buffer is empty");
     return -EAGAIN;
 }

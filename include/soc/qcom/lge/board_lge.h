@@ -123,6 +123,7 @@ static inline void gpio_debug_print(void) { return; }
 char* lge_get_dsv_vendor(void);
 int lge_get_panel(void);
 void lge_set_panel(int);
+int lge_get_rsp_nvm(void);
 #if defined(CONFIG_MACH_MSM8992_P1_CN) || defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
 int lge_get_sim_type(void);
 #endif

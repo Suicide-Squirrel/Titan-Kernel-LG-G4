@@ -28,7 +28,8 @@
 #define VBUS_REG_CHECK_DELAY	(msecs_to_jiffies(1000))
 
 #ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
-#define MAX_INVALID_CHRGR_RETRY 8
+#define MAX_INVALID_CHRGR_RETRY 40
+static int control_flag_incompatible_popup;
 #else
 #define MAX_INVALID_CHRGR_RETRY 3
 #endif
@@ -563,7 +564,11 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 
 	dev_info(phy->dev, "Avail curr from USB = %u\n", mA);
 
+#ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
+	if (mA > 2) {
+#else
 	if (dotg->charger->max_power <= 2 && mA > 2) {
+#endif
 		/* Enable charging */
 		if (power_supply_set_online(dotg->psy, true))
 			goto psy_error;
@@ -708,6 +713,10 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					break;
 #endif
 				case DWC3_PROPRIETARY_CHARGER:
+#ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
+					if(control_flag_incompatible_popup)
+						queue_delayed_work(system_nrt_wq, dotg->charger->drv_check_state_wq, 0);
+#endif
 					dev_dbg(phy->dev, "lpm, DCP charger\n");
 					dwc3_otg_set_power(phy,
 							DWC3_IDEV_CHG_MAX);
@@ -742,6 +751,10 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					work = 1;
 					break;
 				case DWC3_FLOATED_CHARGER:
+#if defined (CONFIG_LGE_USB_CHARGING_SPEC_VZW) && defined (CONFIG_LGE_PM_USB_ID)
+					if (!dotg->charger_retry_count)
+						dwc3_otg_set_power(phy, 100);
+#endif
 					if (dotg->charger_retry_count <
 							max_chgr_retry_count)
 						dotg->charger_retry_count++;
@@ -754,20 +767,25 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					 * calling start_detection() with false
 					 * and then with true argument.
 					 */
+#ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
+					if (dotg->charger_retry_count == 8) {
+						control_flag_incompatible_popup = 1;
+						queue_delayed_work(system_nrt_wq, dotg->charger->drv_check_state_wq, 0);
+					}
+#endif
 					if (dotg->charger_retry_count ==
 						max_chgr_retry_count) {
-#ifdef CONFIG_LGE_PM_USB_ID
+
 #ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
+						control_flag_incompatible_popup = 0;
 						queue_delayed_work(system_nrt_wq, dotg->charger->drv_check_state_wq, 0);
-						dwc3_otg_start_peripheral(&dotg->otg, 1);
-						phy->state = OTG_STATE_B_PERIPHERAL;
-						work = 1;
-#else
+#elif CONFIG_LGE_PM_USB_ID
 						dwc3_otg_set_power(phy, 100);
+#endif
+#ifdef CONFIG_LGE_PM_USB_ID
 						dwc3_otg_start_peripheral(&dotg->otg, 1);
 						phy->state = OTG_STATE_B_PERIPHERAL;
 						work = 1;
-#endif
 #else
 						dwc3_otg_set_power(phy, 0);
 						dbg_event(0xFF, "FLCHG put", 0);

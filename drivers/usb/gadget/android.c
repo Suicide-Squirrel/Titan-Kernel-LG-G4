@@ -49,6 +49,9 @@
 #ifdef CONFIG_SND_PCM
 #include "f_audio_source.c"
 #endif
+//#ifdef CONFIG_SND_RAWMIDI   FIXME
+//#include "f_midi.c"
+//#endif
 #include "f_mass_storage.c"
 #ifdef CONFIG_LGE_USB_G_ANDROID
 #include "f_midi.c"
@@ -119,6 +122,13 @@ static const char longname[] = "Gadget Android";
 #endif
 
 #define ANDROID_DEVICE_NODE_NAME_LENGTH 11
+#if 0 //FIXME
+/* f_midi configuration */
+#define MIDI_INPUT_PORTS    1
+#define MIDI_OUTPUT_PORTS   1
+#define MIDI_BUFFER_SIZE    1024
+#define MIDI_QUEUE_LENGTH   32
+#endif
 
 struct android_usb_function {
 	char *name;
@@ -241,6 +251,7 @@ struct android_dev {
 	struct list_head list_item;
 #if defined CONFIG_LGE_USB_G_ANDROID && defined CONFIG_LGE_PM
 	bool check_pif;
+	bool check_qem;
 #endif
 #ifdef CONFIG_LGE_USB_G_AUTORUN
 	bool check_charge_only;
@@ -3069,7 +3080,8 @@ static ssize_t audio_source_pcm_show(struct device *dev,
 	struct audio_source_config *config = f->config;
 
 	/* print PCM card and device numbers */
-	return sprintf(buf, "%d %d\n", config->card, config->device);
+	return snprintf(buf, PAGE_SIZE,
+			"%d %d\n", config->card, config->device);
 }
 
 static DEVICE_ATTR(pcm, S_IRUGO, audio_source_pcm_show, NULL);
@@ -3974,7 +3986,7 @@ field ## _store(struct device *dev, struct device_attribute *attr,	\
 		const char *buf, size_t size)				\
 {									\
 	struct android_dev *adev = dev_get_drvdata(dev);		\
-	if (adev->check_pif)						\
+	if (adev->check_pif && adev->check_qem)				\
 		return -EPERM;						\
 	if (size >= sizeof(buffer))					\
 		return -EINVAL;						\
@@ -4736,8 +4748,20 @@ static int android_probe(struct platform_device *pdev)
 	mutex_init(&android_dev->mutex);
 
 #if defined CONFIG_LGE_USB_G_ANDROID && defined CONFIG_LGE_PM
-	if (lgeusb_get_factory_cable())
+	if (lgeusb_get_factory_cable()) {
 		android_dev->check_pif = true;
+
+		switch (lge_get_boot_mode()) {
+		case LGE_BOOT_MODE_QEM_56K:
+		case LGE_BOOT_MODE_QEM_130K:
+		case LGE_BOOT_MODE_QEM_910K:
+			android_dev->check_qem = true;
+			break;
+
+		default:
+			break;
+		}
+	}
 #endif
 
 	android_dev->pdata = pdata;

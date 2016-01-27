@@ -51,6 +51,7 @@ enum {
 	ADC4_TXFE,
 	ADC5_TXFE,
 	ADC6_TXFE,
+	HPH_DELAY,
 };
 
 #define TOMTOM_MAD_SLIMBUS_TX_PORT 12
@@ -61,7 +62,7 @@ enum {
 #define TOMTOM_BIT_ADJ_SHIFT_PORT1_6 4
 #define TOMTOM_BIT_ADJ_SHIFT_PORT7_10 5
 
-#define TOMTOM_HPH_PA_SETTLE_COMP_ON 5000
+#define TOMTOM_HPH_PA_SETTLE_COMP_ON 10000
 #define TOMTOM_HPH_PA_SETTLE_COMP_OFF 13000
 #define TOMTOM_HPH_PA_RAMP_DELAY 30000
 
@@ -3540,7 +3541,11 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMU:
+#ifdef CONFIG_MACH_LGE
+		usleep_range(20000, 20100);
+#else
 		usleep_range(5000, 5100);
+#endif
 		/* Let MBHC module know so micbias is on */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_on);
 		break;
@@ -4324,14 +4329,22 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
+		set_bit(HPH_DELAY, &tomtom->status_mask);
 		/* Let MBHC module know PA is turning on */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_pre_on);
 		break;
 
 	case SND_SOC_DAPM_POST_PMU:
-		usleep_range(pa_settle_time, pa_settle_time + 1000);
-		pr_debug("%s: sleep %d us after %s PA enable\n", __func__,
-				pa_settle_time, w->name);
+		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
+			/*
+			 * Make sure to wait 10ms after enabling HPHR_HPHL
+			 * in register 0x1AB
+			*/
+			usleep_range(pa_settle_time, pa_settle_time + 1000);
+			clear_bit(HPH_DELAY, &tomtom->status_mask);
+			pr_debug("%s: sleep %d us after %s PA enable\n",
+				__func__, pa_settle_time, w->name);
+		}
 		if (!high_perf_mode && !tomtom->uhqa_mode) {
 			wcd9xxx_clsh_fsm(codec, &tomtom->clsh_d,
 						 req_clsh_state,
@@ -4341,14 +4354,22 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
-		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_pre_off);
+		set_bit(HPH_DELAY, &tomtom->status_mask);
 		break;
+
 	case SND_SOC_DAPM_POST_PMD:
 		/* Let MBHC module know PA turned off */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_off);
-		usleep_range(pa_settle_time, pa_settle_time + 1000);
-		pr_debug("%s: sleep %d us after %s PA disable\n", __func__,
-				pa_settle_time, w->name);
+		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
+			/*
+			 * Make sure to wait 10ms after disabling HPHR_HPHL
+			 * in register 0x1AB
+			*/
+			usleep_range(pa_settle_time, pa_settle_time + 1000);
+			clear_bit(HPH_DELAY, &tomtom->status_mask);
+			pr_debug("%s: sleep %d us after %s PA disable\n",
+				__func__, pa_settle_time, w->name);
+		}
 
 		break;
 	}
@@ -5270,10 +5291,23 @@ static int tomtom_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 	if (tomtom_is_digital_gain_register(reg))
 		return 1;
 
+	/* HPH status registers */
+	if (reg == TOMTOM_A_RX_HPH_L_STATUS || reg == TOMTOM_A_RX_HPH_R_STATUS)
+		return 1;
+
+	if (reg == TOMTOM_A_MBHC_INSERT_DET_STATUS)
+		return 1;
+
+	if (reg == TOMTOM_A_RX_HPH_CNP_EN)
+		return 1;
+
 	if (((reg >= TOMTOM_A_CDC_SPKR_CLIPDET_VAL0 &&
 	    reg <= TOMTOM_A_CDC_SPKR_CLIPDET_VAL7)) ||
 	    ((reg >= TOMTOM_A_CDC_SPKR2_CLIPDET_VAL0) &&
 	     (reg <= TOMTOM_A_CDC_SPKR2_CLIPDET_VAL7)))
+		return 1;
+
+	if (reg == TOMTOM_A_CDC_VBAT_GAIN_MON_VAL)
 		return 1;
 
 	for (i = 0; i < ARRAY_SIZE(audio_reg_cfg); i++)
@@ -5281,17 +5315,8 @@ static int tomtom_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 		    TOMTOM_REGISTER_START_OFFSET == reg)
 			return 1;
 
-	switch (reg) {
-	case TOMTOM_A_RX_HPH_R_STATUS:
-	case TOMTOM_A_RX_HPH_L_STATUS:
-	case TOMTOM_A_MBHC_INSERT_DET_STATUS:
-	case TOMTOM_A_RX_HPH_CNP_EN:
-	case TOMTOM_A_CDC_VBAT_GAIN_MON_VAL:
-	case TOMTOM_A_SVASS_SPE_INBOX_TRG:
-	case TOMTOM_A_BIAS_OSC_BG_CTL:
-	case TOMTOM_A_CLK_BUFF_EN2:
+	if (reg == TOMTOM_A_SVASS_SPE_INBOX_TRG)
 		return 1;
-	}
 
 	return 0;
 }
@@ -6675,7 +6700,7 @@ static const struct snd_soc_dapm_widget tomtom_dapm_widgets[] = {
 
 	SND_SOC_DAPM_PGA_E("HPHR", TOMTOM_A_RX_HPH_CNP_EN, 4, 0, NULL, 0,
 		tomtom_hph_pa_event, SND_SOC_DAPM_PRE_PMU |
-		SND_SOC_DAPM_POST_PMU |	SND_SOC_DAPM_PRE_PMD |
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD |
 		SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_DAC_E("HPHR DAC", NULL, TOMTOM_A_RX_HPH_R_DAC_CTL, 7, 0,

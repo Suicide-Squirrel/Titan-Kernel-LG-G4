@@ -2977,12 +2977,14 @@ void cnss_runtime_init(struct device *dev, int auto_delay)
 	pm_runtime_allow(dev);
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_noidle(dev);
+	pm_suspend_ignore_children(dev, true);
 }
 EXPORT_SYMBOL(cnss_runtime_init);
 
 void cnss_runtime_exit(struct device *dev)
 {
 	pm_runtime_get_noresume(dev);
+	pm_runtime_set_active(dev);
 }
 EXPORT_SYMBOL(cnss_runtime_exit);
 module_init(cnss_initialize);
