@@ -1523,14 +1523,15 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		if (lge_mdss_dsi.lge_mdss_dsi_event_handler)
 			lge_mdss_dsi.lge_mdss_dsi_event_handler(pdata, event, arg);
 #endif
+		if (ctrl_pdata->refresh_clk_rate)
+			rc = mdss_dsi_clk_refresh(pdata);
+
 		rc = mdss_dsi_on(pdata);
 		mdss_dsi_op_mode_config(pdata->panel_info.mipi.mode,
 							pdata);
 		break;
 	case MDSS_EVENT_UNBLANK:
 		mdss_dsi_get_hw_revision(ctrl_pdata);
-		if (ctrl_pdata->refresh_clk_rate)
-			rc = mdss_dsi_clk_refresh(pdata);
 
 		if (ctrl_pdata->on_cmds.link_state == DSI_LP_MODE)
 			rc = mdss_dsi_unblank(pdata);
@@ -1628,6 +1629,33 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	return rc;
 }
 
+static int mdss_dsi_set_override_cfg(char *override_cfg,
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata, char *panel_cfg)
+{
+	struct mdss_panel_info *pinfo = &ctrl_pdata->panel_data.panel_info;
+	char *token = NULL;
+
+	pr_debug("%s: override config:%s\n", __func__, override_cfg);
+	while ((token = strsep(&override_cfg, ":"))) {
+		if (!strcmp(token, OVERRIDE_CFG)) {
+			continue;
+		} else if (!strcmp(token, SIM_HW_TE_PANEL)) {
+			pinfo->sim_panel_mode = SIM_HW_TE_MODE;
+		} else if (!strcmp(token, SIM_SW_TE_PANEL)) {
+			pinfo->sim_panel_mode = SIM_SW_TE_MODE;
+		} else if (!strcmp(token, SIM_PANEL)) {
+			pinfo->sim_panel_mode = SIM_MODE;
+		} else {
+			pr_err("%s: invalid override_cfg token: %s\n",
+					__func__, token);
+			return -EINVAL;
+		}
+	}
+	pr_debug("%s:sim_panel_mode:%d\n", __func__, pinfo->sim_panel_mode);
+
+	return 0;
+}
+
 static struct device_node *mdss_dsi_pref_prim_panel(
 		struct platform_device *pdev)
 {
@@ -1664,8 +1692,10 @@ static struct device_node *mdss_dsi_find_panel_of_node(
 	int ctrl_id = pdev->id - 1;
 	char panel_name[MDSS_MAX_PANEL_LEN];
 	char ctrl_id_stream[3] =  "0:";
-	char *stream = NULL, *pan = NULL;
+	char *stream = NULL, *pan = NULL, *override_cfg = NULL;
 	struct device_node *dsi_pan_node = NULL, *mdss_node = NULL;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = platform_get_drvdata(pdev);
+	struct mdss_panel_info *pinfo = &ctrl_pdata->panel_data.panel_info;
 
 	len = strlen(panel_cfg);
 	if (!len) {
@@ -1674,6 +1704,17 @@ static struct device_node *mdss_dsi_find_panel_of_node(
 			 __func__, __LINE__);
 		goto end;
 	} else {
+		/* check if any override parameters are set */
+		pinfo->sim_panel_mode = 0;
+		override_cfg = strnstr(panel_cfg, "#" OVERRIDE_CFG, len);
+		if (override_cfg) {
+			*override_cfg = '\0';
+			if (mdss_dsi_set_override_cfg(override_cfg + 1,
+					ctrl_pdata, panel_cfg))
+				return NULL;
+			len = strlen(panel_cfg);
+		}
+
 		if (ctrl_id == 1)
 			strlcpy(ctrl_id_stream, "1:", 3);
 
@@ -2280,24 +2321,6 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	 * suspend also.
 	 */
 	if (pinfo->ulps_suspend_enabled) {
-#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
-		if(pinfo->lge_pan_info.panel_type == LGD_INCELL_CMD_PANEL) {
-			/* Do nothing for P1 LGD when suspend-ulps is enabled.
-			But for MIPI spec, DSI power must be enabled to keep MIPI lanes low.
-			And this change is just an w/a code, which could cause other side effects ,
-			and just for decrease of current consumption */
-			pr_info("%s: just skip to enable vregs for DSI_CTRL_PM, ulps_suspend_enabled\n", __func__);
-		} else {
-			rc = msm_dss_enable_vreg(
-				ctrl_pdata->power_data[DSI_CTRL_PM].vreg_config,
-				ctrl_pdata->power_data[DSI_CTRL_PM].num_vreg, 1);
-			if (rc) {
-				pr_err("%s: failed to enable vregs for DSI_CTRL_PM\n",
-					__func__);
-				return rc;
-			}
-		}
-#else
 		rc = msm_dss_enable_vreg(
 			ctrl_pdata->power_data[DSI_CTRL_PM].vreg_config,
 			ctrl_pdata->power_data[DSI_CTRL_PM].num_vreg, 1);
@@ -2306,7 +2329,6 @@ int dsi_panel_device_register(struct device_node *pan_node,
 				__func__);
 			return rc;
 		}
-#endif
 	}
 
 	if (pinfo->cont_splash_enabled) {

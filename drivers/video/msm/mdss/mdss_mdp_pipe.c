@@ -597,16 +597,13 @@ static int mdss_mdp_smp_alloc(struct mdss_mdp_pipe *pipe)
 
 	mutex_lock(&mdss_mdp_smp_lock);
 	for (i = 0; i < MAX_PLANES; i++) {
-		cnt += bitmap_weight(pipe->smp_map[i].fixed, SMP_MB_CNT);
+		cnt += mdss_mdp_smp_mmb_set(pipe->ftch_id + i,
+			pipe->smp_map[i].fixed);
 
-		if (bitmap_empty(pipe->smp_map[i].reserved, SMP_MB_CNT)) {
-			cnt += mdss_mdp_smp_mmb_set(pipe->ftch_id + i,
-				pipe->smp_map[i].allocated);
-			continue;
+		if (!bitmap_empty(pipe->smp_map[i].reserved, SMP_MB_CNT)) {
+			mdss_mdp_smp_mmb_amend(pipe->smp_map[i].allocated,
+				pipe->smp_map[i].reserved);
 		}
-
-		mdss_mdp_smp_mmb_amend(pipe->smp_map[i].allocated,
-			pipe->smp_map[i].reserved);
 		cnt += mdss_mdp_smp_mmb_set(pipe->ftch_id + i,
 			pipe->smp_map[i].allocated);
 	}
@@ -931,7 +928,7 @@ static struct mdss_mdp_pipe *mdss_mdp_pipe_init(struct mdss_mdp_mixer *mixer,
 
 cursor_done:
 	if (!pipe)
-		pr_err("no %d type pipes available\n", type);
+		pr_debug("no %d type pipes available\n", type);
 
 	return pipe;
 }

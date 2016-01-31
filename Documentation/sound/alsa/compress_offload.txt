@@ -180,7 +180,6 @@ data would belong to next track
 This routine is called to send to DSP codec specific data of subsequent track
 in gapless before first write.
 
-
 Sequence flow for gapless would be:
 - Open
 - Get caps / codec caps

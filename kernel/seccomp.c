@@ -23,11 +23,8 @@
 
 /* #define SECCOMP_DEBUG 1 */
 
-#ifdef CONFIG_HAVE_ARCH_SECCOMP_FILTER
-#include <asm/syscall.h>
-#endif
-
 #ifdef CONFIG_SECCOMP_FILTER
+#include <asm/syscall.h>
 #include <linux/filter.h>
 #include <linux/pid.h>
 #include <linux/ptrace.h>
@@ -204,7 +201,7 @@ static int seccomp_check_filter(struct sock_filter *filter, unsigned int flen)
  *
  * Returns valid seccomp BPF response codes.
  */
-static u32 seccomp_run_filters(void)
+static u32 seccomp_run_filters(int syscall)
 {
 	struct seccomp_filter *f = ACCESS_ONCE(current->seccomp.filter);
 	u32 ret = SECCOMP_RET_ALLOW;
@@ -568,43 +565,10 @@ static int mode1_syscalls_32[] = {
 };
 #endif
 
-static void __secure_computing_strict(int this_syscall)
+int __secure_computing(int this_syscall)
 {
-	int *syscall_whitelist = mode1_syscalls;
-#ifdef CONFIG_COMPAT
-	if (is_compat_task())
-		syscall_whitelist = mode1_syscalls_32;
-#endif
-	do {
-		if (*syscall_whitelist == this_syscall)
-			return;
-	} while (*++syscall_whitelist);
-
-#ifdef SECCOMP_DEBUG
-	dump_stack();
-#endif
-	audit_seccomp(this_syscall, SIGKILL, SECCOMP_RET_KILL);
-	do_exit(SIGKILL);
-}
-
-#ifndef CONFIG_HAVE_ARCH_SECCOMP_FILTER
-void secure_computing_strict(int this_syscall)
-{
-	int mode = current->seccomp.mode;
-
-	if (mode == 0)
-		return;
-	else if (mode == SECCOMP_MODE_STRICT)
-		__secure_computing_strict(this_syscall);
-	else
-		BUG();
-}
-#else
-int __secure_computing(void)
-{
-	struct pt_regs *regs = task_pt_regs(current);
-	int this_syscall = syscall_get_nr(current, regs);
 	int exit_sig = 0;
+	int *syscall;
 	u32 ret;
 
 	/*
@@ -615,12 +579,23 @@ int __secure_computing(void)
 
 	switch (current->seccomp.mode) {
 	case SECCOMP_MODE_STRICT:
-		__secure_computing_strict(this_syscall);
-		return 0;
+		syscall = mode1_syscalls;
+#ifdef CONFIG_COMPAT
+		if (is_compat_task())
+			syscall = mode1_syscalls_32;
+#endif
+		do {
+			if (*syscall == this_syscall)
+				return 0;
+		} while (*++syscall);
+		exit_sig = SIGKILL;
+		ret = SECCOMP_RET_KILL;
+		break;
 #ifdef CONFIG_SECCOMP_FILTER
 	case SECCOMP_MODE_FILTER: {
 		int data;
-		ret = seccomp_run_filters();
+		struct pt_regs *regs = task_pt_regs(current);
+		ret = seccomp_run_filters(this_syscall);
 		data = ret & SECCOMP_RET_DATA;
 		ret &= SECCOMP_RET_ACTION;
 		switch (ret) {
@@ -678,10 +653,9 @@ int __secure_computing(void)
 #ifdef CONFIG_SECCOMP_FILTER
 skip:
 	audit_seccomp(this_syscall, exit_sig, ret);
-	return -1;
 #endif
+	return -1;
 }
-#endif /* CONFIG_HAVE_ARCH_SECCOMP_FILTER */
 
 long prctl_get_seccomp(void)
 {
