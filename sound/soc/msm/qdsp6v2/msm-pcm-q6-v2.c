@@ -452,13 +452,11 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 
 	prtd->enabled = RUNNING;
 
-	if (prtd->ch_mixer) {
-		pr_err("ptrd->ch_mixer = %d\n", prtd->ch_mixer);
+	if (prtd->ch_mixer)
 		msm_pcm_routing_channel_mixer(
 			soc_prtd->dai_link->be_id,
 			prtd->audio_client->perf_mode,
 			prtd->session_id, substream->stream, be_id);
-	}
 
 	return ret;
 }
