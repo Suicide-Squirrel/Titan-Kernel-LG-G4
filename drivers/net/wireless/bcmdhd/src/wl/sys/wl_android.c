@@ -215,6 +215,12 @@ typedef struct android_wifi_af_params {
 
 #define ANDROID_WIFI_AF_PARAMS_SIZE sizeof(struct android_wifi_af_params)
 #endif /* WES_SUPPORT */
+
+#ifdef CHANGE_PASSIVE_SCAN_TIME
+#define CMD_GETPASSIVESCANTIME "GETPASSIVESCANTIME"
+#define CMD_SETPASSIVESCANTIME "SETPASSIVESCANTIME"
+#endif /* CHANGE_PASSIVE_SCAN_TIME */
+
 #ifdef SUPPORT_AMPDU_MPDU_CMD
 #define CMD_AMPDU_MPDU		"AMPDU_MPDU"
 #endif /* SUPPORT_AMPDU_MPDU_CMD */
@@ -1374,6 +1380,49 @@ int wl_android_set_okc_mode(struct net_device *dev, char *command, int total_len
 }
 #endif /* WES_SUPPORT */
 #endif /* CUSTOMER_HW4 */
+
+#ifdef CHANGE_PASSIVE_SCAN_TIME
+int wl_android_get_passive_scan_channel_time(struct net_device *dev, char *command, int total_len)
+{
+	int error = 0;
+	int bytes_written = 0;
+	int time = 0;
+
+	error = wldev_iovar_getint(dev, "scan_passive_time", &time);
+	if (error) {
+		DHD_ERROR(("%s: Failed to get Passive Time, error = %d\n", __FUNCTION__, error));
+		return -1;
+	}
+	bytes_written = snprintf(command, total_len, "%s %d", CMD_GETPASSIVESCANTIME, time);
+
+	return bytes_written;
+}
+int wl_android_set_passive_scan_channel_time(struct net_device *dev, char *command, int total_len)
+{
+	int error = 0;
+	int time = 0;
+
+	if (sscanf(command, "%*s %d", &time) != 1) {
+		DHD_ERROR(("%s: Failed to get Parameter\n", __FUNCTION__));
+		return -1;
+	}
+
+	if (time == 0) {
+		DHD_ERROR(("%s: Failed to set Parameter\n", __FUNCTION__));
+		return -1;
+	} else {
+		DHD_ERROR(("%s: scan_passive_time = %d\n",__FUNCTION__, time));
+	}
+	error = wldev_iovar_setint(dev, "scan_passive_time", time);
+	if (error) {
+		DHD_ERROR(("%s: Failed to set Scan Passive Time %d, error = %d\n",
+		__FUNCTION__, time, error));
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* CHANGE_PASSIVE_SCAN_TIME */
 
 #ifdef PNO_SUPPORT
 #define PNO_PARAM_SIZE 50
@@ -3750,6 +3799,17 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 #endif /* WES_SUPPORT */
 #endif /* CUSTOMER_HW4 */
+
+#ifdef CHANGE_PASSIVE_SCAN_TIME
+        else if (strnicmp(command, CMD_GETPASSIVESCANTIME, strlen(CMD_GETPASSIVESCANTIME)) == 0) {
+                bytes_written = wl_android_get_passive_scan_channel_time(net, command,
+                        priv_cmd.total_len);
+        }
+        else if (strnicmp(command, CMD_SETPASSIVESCANTIME, strlen(CMD_SETPASSIVESCANTIME)) == 0) {
+                bytes_written = wl_android_set_passive_scan_channel_time(net, command,
+                        priv_cmd.total_len);
+        }
+#endif /* CHANGE_PASSIVE_SCAN_TIME */
 
 #ifdef PNO_SUPPORT
 	else if (strnicmp(command, CMD_PNOSSIDCLR_SET, strlen(CMD_PNOSSIDCLR_SET)) == 0) {
