@@ -17,7 +17,7 @@
 		wlan-en-gpio = <&msm_gpio 113 0>;
 		wlan-hostwake-gpio = <&msm_gpio 64 0>;
 
-		pinctrl-name = "default";
+		pinctrl-names = "default";
 		pinctrl-0 = <&pmx_wlan_enable_default &pmx_wlan_hostwake_default>;
 	};
 
