@@ -426,7 +426,8 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 			page = virt_to_page(uaddr);
 			if (!page) {
 				MCDRV_DBG_ERROR(mcd, "failed to map address");
-				return -EINVAL;
+				ret = -EINVAL;
+				goto map_buffer_end;
 			}
 			get_page(page);
 			mmutable_as_array_of_pointers_to_page[i] = page;
@@ -440,7 +441,8 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 			page = vmalloc_to_page(uaddr);
 			if (!page) {
 				MCDRV_DBG_ERROR(mcd, "failed to map address");
-				return -EINVAL;
+				ret = -EINVAL;
+				goto map_buffer_end;
 			}
 			get_page(page);
 			mmutable_as_array_of_pointers_to_page[i] = page;
@@ -473,7 +475,8 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 
 			if (!page) {
 				MCDRV_DBG_ERROR(mcd, "page address is null");
-				return -EFAULT;
+				ret = -EFAULT;
+				goto map_buffer_end;
 			}
 			/*
 			 * create MMU table entry, see ARM MMU docu for details
@@ -590,8 +593,11 @@ int mc_free_mmu_table(struct mc_instance *instance, uint32_t handle)
 		ret = -EINVAL;
 		goto err_unlock;
 	}
-	if (instance != table->owner && !is_daemon(instance)) {
-		MCDRV_DBG_ERROR(mcd, "instance does no own it");
+	if (instance == table->owner) {
+		/* Prevent double free */
+		table->owner = NULL;
+	} else if (!is_daemon(instance)) {
+		MCDRV_DBG_ERROR(mcd, "instance does not own it");
 		ret = -EPERM;
 		goto err_unlock;
 	}

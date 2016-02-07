@@ -16,42 +16,7 @@ ifdef MCDRV_SYMBOLS_FILE
     KBUILD_EXTRA_SYMBOLS=$(MCDRV_SYMBOLS_FILE)
 endif
 
-ifeq ($(PLATFORM), ARM_VE_A9X4_QEMU)
-	ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), MSM8974_SURF_STD)
-	ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), EXYNOS_5422_STD)
-	ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), EXYNOS_5430_STD)
-	ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), EXYNOS_7410_STD)
-	ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), EXYNOS_5433_STD)
-	ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), LGE_ODIN_LPAE)
-	ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), MSM8084_SURF_STD)
-        ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
-ifeq ($(PLATFORM), MSM8916_SURF_STD)
-        ccflags-y += -DMC_NETLINK_COMPAT_V37
-endif
-
+ccflags-y += -DMC_NETLINK_COMPAT_V37
 
 #EXTRA_CFLAGS += -DDEBUG -DDEBUG_VERBOSE
 #EXTRA_CFLAGS += -Wno-declaration-after-statement

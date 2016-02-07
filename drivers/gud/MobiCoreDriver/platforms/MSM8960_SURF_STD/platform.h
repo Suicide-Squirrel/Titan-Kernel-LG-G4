@@ -30,10 +30,12 @@
 #define MC_SMC_FASTCALL
 
 /*--------------- Implementation -------------- */
+#if defined(CONFIG_ARCH_APQ8084) || defined(CONFIG_ARCH_MSM8916) || \
+	defined(CONFIG_ARCH_MSM8994) || defined(CONFIG_ARCH_MSM8909)
+
 #include <soc/qcom/scm.h>
 
-#if defined(CONFIG_ARCH_APQ8084) || defined(CONFIG_ARCH_MSM8916) || \
-	defined(CONFIG_ARCH_MSM8994)
+#if defined(CONFIG_ARM64) || defined(CONFIG_ARCH_MSM8916)
 
 	#include <soc/qcom/qseecomi.h>
 	#include <linux/slab.h>
@@ -52,6 +54,10 @@
 			TZ_SYSCALL_PARAM_TYPE_BUF_RW, \
 			TZ_SYSCALL_PARAM_TYPE_VAL)
 
+#endif
+
+#else
+#include <mach/scm.h>
 #endif
 
 /* from following file */
@@ -106,7 +112,9 @@ static inline int smc_fastcall(void *fc_generic, size_t size)
 /* Enable the use of vm_unamp instead of the deprecated do_munmap
  * and other 3.7 features
  */
+#ifndef CONFIG_ARCH_MSM8960
 #define MC_VM_UNMAP
+#endif
 
 /*
  *  Perform crypto clock enable/disable
