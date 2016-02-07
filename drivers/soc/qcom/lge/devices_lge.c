@@ -45,6 +45,7 @@ static struct chg_cable_info_table lge_acc_cable_type_data[MAX_CABLE_NUM];
 static char dsv_vendor[3];
 int display_panel_type;
 int lk_panel_init_fail = 0;
+int rsp_nvm_rw;
 #if defined(CONFIG_MACH_MSM8992_P1_CN) || defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)
 int lge_sim_type;
 #endif
@@ -319,6 +320,26 @@ void lge_set_panel(int panel_type)
 int lge_get_panel(void)
 {
 	return display_panel_type;
+}
+
+static int __init lge_rsp_nvm_setup(char *rsp_nvm)
+{
+	if (strncmp(rsp_nvm, "0", 1) == 0) {
+		rsp_nvm_rw = 0;
+	} else if (strncmp(rsp_nvm, "1", 1) == 0) {
+		rsp_nvm_rw = 1;
+	} else {
+		pr_err("%s : fail to read rsp_nvm \n", __func__);
+	}
+	pr_debug("rsp_nvm %d,\n", rsp_nvm_rw);
+
+	return 1;
+}
+__setup("lge.rsp_nvm=", lge_rsp_nvm_setup);
+
+int lge_get_rsp_nvm(void)
+{
+	return rsp_nvm_rw;
 }
 
 #if defined(CONFIG_MACH_MSM8992_P1_CN) || defined(CONFIG_MACH_MSM8992_P1_GLOBAL_COM)

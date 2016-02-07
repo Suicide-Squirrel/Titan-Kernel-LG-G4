@@ -47,8 +47,6 @@
 #include <linux/fb.h>
 #endif
 
-#include <linux/input/lge_touch_notify.h>
-
 struct touch_device_driver      *touch_device_func;
 struct workqueue_struct         *touch_wq;
 int ime_stat = 0;
@@ -1202,11 +1200,23 @@ static int get_fw_pid_addr(struct lge_touch_data *ts, int panel_id)
 static int get_inbuilt_fw_path(struct lge_touch_data *ts, int panel_id)
 {
 	int idx = 0;
+	int panel_info = 0;
 	if (ts->pdata->inbuilt_fw_name)
 		return 0;
 
-	if (ts->pdata->inbuilt_fw_name_list[panel_id] != 0)
+	if (ts->pdata->inbuilt_fw_name_list[panel_id] != 0) {
 		idx = panel_id + ts->pdata->role->fw_index;
+
+		if (panel_id == 1) {
+			panel_info = lge_get_rsp_nvm();
+			TOUCH_D(DEBUG_BASE_INFO,
+				"panel info : %d\n", panel_info);
+			if (panel_info == 1)
+				idx += panel_info;
+			TOUCH_D(DEBUG_BASE_INFO,
+				"fw path idx : %d\n", idx);
+		}
+	}
 
 	ts->pdata->inbuilt_fw_name =
 		ts->pdata->inbuilt_fw_name_list[idx];
@@ -1275,7 +1285,8 @@ int touch_ic_init(struct lge_touch_data *ts, int is_error)
 {
 	TOUCH_TRACE();
 
-	TOUCH_I("%s : value = %d\n", __func__, is_error);
+	TOUCH_I("%s : value = %d, panel_id = %d\n",
+			__func__, is_error, ts->pdata->panel_id);
 
 	DO_IF(touch_device_func->init(ts->client) != 0, error);
 
@@ -1936,7 +1947,8 @@ void update_status(int code, int value)
 		}
 	}
 
-	if (atomic_read(&state->power) == POWER_ON)
+	if (atomic_read(&state->power) == POWER_ON ||
+		atomic_read(&state->power) == POWER_SLEEP)
 		touch_device_func->notify(client_only_for_update_status,
 				(u8)code, value);
 
@@ -3218,6 +3230,29 @@ static ssize_t store_mfts_mode(struct i2c_client *client,
 	return count;
 }
 
+static ssize_t show_fw_change(struct i2c_client *client, char *buf)
+{
+	struct lge_touch_data *ts = i2c_get_clientdata(client);
+	int ret, idx = 0;
+
+	if (ts->pdata->panel_id != 1) {
+		return ret;
+	}
+
+	idx = ts->pdata->panel_id + ts->pdata->role->fw_index + 1;
+
+	memcpy(ts->fw_info.fw_path, ts->pdata->inbuilt_fw_name_list[idx],
+			sizeof(ts->fw_info.fw_path));
+
+	TOUCH_I("idx : %d, fw_path : %s\n", idx, ts->fw_info.fw_path);
+
+	ts->fw_info.force_upgrade_cat = 1;
+
+	queue_delayed_work(touch_wq, &ts->work_upgrade, 0);
+
+	return ret;
+}
+
 static LGE_TOUCH_ATTR(platform_data,
 		S_IRUGO | S_IWUSR, show_platform_data, store_platform_data);
 static LGE_TOUCH_ATTR(power_ctrl, S_IRUGO | S_IWUSR, NULL, store_power_ctrl);
@@ -3225,6 +3260,7 @@ static LGE_TOUCH_ATTR(ic_rw, S_IRUGO | S_IWUSR, show_ic_rw, store_ic_rw);
 static LGE_TOUCH_ATTR(notify, S_IRUGO | S_IWUSR, show_notify, store_notify);
 static LGE_TOUCH_ATTR(fw_upgrade, S_IRUGO | S_IWUSR,
 		show_upgrade, store_upgrade);
+static LGE_TOUCH_ATTR(fw_change, S_IRUGO | S_IWUSR, show_fw_change, NULL);
 static LGE_TOUCH_ATTR(lpwg_data,
 		S_IRUGO | S_IWUSR, show_lpwg_data, store_lpwg_data);
 static LGE_TOUCH_ATTR(lpwg_notify, S_IRUGO | S_IWUSR, show_lpwg_notify, store_lpwg_notify);
@@ -3250,6 +3286,7 @@ static struct attribute *lge_touch_attribute_list[] = {
 	&lge_touch_attr_ic_rw.attr,
 	&lge_touch_attr_notify.attr,
 	&lge_touch_attr_fw_upgrade.attr,
+	&lge_touch_attr_fw_change.attr,
 	&lge_touch_attr_lpwg_data.attr,
 	&lge_touch_attr_lpwg_notify.attr,
 	&lge_touch_attr_tap2wake.attr,
