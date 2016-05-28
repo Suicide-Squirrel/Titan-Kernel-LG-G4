@@ -25,6 +25,7 @@
 static char ime_str[3][8] = {"OFF", "ON", "SWYPE"};
 static char incoming_call_str[3][8] = {"IDLE", "RINGING", "OFFHOOK"};
 static char mfts_str[3][8] = {"NONE", "FOLDER", "FLAT"};
+static int lpwg_status = 0;
 
 static ssize_t show_platform_data(struct device *dev, char *buf)
 {
@@ -133,6 +134,11 @@ static ssize_t store_lpwg_data(struct device *dev,
 	return count;
 }
 
+static ssize_t show_lpwg_notify(struct device *dev, char *buf)
+{
+	return sprintf(buf, "%d\n", lpwg_status);
+}
+
 static ssize_t store_lpwg_notify(struct device *dev,
 		const char *buf, size_t count)
 {
@@ -163,6 +169,7 @@ static ssize_t store_lpwg_notify(struct device *dev,
 	if (ts->driver->lpwg) {
 		mutex_lock(&ts->lock);
 		ts->driver->lpwg(ts->dev, code, param);
+		lpwg_status = (param[0]) ? 1 : 0;
 		mutex_unlock(&ts->lock);
 	}
 
