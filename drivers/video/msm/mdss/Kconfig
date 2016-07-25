@@ -180,3 +180,10 @@ config LGE_READER_MODE
 	---help---
 	The reader mode provides support to change color temperature
 	by sending proper cmds to panel.
+
+config FB_MSM_MDSS_KCAL_CTRL
+	depends on FB_MSM_MDSS
+	bool "MDSS color control"
+	---help---
+	  Enable sysfs for post-processing control of mdss-mdp5 display
+	  controllers in MDSS.
