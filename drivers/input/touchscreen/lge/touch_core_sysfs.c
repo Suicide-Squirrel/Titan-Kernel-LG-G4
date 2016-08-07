@@ -176,24 +176,30 @@ static ssize_t store_lpwg_notify(struct device *dev,
 	return count;
 }
 
+static int tap2wake_knocked[4] = { 1, 1, 0, 0 };
+
+static ssize_t show_tap2wake(struct device *dev, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%d\n", lpwg_status);
+}
+
 static ssize_t store_tap2wake(struct device *dev,
 		const char *buf, size_t count)
 {
-    struct touch_core_data *ts = to_touch_core(dev);
-    int status = 0;
+	struct touch_core_data *ts = to_touch_core(dev);
+	int status = 0;
 
-    sscanf(buf, "%d", &status);
+	sscanf(buf, "%d", &tap2wake_knocked[0]);
 
 	if (ts->driver->lpwg) {
 		mutex_lock(&ts->lock);
+		TOUCH_I("tap2wake %s\n", (status) ? "Enabled" : "Disabled");
+		ts->driver->lpwg(ts->dev, LPWG_MASTER, tap2wake_knocked);
+		lpwg_status = status;
+		mutex_unlock(&ts->lock);
+	}
 
-        TOUCH_I("TAP2WAKE: %s\n", (status) ? "Enabled" : "Disabled");
-        ts->driver->lpwg(ts->dev, LPWG_ENABLE, &status);
-
-        mutex_unlock(&ts->lock);
-    }
-
-    return count;
+	return count;
 }
 
 static ssize_t show_lockscreen_state(struct device *dev, char *buf)
