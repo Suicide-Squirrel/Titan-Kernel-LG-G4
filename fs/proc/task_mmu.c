@@ -1266,6 +1266,36 @@ ssize_t reclaim_walk_mm(struct task_struct *task, char *type_buf)
 	else
 		return -EINVAL;
 
+		if(!down_read_trylock(&mm->mmap_sem)) {
+			mmput(mm);
+			return -EINVAL;
+		}
+
+	return 0;
+}
+	
+static ssize_t reclaim_write(struct file *file, const char __user *buf,
+				size_t count, loff_t *ppos)
+{
+	struct task_struct *task;
+	char buffer[PROC_NUMBUF];
+	struct mm_struct *mm;
+	struct vm_area_struct *vma;
+	enum reclaim_type type;
+	char *type_buf;
+
+	memset(buffer, 0, sizeof(buffer));
+	if (count > sizeof(buffer) - 1)
+		count = sizeof(buffer) - 1;
+
+	if (copy_from_user(buffer, buf, count))
+		return -EFAULT;
+
+	type_buf = strstrip(buffer);
+	task = get_proc_task(file->f_path.dentry->d_inode);
+	if (!task)
+		return -ESRCH;
+
 	mm = get_task_mm(task);
 	if (mm) {
 		struct mm_walk reclaim_walk = {
@@ -1273,11 +1303,7 @@ ssize_t reclaim_walk_mm(struct task_struct *task, char *type_buf)
 			.mm = mm,
 		};
 
-		if(!down_read_trylock(&mm->mmap_sem)) {
-			mmput(mm);
-			return -EINVAL;
-		}
-
+		down_read(&mm->mmap_sem);
 		for (vma = mm->mmap; vma; vma = vma->vm_next) {
 			reclaim_walk.private = vma;
 
@@ -1296,9 +1322,14 @@ ssize_t reclaim_walk_mm(struct task_struct *task, char *type_buf)
 		up_read(&mm->mmap_sem);
 		mmput(mm);
 	}
+	put_task_struct(task);
 
-	return 0;
+	return count;
+}
 
+const struct file_operations proc_reclaim_operations = {
+	.write		= reclaim_write,
+	.llseek		= noop_llseek,
 };
 #endif
 

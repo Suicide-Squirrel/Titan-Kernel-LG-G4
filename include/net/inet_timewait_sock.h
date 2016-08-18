@@ -128,6 +128,9 @@ struct inet_timewait_sock {
 	/* And these are ours. */
 	unsigned int		tw_ipv6only     : 1,
 				tw_transparent  : 1,
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+                tw_flowlabel    : 20,
+#endif
 				tw_pad		: 6,	/* 6 bits hole */
 				tw_tos		: 8,
 				tw_ipv6_offset  : 16;
@@ -188,6 +191,10 @@ static inline struct inet_timewait_sock *inet_twsk(const struct sock *sk)
 {
 	return (struct inet_timewait_sock *)sk;
 }
+
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+void inet_twsk_free(struct inet_timewait_sock *tw);
+#endif
 
 static inline __be32 sk_rcv_saddr(const struct sock *sk)
 {

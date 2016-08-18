@@ -76,6 +76,8 @@ struct lge_pan_data {
 	struct notifier_block notif;
 	struct dsi_panel_cmds clk_on_cmds;
 	struct dsi_panel_cmds clk_off_cmds;
+	struct dsi_panel_cmds rsp_nvm_write;
+	bool do_rsp_nvm_write;
 };
 
 #define MAX_PANEL_ID_LEN 64

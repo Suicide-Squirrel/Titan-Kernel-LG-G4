@@ -7,4 +7,4 @@ KBUILD_CFLAGS += -w
 EXTRA_CFLAGS := -I$(PWD)/../include/
 
 ccflags-y := -DVERSION="\"$(BUILD_MODULE_VERSION)\""
-
+ccflags-y += -DDEF_V4L2_FM_AUDIO_PATH=FM_AUDIO_I2S

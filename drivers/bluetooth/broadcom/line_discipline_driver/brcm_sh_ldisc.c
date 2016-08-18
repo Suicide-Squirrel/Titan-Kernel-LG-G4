@@ -404,7 +404,10 @@ static ssize_t store_fw_patchfile(struct device *dev,
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_bdaddr =
-__ATTR(bdaddr, 0666, NULL,(void *)store_bdaddr);
+//BT_S [CONBT-2341] LGC_BT_COMMON_IMP_V4L2_OTHERWRITABLE_PERMISSION_DISABLE
+//orig __ATTR(bdaddr, 0666, NULL,(void *)store_bdaddr);
+__ATTR(bdaddr, 0664, NULL,(void *)store_bdaddr);
+//BT_E [CONBT-2341] LGC_BT_COMMON_IMP_V4L2_OTHERWRITABLE_PERMISSION_DISABLE
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_install =
@@ -412,7 +415,10 @@ __ATTR(install, 0444, (void *)show_install, NULL);
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_fw_patchfile =
-__ATTR(fw_patchfile, 0666, NULL, (void *)store_fw_patchfile);
+//BT_S [CONBT-2341] LGC_BT_COMMON_IMP_V4L2_OTHERWRITABLE_PERMISSION_DISABLE
+//orig __ATTR(fw_patchfile, 0666, NULL, (void *)store_fw_patchfile);
+__ATTR(fw_patchfile, 0664, NULL, (void *)store_fw_patchfile);
+//BT_E [CONBT-2341] LGC_BT_COMMON_IMP_V4L2_OTHERWRITABLE_PERMISSION_DISABLE
 
 
 static struct attribute *uim_attrs[] = {
@@ -617,6 +623,10 @@ static int brcm_hci_uart_set_proto(struct hci_uart *hu, int id)
 
     hu->proto = p;
     BT_LDISC_DBG(V4L2_DBG_INIT, "%p", p);
+
+    /* installation of N_BRCM_HCI ldisc complete */
+    sh_ldisc_complete(hu);
+
     return 0;
 }
 
@@ -1313,8 +1323,10 @@ long brcm_sh_ldisc_stop(struct hci_uart *hu)
     sysfs_notify(&hu->brcm_pdev->dev.kobj, NULL, "install");
 
     /* wait for ldisc to be un-installed */
+//BT_S : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
     err = wait_for_completion_timeout(&hu->ldisc_installed,
-            msecs_to_jiffies(LDISC_TIME));
+            msecs_to_jiffies(LDISC_STOP_TIME));/*LDISC_TIME to LDISC_STOP_TIME*/
+//BT_E : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
     if (!err) {     /* timeout */
         BT_LDISC_ERR(" timed out waiting for ldisc to be un-installed");
         return -ETIMEDOUT;
@@ -1350,10 +1362,45 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
         err = wait_for_completion_timeout(&hu->ldisc_installed,
                 msecs_to_jiffies(LDISC_TIME));
         if (!err) { /* timeout */
-            pr_err("line disc installation timed out ");
-            err = brcm_sh_ldisc_stop(hu);
-            continue;
+            pr_err("line disc start installation timed out ");
+//BT_S : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
+            do {
+                err = brcm_sh_ldisc_stop(hu);
+                if(err > 0 && hu->tty == NULL) {
+                    pr_err("Stop Complete");
+                    break;
+                } else {
+                    // Print Status
+                    if (!err) {
+                        pr_err("line disc stop timed out");
+                    } else if (err > 0 && hu->tty != NULL) {
+                        pr_err("(err > 0 && hu->tty != NULL)");
+                    } else if (err < 0 && hu->tty == NULL){
+                        pr_err("(err < 0 && hu->tty == NULL)");
+                    } else if (err < 0 && hu->tty != NULL) {
+                        pr_err("(err < 0 && hu->tty != NULL)");
+                    } else {
+                        pr_err("unknown error");
+                    }
+
+                    continue;
+                }
+            } while(retry--);
+
+            if(retry > 0){
+                pr_err("GOTO RETRY");
+            } else {
+                err = -1;
+                pr_err("END RETRY");
+                break;
+            }
+//BT_E : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
         } else {
+//BT_S : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
+            if(hu->tty == NULL) {
+                continue;
+            }
+//BT_E : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
             /* ldisc installed now */
             BT_LDISC_DBG(V4L2_DBG_INIT, " line discipline installed ");
             err = download_patchram(hu);
@@ -1428,13 +1475,15 @@ long brcm_sh_ldisc_write(struct sk_buff *skb)
 
     len = skb->len;
 
-    hu->proto->enqueue(hu, skb);
-
     /* forward to snoop */
 #if V4L2_SNOOP_ENABLE
     if(ldisc_snoop_enable_param)
         brcm_hci_write(hu, skb->data, skb->len);
 #endif
+
+//BT_S : [CONBT-2375][CSP#972153] During Opp transfer, Kernel Crash Error Fix (code position moved)
+    hu->proto->enqueue(hu, skb);
+//BT_E : [CONBT-2375][CSP#972153] During Opp transfer, Kernel Crash Error Fix (code position moved)
 
     brcm_hci_uart_tx_wakeup(hu);
 
@@ -1514,9 +1563,6 @@ static int brcm_hci_uart_tty_open(struct tty_struct *tty)
     }
 #endif
 
-   /* installation of N_BRCM_HCI ldisc complete */
-    sh_ldisc_complete(hu);
-
     return 0;
 }
 
@@ -1579,8 +1625,12 @@ static void brcm_hci_uart_tty_close(struct tty_struct *tty)
             }
         }
     }
-    sh_ldisc_complete(hu);
+
+//BT_S : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
+    //sh_ldisc_complete(hu);
     hu->tty = 0;
+    sh_ldisc_complete(hu);
+//BT_E : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
     BT_LDISC_DBG(V4L2_DBG_INIT, "tty close exit");
 }
 

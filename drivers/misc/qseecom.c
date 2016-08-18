@@ -1325,6 +1325,14 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		return -EFAULT;
 	}
 
+#ifdef CONFIG_MACH_MSM8992_P1
+    // Do not flow below code except P1 M OS, it is only for P1 M OS!
+    if (!memcmp(load_img_req.img_name, "keymaste", strlen("keymaste"))) {
+        pr_err("keymaster TZ app can't be loaded from this model\n");
+        return -EFAULT;
+    }
+#endif
+
 	if (qseecom.support_bus_scaling) {
 		mutex_lock(&qsee_bw_mutex);
 		ret = __qseecom_register_bus_bandwidth_needs(data, MEDIUM);
@@ -1515,8 +1523,9 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 	bool found_app = false;
 	bool found_dead_app = false;
 
-	if (!memcmp(data->client.app_name, "keymaste", strlen("keymaste"))) {
-		pr_debug("Do not unload keymaster app from tz\n");
+    if ((!memcmp(data->client.app_name, "keymaste", strlen("keymaste")))
+        || (!memcmp(data->client.app_name, "kmota", strlen("kmota")))) {
+        pr_debug("Do not unload keymaster or kmota app from tz\n");
 		goto unload_exit;
 	}
 

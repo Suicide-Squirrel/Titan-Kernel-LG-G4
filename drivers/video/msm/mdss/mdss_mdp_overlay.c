@@ -47,8 +47,7 @@
 	((flags & MDSS_MDP_RIGHT_MIXER) || (dst_x >= left_lm_w))
 
 /* hw cursor can only be setup in highest mixer stage */
-#define HW_CURSOR_STAGE(mdata) \
-	(((mdata)->max_target_zorder + MDSS_MDP_STAGE_0) - 1)
+#define HW_CURSOR_STAGE(mdata) ((mdata)->cursor_stage)
 
 #define BUF_POOL_SIZE 32
 
@@ -838,7 +837,7 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 
 	if (IS_RIGHT_MIXER_OV(req->flags, req->dst_rect.x, left_lm_w)
 			&& !(req->pipe_type == MDSS_MDP_PIPE_TYPE_CURSOR
-				&& is_split_lm(mfd)))
+				 && is_split_lm(mfd)))
 		mixer_mux = MDSS_MDP_MIXER_MUX_RIGHT;
 	else
 		mixer_mux = MDSS_MDP_MIXER_MUX_LEFT;
@@ -1074,7 +1073,7 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 	 */
 	if (mdata->has_src_split) {
 		if ((pipe->type == MDSS_MDP_PIPE_TYPE_CURSOR) &&
-				is_split_lm(mfd)) {
+				   is_split_lm(mfd)) {
 			pipe->src_split_req = true;
 		} else if ((mixer_mux == MDSS_MDP_MIXER_MUX_LEFT) &&
 		    ((req->dst_rect.x + req->dst_rect.w) > mixer->width)) {
@@ -1185,11 +1184,6 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 		}
 	}
 
-	/*
-	 * Populate Color Space.
-	 */
-	if (pipe->src_fmt->is_yuv && (pipe->type == MDSS_MDP_PIPE_TYPE_VIG))
-		pipe->csc_coeff_set = req->color_space;
 	/*
 	 * When scaling is enabled src crop and image
 	 * width and height is modified by user
@@ -3497,8 +3491,13 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 
 	size = img->width * img->height * 4;
 	if (size != mfd->cursor_buf_size) {
-		pr_debug("allocating cursor mem size:%zd, mfd-cursor_buf->size:%zd\n",
-				size, mfd->cursor_buf_size);
+		pr_debug("allocating cursor mem size:%zd\n", size);
+
+		if (!ion_client) {
+			pr_err("ion client is not defined\n");
+			ret = -ENODEV;
+			goto done;
+		}
 
 		ion_handle = ion_alloc(ion_client, size, SZ_4K,
 				ION_HEAP(ION_SYSTEM_HEAP_ID), 0);
@@ -3527,6 +3526,7 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 		ret = copy_from_user(cursor_buf, img->data, size);
 		if (ret) {
 			pr_err("copy from user failed for cursor data\n");
+			ret = -EFAULT;
 			ion_unmap_kernel(ion_client, ion_handle);
 			goto done;
 		}
@@ -4439,6 +4439,7 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 	struct mdss_mdp_pipe *left_plist[MAX_PIPES_PER_LM] = { 0 };
 
 	bool sort_needed = mdata->has_src_split && (num_ovs > 1);
+	u32 base_zorder;
 
 	ret = mutex_lock_interruptible(&mdp5_data->ov_lock);
 	if (ret)
@@ -4477,8 +4478,20 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 			break;
 	}
 
-	for (i = 0; i < num_ovs; i++) {
-		left_blend_pipe = NULL;
+		/*
+		 * user z_order starts from 0, based on target the minimum
+		 * z_order in hardware can be from base, but only if there is
+		 * no full screen base layer requirement and in single LM mode;
+		 * otherwise start at stage 0
+		 */
+
+		if (mdss_has_quirk(mdata, MDSS_QUIRK_BASE_FULLSCREEN) ||
+				is_split_lm(mfd))
+			base_zorder = MDSS_MDP_STAGE_0;
+		else
+			base_zorder = MDSS_MDP_STAGE_BASE;
+		for (i = 0; i < num_ovs; i++) {
+			 left_blend_pipe = NULL;
 
 		if (sort_needed) {
 			req = &sorted_ovs[i];
@@ -4491,8 +4504,8 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 			 * overlay or in other terms left blend overlay.
 			 */
 			if (prev_req && (prev_req->z_order == req->z_order) &&
-			    is_ov_right_blend(&prev_req->dst_rect,
-				    &req->dst_rect, left_lm_w)) {
+				is_ov_right_blend(&prev_req->dst_rect,
+					&req->dst_rect, left_lm_w)) {
 				left_blend_pipe = pipe;
 			}
 		} else {
@@ -4505,10 +4518,10 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 		else
 			is_single_layer = (left_lm_ovs == 1);
 
-		req->z_order += MDSS_MDP_STAGE_0;
+		req->z_order += base_zorder;
 		ret = mdss_mdp_overlay_pipe_setup(mfd, req, &pipe,
 			left_blend_pipe, is_single_layer);
-		req->z_order -= MDSS_MDP_STAGE_0;
+		req->z_order -= base_zorder;
 
 		if (IS_ERR_VALUE(ret))
 			goto validate_exit;

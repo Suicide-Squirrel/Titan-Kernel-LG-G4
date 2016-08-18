@@ -196,7 +196,7 @@ struct touch_platform_data {
 	struct swp_caps			*swp_down_caps;
 	struct swp_caps			*swp_up_caps;
 	const char *inbuilt_fw_name;
-	const char *inbuilt_fw_name_list[6];
+	const char *inbuilt_fw_name_list[5];
 	const char *panel_spec;
 	const char *panel_spec_mfts_folder;
 	const char *panel_spec_mfts_flat;

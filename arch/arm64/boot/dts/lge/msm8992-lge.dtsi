@@ -127,7 +127,7 @@
 		status = "disabled";
 		compatible = "lge,charger-controller";
 		lge,chargercontroller-current-ibat-max = <2000>;
-		lge,chargercontroller-current-ibat-lcd_off = <1000>;
+		lge,chargercontroller-current-ibat-lcd_on = <1000>;
 		lge,chargercontroller-current-limit = <450>;
 		lge,chargercontroller-current-wlc-limit = <500>;
 		lge,chargercontroller-current-ibat-max-wireless = <1200>;

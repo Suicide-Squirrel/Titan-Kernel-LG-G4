@@ -87,11 +87,6 @@
 
 #define FM_STEP_NONE               0xff
 
-/* FM/RDS flag bits */
-#define FM_RDS_FLAG_CLEAN_BIT       0x01 /* clean FM_RDS_FLAG region */
-#define FM_RDS_FLAGSCH_FRZ_BIT          0x02 /* interrupt freeze */
-#define FM_RDS_FLAG_SCH_BIT         0x04 /* Pending search_tune */
-
 /* bits in I2C_FM_REG_FM_RDS_FLAG 0x12 */
 #define I2C_MASK_SRH_TUNE_CMPL_BIT     (0x0001 << 0)    /* FM/RDS register search/tune cmpl bit */
 #define I2C_MASK_SRH_TUNE_FAIL_BIT     (0x0001 << 1)    /* FM/RDS register search/tune fail bit */
@@ -112,15 +107,15 @@
 #define FM_RDS_END_TUPLE_3RD_BYTE    0xff /* 3rd byte of a RDS ending tuple */
 
 /* FM/RDS flag bits used with fm_dev->rx.fm_rds_flag */
-#define     FM_RDS_FLAG_CLEAN_BIT         0x01    /* clean FM_RDS_FLAG register */
-#define     FM_RDS_FLAG_SCH_FRZ_BIT     0x02    /* interrupt freeze */
-#define     FM_RDS_FLAG_SCH_BIT             0x04    /* pending search_tune */
+#define FM_RDS_FLAG_CLEAN_BIT           0x01    /* clean FM_RDS_FLAG register */
+#define FM_RDS_FLAG_SCH_FRZ_BIT         0x02    /* interrupt freeze */
+#define FM_RDS_FLAG_SCH_BIT             0x04    /* pending search_tune */
 
-#define     FM_RDS_UPD_TUPLE            64       /* 64 tuples per read(64*3 = 192 bytes),
+#define FM_RDS_UPD_TUPLE            64       /* 64 tuples per read(64*3 = 192 bytes),
                                                     one tuple contains 1 RDS block  */
 
-#define     FM_READ_1_BYTE_DATA     1
-#define     FM_READ_2_BYTE_DATA     2
+#define FM_READ_1_BYTE_DATA     1
+#define FM_READ_2_BYTE_DATA     2
 
 #define TRUE 1
 #define FALSE 0

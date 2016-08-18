@@ -44,6 +44,7 @@
 		qcom,mdss-dsi-bllp-power-mode;
 		qcom,cmd-sync-wait-broadcast;
 		qcom,cmd-sync-wait-trigger;
+
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
@@ -65,7 +66,7 @@
 		qcom,mdss-dsi-te-dcs-command = <1>;
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-te-pin;
-		qcom,ulps-enabled;
+		qcom,suspend-ulps-enabled;
 		qcom,mdss-dsi-lp11-init;
 		/* Partial update */
 		//qcom,partial-update-enabled;
@@ -274,6 +275,25 @@
 			39 01 00 00 00 00 02 55 F3
 		];
 		/* SRE cmds set END*/
+
+		lgd,rsp-write-nvm = [
+			29 01 00 00 00 00 02 B0 04
+			29 01 00 00 00 00 02 E8 01
+
+			39 01 00 00 00 00 07
+			A1 01 24 FF FF FF FF //LGD is written 1st:01, 2nd:24, others : don't care
+
+			29 01 00 00 00 00 02 D6 81
+			29 01 00 00 00 00 02 E3 BF
+
+			39 01 00 00 00 00 02 35 00
+
+			29 01 00 00 00 00 05
+			E0 11 00 00 40
+
+			29 01 00 00 00 00 05
+			E0 00 00 00 00
+		];
 
 		qcom,blmap-size = <256>;
 		qcom,blmap = <

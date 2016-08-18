@@ -189,7 +189,7 @@ struct fm_cmd_complete_hdr {
 /* Tunner modes */
 #define FM_TUNER_NORMAL_SCAN_MODE       0
 #define FM_TUNER_PRESET_MODE            1
-#define FM_TUNER_SEEK_MODE 2
+#define FM_TUNER_SEEK_MODE              2
 #define FM_TUNER_AF_JUMP_MODE           3
 
 #define FM_SCAN_FULL        (FM_SCAN_UP | FM_TUNER_NORMAL_SCAN_MODE |0x02)       /* full band scan */

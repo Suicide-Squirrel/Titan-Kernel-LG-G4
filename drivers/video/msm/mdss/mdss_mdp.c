@@ -1287,6 +1287,7 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 {
 	/* prevent disable of prefill calculations */
 	mdata->min_prefill_lines = 0xffff;
+	mdss_set_quirk(mdata, MDSS_QUIRK_BASE_FULLSCREEN);
 
 	mdss_mdp_hw_rev_debug_caps_init(mdata);
 
@@ -1303,7 +1304,8 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 				SVS_PLUS_MIN_HW_110, SVS_PLUS_MAX_HW_110);
 		mdss_set_quirk(mdata, MDSS_QUIRK_BWCPANIC);
 		mdss_set_quirk(mdata, MDSS_QUIRK_DOWNSCALE_HFLIP_MDPCLK);
-		mdata->max_target_zorder = 4; /* excluding base layer */
+		mdss_clear_quirk(mdata, MDSS_QUIRK_BASE_FULLSCREEN);
+		mdata->max_target_zorder = 5; /* excluding base layer */
 		mdata->max_cursor_size = 128;
 		mdata->min_prefill_lines = 12;
 		mdata->props = mdss_get_props();
@@ -1318,6 +1320,13 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdata->max_target_zorder = 4; /* excluding base layer */
 		mdata->max_cursor_size = 64;
 	}
+
+	/* cursor can only be blended in last blending stage */
+	mdata->cursor_stage = mdata->max_target_zorder - 1;
+	if (mdss_has_quirk(mdata, MDSS_QUIRK_BASE_FULLSCREEN))
+		mdata->cursor_stage += MDSS_MDP_STAGE_0;
+	else
+		mdata->cursor_stage += MDSS_MDP_STAGE_BASE;
 
 	if (mdata->mdp_rev < MDSS_MDP_HW_REV_103)
 		mdss_set_quirk(mdata, MDSS_QUIRK_DOWNSCALE_HANG);
@@ -1382,10 +1391,6 @@ void mdss_hw_init(struct mdss_data_type *mdata)
 		/* swap */
 		writel_relaxed(1, offset + 16);
 	}
-
-	/* initialize csc matrix default value */
-	for (i = 0; i < mdata->nvig_pipes; i++)
-		vig[i].csc_coeff_set = MDSS_MDP_CSC_YUV2RGB_709L;
 
 	mdata->nmax_concurrent_ad_hw =
 		(mdata->mdp_rev < MDSS_MDP_HW_REV_103) ? 1 : 2;

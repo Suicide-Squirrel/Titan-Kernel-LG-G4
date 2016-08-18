@@ -77,6 +77,13 @@ config MACH_MSM8992_P1_SPR_US
 	help
 	  Support for the Qualcomm MSM8992 P1_SPR_US device.
 
+config MACH_MSM8992_P1_ACG_US
+	bool "MSM8992 P1_ACG_US"
+	depends on ARCH_MSM8992
+	select MACH_LGE
+	help
+	  Support for the Qualcomm MSM8992 P1_ACG_US device.
+
 config MACH_MSM8992_P1_VZW
 	bool "MSM8992 P1_VZW"
 	depends on ARCH_MSM8992

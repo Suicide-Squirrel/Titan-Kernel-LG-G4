@@ -140,15 +140,6 @@ void __init arm64_memblock_init(void)
 	/* Register the kernel text, kernel data and initrd with memblock */
 	memblock_reserve(__pa(_text), _end - _text);
 
-#ifdef CONFIG_CRYPTO_FIPS
-	/* Register the copy of the kernel image with memblock,
-	   we'll free it later on when we check its HMAC */
-	printk(KERN_INFO "FIPS: reserving kernel Image block of %d bytes\n",
-		(u32) (__bss_start - _text));
-	memblock_reserve((unsigned long) CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS,
-		(unsigned long) (__bss_start - _text));
-#endif
-
 #ifdef CONFIG_BLK_DEV_INITRD
 	if (phys_initrd_size) {
 		memblock_reserve(phys_initrd_start, phys_initrd_size);

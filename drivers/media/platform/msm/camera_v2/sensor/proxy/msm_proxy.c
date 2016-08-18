@@ -263,13 +263,13 @@ int32_t proxy_i2c_e2p_write(uint16_t addr, uint16_t data, enum msm_camera_i2c_da
 	int32_t ret = 0;
 	struct msm_camera_cci_client *cci_client = NULL;
 
-	cci_client = msm_proxy_t.i2c_client.cci_client;
+	cci_client = msm_proxy_t.i2c_eeprom_client.cci_client;
 	cci_client->sid = 0xA0 >> 1;
 	cci_client->retries = 3;
 	cci_client->id_map = 0;
 	cci_client->cci_i2c_master = msm_proxy_t.cci_master;
-	msm_proxy_t.i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
-	ret = msm_proxy_t.i2c_client.i2c_func_tbl->i2c_write(&msm_proxy_t.i2c_client, addr, data, data_type);
+	msm_proxy_t.i2c_eeprom_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = msm_proxy_t.i2c_eeprom_client.i2c_func_tbl->i2c_write(&msm_proxy_t.i2c_eeprom_client, addr, data, data_type);
 
 	return ret;
 }
@@ -279,13 +279,13 @@ int32_t proxy_i2c_e2p_read(uint16_t addr, uint16_t *data, enum msm_camera_i2c_da
 	int32_t ret = 0;
 	struct msm_camera_cci_client *cci_client = NULL;
 
-	cci_client = msm_proxy_t.i2c_client.cci_client;
+	cci_client = msm_proxy_t.i2c_eeprom_client.cci_client;
 	cci_client->sid = 0xA0 >> 1;
 	cci_client->retries = 3;
 	cci_client->id_map = 0;
 	cci_client->cci_i2c_master = msm_proxy_t.cci_master;
-	msm_proxy_t.i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
-	ret = msm_proxy_t.i2c_client.i2c_func_tbl->i2c_read(&msm_proxy_t.i2c_client, addr, data, data_type);
+	msm_proxy_t.i2c_eeprom_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = msm_proxy_t.i2c_eeprom_client.i2c_func_tbl->i2c_read(&msm_proxy_t.i2c_eeprom_client, addr, data, data_type);
 	return ret;
 
 }
@@ -479,7 +479,7 @@ static void get_proxy(struct work_struct *work)
 
 
 				if ((offset < 11) && (offset > (-21))) {
-					if ((shiftModuleId == 0x01) || (shiftModuleId == 0x02)) {
+					if ((shiftModuleId == 0x01) || (shiftModuleId == 0x02) || (shiftModuleId == 0x14)) {
 						proxy_i2c_e2p_read(IT_EEP_REG, &finVal, 2);
 						calCount = finVal >> 8;
 
@@ -756,7 +756,7 @@ int32_t msm_init_proxy(void)
 	shiftModuleId = moduleId >> 8;
 	pr_err("KSY module ID : %d\n", shiftModuleId);
 
-	if ((shiftModuleId == 0x01) || (shiftModuleId == 0x02)) {
+	if ((shiftModuleId == 0x01) || (shiftModuleId == 0x02) || (shiftModuleId == 0x14)) {
 		proxy_i2c_e2p_read(IT_EEP_REG, &finVal, 2);
 		offsetByte = 0x00FF & finVal;
 		calCount = (0xFF00 & finVal) >> 8;
@@ -1636,6 +1636,7 @@ static int32_t msm_proxy_platform_probe(struct platform_device *pdev)
 	int32_t rc = 0;
 
 	struct msm_camera_cci_client *cci_client = NULL;
+	struct msm_camera_cci_client *cci_eeprom_client = NULL;
 	CDBG("Enter\n");
 
 	if (!pdev->dev.of_node) {
@@ -1670,6 +1671,18 @@ static int32_t msm_proxy_platform_probe(struct platform_device *pdev)
 		pr_err("failed no memory\n");
 		return -ENOMEM;
 	}
+
+	msm_proxy_t.i2c_eeprom_client.i2c_func_tbl = &msm_sensor_cci_func_tbl;
+	msm_proxy_t.i2c_eeprom_client.cci_client = kzalloc(sizeof(
+		struct msm_camera_cci_client), GFP_KERNEL);
+	if (!msm_proxy_t.i2c_eeprom_client.cci_client) {
+		pr_err("failed no memory\n");
+		return -ENOMEM;
+	}
+
+	cci_eeprom_client = msm_proxy_t.i2c_eeprom_client.cci_client;
+	cci_eeprom_client->cci_subdev = msm_cci_get_subdev();
+	cci_eeprom_client->cci_i2c_master = msm_proxy_t.cci_master;
 
 	msm_proxy_t.i2c_client.cci_client->sid = 0x29;    //Slave address
 	msm_proxy_t.i2c_client.cci_client->retries = 3;

@@ -39,6 +39,7 @@ extern void lgit_imx214_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
 #if defined(CONFIG_IMX234)
 extern void lgit_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
 extern void lgit_imx234_rohm_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
+extern void imtech_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
 extern void lc898122a_af_vcm_code(int16_t UsVcmCod);
 #endif
 static struct msm_ois_ctrl_t *local_msm_ois_t;
@@ -240,6 +241,13 @@ static int msm_ois_init(struct msm_ois_ctrl_t *o_ctrl)
 #endif
 	case 0x03:
 		printk("%s : FujiFilm OIS module!\n", __func__);
+		break;
+	case 0x14:
+	case 0x15:
+	case 0x16:
+		imtech_imx234_onsemi_ois_init(o_ctrl);
+		local_msm_ois_t->sid_ois = o_ctrl->sid_ois;
+		printk("%s : imtech onsemi i2c shift addr 0x%x!\n", __func__, o_ctrl->sid_ois);
 		break;
 	default:
 		printk("%s : unknown module! maker id = %d\n", __func__, chipid);
@@ -802,13 +810,13 @@ int32_t ois_i2c_e2p_write(uint16_t addr, uint16_t data, enum msm_camera_i2c_data
 	int32_t ret = 0;
 	struct msm_camera_cci_client *cci_client = NULL;
 
-	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client = local_msm_ois_t->i2c_eeprom_client.cci_client;
 	cci_client->sid = 0xA0 >> 1;
 	cci_client->retries = 3;
 	cci_client->id_map = 0;
 	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
-	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
-	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_write(&local_msm_ois_t->i2c_client, addr, data, data_type);
+	local_msm_ois_t->i2c_eeprom_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_eeprom_client.i2c_func_tbl->i2c_write(&local_msm_ois_t->i2c_eeprom_client, addr, data, data_type);
 	return ret;
 }
 
@@ -818,13 +826,13 @@ int32_t ois_i2c_e2p_read(uint16_t addr, uint16_t *data, enum msm_camera_i2c_data
 	struct msm_camera_cci_client *cci_client = NULL;
 
 
-	cci_client = local_msm_ois_t->i2c_client.cci_client;
+	cci_client = local_msm_ois_t->i2c_eeprom_client.cci_client;
 	cci_client->sid = 0xA0 >> 1;
 	cci_client->retries = 3;
 	cci_client->id_map = 0;
 	cci_client->cci_i2c_master = local_msm_ois_t->cci_master;
-	local_msm_ois_t->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
-	ret = local_msm_ois_t->i2c_client.i2c_func_tbl->i2c_read(&local_msm_ois_t->i2c_client, addr, data, data_type);
+	local_msm_ois_t->i2c_eeprom_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ret = local_msm_ois_t->i2c_eeprom_client.i2c_func_tbl->i2c_read(&local_msm_ois_t->i2c_eeprom_client, addr, data, data_type);
 	return ret;
 }
 
@@ -852,6 +860,7 @@ static int32_t msm_ois_platform_probe(struct platform_device *pdev)
 {
 	int32_t rc = 0;
 	struct msm_camera_cci_client *cci_client = NULL;
+	struct msm_camera_cci_client *cci_eeprom_client = NULL;
 	struct msm_ois_ctrl_t *msm_ois_t = NULL;
 	struct msm_ois_vreg *vreg_cfg;
 	CDBG("Enter\n");
@@ -917,6 +926,21 @@ static int32_t msm_ois_platform_probe(struct platform_device *pdev)
 	cci_client = msm_ois_t->i2c_client.cci_client;
 	cci_client->cci_subdev = msm_cci_get_subdev();
 	cci_client->cci_i2c_master = msm_ois_t->cci_master;
+
+	msm_ois_t->i2c_eeprom_client.i2c_func_tbl = &msm_sensor_cci_func_tbl;
+	msm_ois_t->i2c_eeprom_client.cci_client = kzalloc(sizeof(
+		struct msm_camera_cci_client), GFP_KERNEL);
+	if (!msm_ois_t->i2c_eeprom_client.cci_client) {
+		kfree(msm_ois_t->vreg_cfg.cam_vreg);
+		kfree(msm_ois_t);
+		pr_err("failed no memory\n");
+		return -ENOMEM;
+	}
+
+	cci_eeprom_client = msm_ois_t->i2c_eeprom_client.cci_client;
+	cci_eeprom_client->cci_subdev = msm_cci_get_subdev();
+	cci_eeprom_client->cci_i2c_master = msm_ois_t->cci_master;
+
 	v4l2_subdev_init(&msm_ois_t->msm_sd.sd,
 		msm_ois_t->ois_v4l2_subdev_ops);
 	v4l2_set_subdevdata(&msm_ois_t->msm_sd.sd, msm_ois_t);

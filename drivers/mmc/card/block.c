@@ -741,6 +741,11 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
 
+#ifdef CONFIG_MACH_LGE
+    if (mmc_card_get_bkops_en_manual(card))
+        mmc_stop_bkops(card);
+#endif
+
 	if(cmd.opcode == MMC_FFU_DOWNLOAD_OP) {
 		err = mmc_ffu_download(card, &cmd, idata->buf,
 				idata->buf_bytes);
@@ -914,6 +919,11 @@ static int mmc_blk_ioctl_rpmb_cmd(struct block_device *bdev,
 
 	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
+
+#ifdef CONFIG_MACH_LGE
+	if (mmc_card_get_bkops_en_manual(card))
+		mmc_stop_bkops(card);
+#endif
 
 	err = mmc_blk_part_switch(card, md);
 	if (err)

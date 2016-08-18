@@ -998,16 +998,16 @@ const unsigned char CsFilGRamDat_C00X[] = {
 	0x3E, 0x00, 0x00,	 /*3E0000,1055,Free,fs/8,invert=0*/
 	0x00, 0x00, 0x00,	 /*000000,1056,Free,fs/8,invert=0*/
 	0x10, 0x57,	/* 0x1057 */
-	0x2E, 0x0C, 0x49,	 /*2E0C49,1057,Free,fs/8,invert=0*/
+	 0x2F, 0x12, 0x70, 	 /*2F1270,1057,Free,fs/8,invert=0*/
 	0x3E, 0x00, 0x00,	 /*3E0000,1058,Free,fs/8,invert=0*/
 	0x10, 0x59,	/* 0x1059 */
 	0x00, 0x00, 0x00,	 /*000000,1059,Free,fs/8,invert=0*/
-	0x2E, 0x0C, 0x49,	 /*2E0C49,105A,Free,fs/8,invert=0*/
+	 0x2F, 0x12, 0x70, 	 /*2F1270,105A,Free,fs/8,invert=0*/
 	0x10, 0x5B,	/* 0x105B */
 	0x3E, 0x00, 0x00,	 /*3E0000,105B,Free,fs/8,invert=0*/
 	0x00, 0x00, 0x00,	 /*000000,105C,Free,fs/8,invert=0*/
 	0x10, 0x5D,	/* 0x105D */
-	0x2E, 0x0C, 0x49,	 /*2E0C49,105D,Free,fs/8,invert=0*/
+	 0x2F, 0x12, 0x70, 	 /*2F1270,105D,Free,fs/8,invert=0*/
 	0x3E, 0x00, 0x00,	 /*3E0000,105E,Free,fs/8,invert=0*/
 	0x10, 0x63,	/* 0x1063 */
 	0x3E, 0x00, 0x00,	 /*3E0000,1063,0dB,invert=0*/
@@ -1893,13 +1893,13 @@ const struct STFILRAM	CsFilRam_C00X_G[FILRAMTAB_G] = {
 	{0x1054, 0x3AB78000},		/*3AB78000,1054,Free,fs/8,invert=0*/
 	{0x1055, 0x3F800000},		/*3F800000,1055,Free,fs/8,invert=0*/
 	{0x1056, 0x00000000},		/*00000000,1056,Free,fs/8,invert=0*/
-	{0x1057, 0x3B831240},		/*3B831240,1057,Free,fs/8,invert=0*/
+		{ 0x1057,	0x3BC49C00},		/*3BC49C00,1057,Free,fs/8,invert=0*/
 	{0x1058, 0x3F800000},		/*3F800000,1058,Free,fs/8,invert=0*/
 	{0x1059, 0x00000000},		/*00000000,1059,Free,fs/8,invert=0*/
-	{0x105A, 0x3B831240},		/*3B831240,105A,Free,fs/8,invert=0*/
+		{ 0x105A,	0x3BC49C00},		/*3BC49C00,105A,Free,fs/8,invert=0*/
 	{0x105B, 0x3F800000},		/*3F800000,105B,Free,fs/8,invert=0*/
 	{0x105C, 0x00000000},		/*00000000,105C,Free,fs/8,invert=0*/
-	{0x105D, 0x3B831240},		/*3B831240,105D,Free,fs/8,invert=0*/
+		{ 0x105D,	0x3BC49C00},		/*3BC49C00,105D,Free,fs/8,invert=0*/
 	{0x105E, 0x3F800000},		/*3F800000,105E,Free,fs/8,invert=0*/
 	{0x1063, 0x3F800000},		/*3F800000,1063,0dB,invert=0*/
 	{0x1066, 0x3F800000},		/*3F800000,1066,0dB,invert=0*/
@@ -3966,6 +3966,10 @@ int32_t	lc898122a_version_check(void)
 		UcVerLow = 0x03;
 	}else if( UcVerLow == 0x04){
 		UcVerLow = 0x04 ;
+	}else if( UcVerLow == 0x05 ){					// 0x05 5th LGIT Act(Type-G).
+		UcVerLow = 0x05 ;
+	}else if( UcVerLow == 0x06 ){					// 0x06 5th LGIT Act. after 08/20
+		UcVerLow = 0x06 ;
 	} else if (UcVerLow == 0x10) {					// 0x10 1rd MTM Act.
 		UcVerLow = 0x10;
 	} else if (UcVerLow == 0x11) {					// 0x11 2nd MTM Act.
@@ -4176,7 +4180,8 @@ void lc898122a_init_servo(void)
 
 	/* High-dimensional correction  */
 	RegWriteA(WH_HOFCON, 0x11);				// 0x0174		OUT 3x3
-	if( (UcVerLow == 0x00) || (UcVerLow == 0x01) || (UcVerLow == 0x02) || (UcVerLow == 0x03) || (UcVerLow == 0x04) ){
+	if( UcVerHig == 0x00 ){
+		if( (UcVerLow == 0x00) || (UcVerLow == 0x01) || (UcVerLow == 0x02) || (UcVerLow == 0x03) || (UcVerLow == 0x04) || (UcVerLow == 0x05) || (UcVerLow == 0x06) ){		// 0x04 5th LGIT Act / 0x05 5th LGIT Act(Type-G) / 0x06 5th LGIT Act
 		/* (0.4531388X^3+0.4531388X)*(0.4531388X^3+0.4531388X) 15ohm*/
 		/* Front */
 		RamWrite32A(sxiexp3, 0x3EE801CF);			// 0x10BA
@@ -4209,7 +4214,7 @@ void lc898122a_init_servo(void)
 		RamWrite32A(syoexp0, 0x00000000);			// 0x11FD
 		RamWrite32A(syoexp, 0x3F800000);			// 0x11FE
 		#endif	//INI_SHORT4
-	}else if (UcVerLow == 0x10 || (UcVerLow == 0x11) || (UcVerLow == 0x12) || (UcVerLow == 0x13)){
+		}else if( (UcVerLow == 0x10) || (UcVerLow == 0x11) || (UcVerLow == 0x12) || (UcVerLow == 0x13) ){
 		/* (0.3750114X^3+0.5937681X)*(0.3750114X^3+0.5937681X) 6.5ohm*/
 		/* Front */
 		RamWrite32A(sxiexp3, 0x3EC0017F);			// 0x10BA
@@ -4243,6 +4248,7 @@ void lc898122a_init_servo(void)
 		RamWrite32A(syoexp, 0x3F800000);			// 0x11FE
 		#endif	//INI_SHORT4
 	}
+	}	// UcVerHig == 0x01 // PWM Mode
 	#ifdef	INI_SHORT4
 	RegWriteA( WC_RAMACCXY, 0x00 ) ;			// 0x018D	Simultaneously Setting Off
 	#endif	//INI_SHORT4
@@ -4439,7 +4445,7 @@ void lc898122a_init_gyro_setting(void)
 	// State2,4 Step Time Setting
 	RegWriteA(WG_PANSTT2TMR0, 0x01);		// 0x013C
 	RegWriteA(WG_PANSTT2TMR1, 0x00);		// 0x013D
-	RegWriteA(WG_PANSTT4TMR0, 0x01);		// 0x013E
+	RegWriteA( WG_PANSTT4TMR0,	0x01 );		// 0x013E
 	RegWriteA(WG_PANSTT4TMR1, 0x0F);		// 0x013F
 
 	RegWriteA(WG_PANSTTXXXTH, 0x00);		// 0x015A
@@ -4610,9 +4616,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 		break;
 	}
 #else	//CATCHMODE
-	#ifdef	INI_SHORT4
-	RegWriteA( WC_RAMACCXY, 0x01 ) ;			// 0x018D	Filter copy on
-	#endif	//INI_SHORT4
 	switch (UcPtMod) {
 	case OFF:
 		// State 3 -> 1
@@ -4633,10 +4636,8 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 
 		RegWriteA(WG_PANSTTXXXTH, 0x0F);				// 0x015A
 		RamWrite32A(Sttx34aM, GYRA34_MID);			// 0x108F
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
 		RamWrite32A(Stty34aM, GYRA34_MID);			// 0x118F
-		#endif	//INI_SHORT4
+
 		if ((UcVerLow == 0x00) || (UcVerLow == 0x01) || (UcVerLow == 0x10)) {
 			// I Filter X							// 2s
 			RamWrite32A(gxia_1, 0x3760E040);		// 0x1043	0.1Hz
@@ -4655,8 +4656,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gxib_c, 0xB261CF49);		// 0x104D	Down
 			RamWrite32A(gxic_c, 0x3261CF49);		// 0x104E	Up
 
-			#ifdef	INI_SHORT4
-			#else	//INI_SHORT4
 			// I Filter Y
 			RamWrite32A(gyia_1, 0x3760E040);		// 0x1143	0.1Hz
 			RamWrite32A(gyib_1, 0xB261CF49);		// 0x1144	Down
@@ -4673,7 +4672,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gyia_c, 0x3760E040);		// 0x114C	0.1Hz
 			RamWrite32A(gyib_c, 0xB261CF49);		// 0x114D	Down
 			RamWrite32A(gyic_c, 0x3261CF49);		// 0x114E	Up
-			#endif	//INI_SHORT4
 		}else{	// (UcVerLow == 0x02) || (UcVerLow == 0x03) || (UcVerLow == 0x11) || (UcVerLow == 0x12) || (UcVerLow == 0x13)
 			// I Filter X							// 2s
 			RamWrite32A(gxia_1, 0x37A8A800);		// 0x1043	0.15Hz
@@ -4692,8 +4690,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gxib_c, 0xB261CF49);		// 0x104D	Down
 			RamWrite32A(gxic_c, 0x3261CF49);		// 0x104E	Up
 
-			#ifdef	INI_SHORT4
-			#else	//INI_SHORT4
 			// I Filter Y
 			RamWrite32A(gyia_1, 0x37A8A800);		// 0x1143	0.15Hz
 			RamWrite32A(gyib_1, 0xB261CF49);		// 0x1144	Down
@@ -4710,7 +4706,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gyia_c, 0x37A8A800);		// 0x114C	0.15Hz
 			RamWrite32A(gyib_c, 0xB261CF49);		// 0x114D	Down
 			RamWrite32A(gyic_c, 0x3261CF49);		// 0x114E	Up
-			#endif	//INI_SHORT4
 		}
 		break;
 	case ON:
@@ -4732,10 +4727,8 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 
 		RegWriteA(WG_PANSTTXXXTH, 0xF0);				// 0x015A
 		RamWrite32A(Sttx34aM, GYRA34_MID_M);			// 0x108F
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
 		RamWrite32A(Stty34aM, GYRA34_MID_M);			// 0x118F
-		#endif	//INI_SHORT4
+		
 		if ((UcVerLow == 0x00) || (UcVerLow == 0x01) || (UcVerLow == 0x10)) {
 			// I Filter X							// 2s
 			RamWrite32A(gxia_1, 0x3760E040);		// 0x1043	0.1Hz
@@ -4754,8 +4747,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gxib_c, 0xB261CF49);		// 0x104D	Down
 			RamWrite32A(gxic_c, 0x3F800000);		// 0x104E	Up
 
-			#ifdef	INI_SHORT4
-			#else	//INI_SHORT4
 			// I Filter Y
 			RamWrite32A(gyia_1, 0x3760E040);		// 0x1143	0.1Hz
 			RamWrite32A(gyib_1, 0xB261CF49);		// 0x1144	Down
@@ -4772,7 +4763,7 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gyia_c, 0x3A2F91C0);		// 0x114C	5Hz
 			RamWrite32A(gyib_c, 0xB261CF49);		// 0x114D	Down
 			RamWrite32A(gyic_c, 0x3F800000);		// 0x114E	Up
-			#endif	//INI_SHORT4
+
 		}else{	// (UcVerLow == 0x02) || (UcVerLow == 0x03) || (UcVerLow == 0x11) || (UcVerLow == 0x12) || (UcVerLow == 0x13)
 			// I Filter X							// 2s
 			RamWrite32A(gxia_1, 0x37A8A800);		// 0x1043	0.15Hz
@@ -4791,8 +4782,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gxib_c, 0xB261CF49);		// 0x104D	Down
 			RamWrite32A(gxic_c, 0x3F800000);		// 0x104E	Up
 
-			#ifdef	INI_SHORT4
-			#else	//INI_SHORT4
 			// I Filter Y
 			RamWrite32A(gyia_1, 0x37A8A800);		// 0x1143	0.15Hz
 			RamWrite32A(gyib_1, 0xB261CF49);		// 0x1144	Down
@@ -4809,13 +4798,9 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 			RamWrite32A(gyia_c, 0x3A2F91C0);		// 0x114C	5Hz
 			RamWrite32A(gyib_c, 0xB261CF49);		// 0x114D	Down
 			RamWrite32A(gyic_c, 0x3F800000);		// 0x114E	Up
-			#endif	//INI_SHORT4
 		}
 		break;
 	}
-	#ifdef	INI_SHORT4
-	RegWriteA( WC_RAMACCXY, 0x00 ) ;			// 0x018D	Simultaneously Setting Off
-	#endif	//INI_SHORT4
 #endif	//CATCHMODE
 }
 //********************************************************************************
@@ -4827,9 +4812,6 @@ void lc898122a_init_pan_mode(uint8_t UcPtMod)
 //********************************************************************************
 void SelectPtRange(uint8_t UcSelRange)
 {
-	#ifdef	INI_SHORT4
-	RegWriteA( WC_RAMACCXY, 0x01 ) ;			// 0x018D	Filter copy on
-	#endif	//INI_SHORT4
 	switch (UcSelRange) {
 	case OFF:
 		RamWrite32A(gxlmt3HS0, GYRLMT3_S1);		// 0x1029
@@ -4837,8 +4819,6 @@ void SelectPtRange(uint8_t UcSelRange)
 			RamWrite32A( gxlmt4HS0, GYRLMT4_S1 ) ;		// 0x102B	X axis Limiter4 High Threshold0
 			RamWrite32A( gxlmt4HS1, GYRLMT4_S2 ) ;		// 0x102C	X axis Limiter4 High Threshold1
 			RamWrite32A( Sttx12aH,	GYRA12_HGH );		// 0x105F
-			#ifdef	INI_SHORT4
-			#else	//INI_SHORT4
 		RamWrite32A(gylmt3HS0, GYRLMT3_S1);		// 0x1129
 
 		RamWrite32A(gylmt3HS1, GYRLMT3_S2);		// 0x112A
@@ -4848,40 +4828,37 @@ void SelectPtRange(uint8_t UcSelRange)
 		RamWrite32A(gylmt4HS1, GYRLMT4_S2);		//0x112C	Y axis Limiter4 High Threshold1
 
 		RamWrite32A(Stty12aH,	GYRA12_HGH);		// 0x115F
-			#endif	//INI_SHORT4
 		break;
 
 #ifdef	CATCHMODE
 	case ON:
-		  if( UcVerLow == 0x04){
-			RamWrite32A( gxlmt3HS0, GYRLMT3_S1_W_C004 ) ;	// 0x1029
-			RamWrite32A( gxlmt3HS1, GYRLMT3_S2_W_C004 ) ;	// 0x102A
-		  }
-		  else{
+		  if( (UcVerLow == 0x04) || (UcVerLow == 0x05) || (UcVerLow == 0x06) ){
+			RamWrite32A( gxlmt3HS0, GYRLMT3_S1_W_C004 ) ;	// 0x1029	0.5
+			RamWrite32A( gxlmt3HS1, GYRLMT3_S2_W_C004 ) ;	// 0x102A	0.5
+		  }else{
 		RamWrite32A(gxlmt3HS0, GYRLMT3_S1_W);		// 0x1029
 			RamWrite32A( gxlmt3HS1, GYRLMT3_S2_W ) ;	// 0x102A
 		  }
 			RamWrite32A( gxlmt4HS0, GYRLMT4_S1_W ) ;	// 0x102B	X axis Limiter4 High Threshold0
 			RamWrite32A( gxlmt4HS1, GYRLMT4_S2_W ) ;	// 0x102C	X axis Limiter4 High Threshold1
 			RamWrite32A( Sttx12aH,	GYRA12_HGH_W );		// 0x105F
-			#ifdef	INI_SHORT4
-			#else	//INI_SHORT4
+
+		  if( (UcVerLow == 0x04) || (UcVerLow == 0x05) || (UcVerLow == 0x06) ){
+			RamWrite32A( gylmt3HS0, GYRLMT3_S1_W_C004 ) ;	// 0x1129	0.5
+			RamWrite32A( gylmt3HS1, GYRLMT3_S2_W_C004 ) ;	// 0x112A	0.5
+		  }else{
 		RamWrite32A(gylmt3HS0, GYRLMT3_S1_W);		// 0x1129
 
 		RamWrite32A(gylmt3HS1, GYRLMT3_S2_W);		// 0x112A
-
+		  }
 		RamWrite32A(gylmt4HS0, GYRLMT4_S1_W);		//0x112B	Y axis Limiter4 High Threshold0
 
 		RamWrite32A(gylmt4HS1, GYRLMT4_S2_W);		//0x112C	Y axis Limiter4 High Threshold1
 
 		RamWrite32A(Stty12aH,	GYRA12_HGH_W);			// 0x115F
-			#endif	//INI_SHORT4
 		break;
 #endif // CATCHMODE
 	}
-	#ifdef	INI_SHORT4
-	RegWriteA( WC_RAMACCXY, 0x00 ) ;			// 0x018D	Simultaneously Setting Off
-	#endif	//INI_SHORT4
 }
 
 //********************************************************************************
@@ -4905,6 +4882,21 @@ void SelectIstpMod(uint8_t UcSelRange)
 		RamWrite32A(gyistp_1, GYRISTP_W);	// 0x1183
 		break;
 #endif	//CATCHMODE
+	}
+}
+void	SetDCoffsetContValue( unsigned char UcSelRange )
+{
+	switch (UcSelRange) {
+	case OFF:
+		RamWrite32A(gxlb, 0x3B031240);	/* 0x101A	0.002 */
+		RamWrite32A(gylb, 0x3B031240);	/* 0x111A */
+		break;
+	case ON:
+		RamWrite32A(gxlb, 0x3C75C280);	/* 0x101A	0.015 */
+		RamWrite32A(gylb, 0x3C75C280);	/* 0x111A */
+		break;
+	default:
+		break;
 	}
 }
 
@@ -4936,17 +4928,13 @@ int32_t	lc898122a_init_gyro_filter(void)
 		pFilGRamNum		= (unsigned char *)CsFilGRamNum_C00X;
 		if( UcVerLow == 0x00 ){								// UcVerLow == 0x00 // LGIT
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C000;
-		}
-		else if( UcVerLow == 0x01 ){						// UcVerLow == 0x01 // LGIT 3rd Act. 141105
+		}else if( UcVerLow == 0x01 ){						// UcVerLow == 0x01 // LGIT 3rd Act. 141105
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C001;
-		}
-		else if( UcVerLow == 0x02 ){						// UcVerLow == 0x02 // LGIT 4th Act. 141208
+		}else if( UcVerLow == 0x02 ){						// UcVerLow == 0x02 // LGIT 4th Act. 141208
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C002;
-		}
-		else if( UcVerLow == 0x03 ){						// UcVerLow == 0x03 // LGIT 4th Act. 141208
+		}else if( UcVerLow == 0x03 ){						// UcVerLow == 0x03 // LGIT 4th Act. 141208
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C003;
-		}
-		else if( UcVerLow == 0x04 ){
+		}else if( (UcVerLow == 0x04) || (UcVerLow == 0x05) || (UcVerLow == 0x06) ){	// UcVerLow == 0x04 LGIT 5th Act. / 0x05 5th LGIT Act(Type-G) / 0x06 LGIT 5th Act.
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C003;
 		}
 		else{
@@ -4961,14 +4949,11 @@ int32_t	lc898122a_init_gyro_filter(void)
 		pFilGRamNum		= (unsigned char *)CsFilGRamNum_C01X;
 		if( UcVerLow == 0x10 ){						// MTM 1st Act
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C010;
-		}
-		else if ( UcVerLow == 0x11 ){						// MTM 2nd Act
+		}else if ( UcVerLow == 0x11 ){						// MTM 2nd Act
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C011;
-		}
-		else if ( UcVerLow == 0x12 ){						// MTM 4th Act
+		}else if ( UcVerLow == 0x12 ){						// MTM 4th Act
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C012;
-		}
-		else if ( UcVerLow == 0x13 ){						// MTM 5th Act
+		}else if ( UcVerLow == 0x13 ){						// MTM 5th Act
 			pFilHRamDat		= (unsigned char *)CsFilHRamDat_C013;
 		}
 		else{
@@ -5046,7 +5031,7 @@ int32_t	lc898122a_init_gyro_filter(void)
 	} else if (UcVerLow == 0x03) { // UcVerLow == 0x03 // LGIT 4th Act. 141208
 		pFilReg = (struct STFILREG *)CsFilReg_C003;
 		pFilRam = (struct STFILRAM *)CsFilRam_C003;
-	}else if( UcVerLow == 0x04){						// UcVerLow == 0x04 // LGIT 4th Act. 150324
+	}else if( (UcVerLow == 0x04) || (UcVerLow == 0x05) || (UcVerLow == 0x06) ){	// UcVerLow == 0x04 // LGIT 4th Act. 150324 // UcVerLow == 0x04 LGIT 5th Act. / 0x05 5th LGIT Act(Type-G) / 0x06 LGIT 5th Act.
 		pFilReg = (struct STFILREG *)CsFilReg_C003;
 		pFilRam = (struct STFILRAM *)CsFilRam_C003;
 	} else if (UcVerLow == 0x10) { // MTM 1st Act
@@ -5138,6 +5123,7 @@ void lc898122a_init_adjust_value(void)
 #else
 	SelectIstpMod(OFF);
 #endif
+ 	SetDCoffsetContValue( ON ) ;
 #else
 	//SelectIstpMod(OFF);
 #endif // CATCHMODE
@@ -5161,7 +5147,7 @@ void lc898122a_init_adjust_value(void)
 		RegWriteA(CMSDAC0, BIAS_CUR_OIS_C003);		// 0x0251	Hall DAC Current
 		RegWriteA(OPGSEL0, AMP_GAIN_X_C003);			// 0x0253	Hall amp Gain X
 		RegWriteA(OPGSEL1, AMP_GAIN_Y_C003);			// 0x0254	Hall amp Gain Y
-	}else if( UcVerLow == 0x04 ){						// LGIT 5th
+	}else if( (UcVerLow == 0x04) || (UcVerLow == 0x05) || (UcVerLow == 0x06) ){	// 0x04 5th LGIT Act / 0x05 5th LGIT Act(Type-G) / 0x06 5th LGIT Act
 		RegWriteA( CMSDAC0, BIAS_CUR_OIS_C004 ) ;		// 0x0251	Hall DAC Current
 		RegWriteA( OPGSEL0, AMP_GAIN_X_C004 ) ;			// 0x0253	Hall amp Gain X
 		RegWriteA( OPGSEL1, AMP_GAIN_Y_C004 ) ;			// 0x0254	Hall amp Gain Y
@@ -5196,9 +5182,12 @@ void lc898122a_init_adjust_value(void)
 	} else if (UcVerLow == 0x03) {						// LGIT 4th Act. 141208
 		RegWriteA(CMSDAC1, BIAS_CUR_AF_C003);		// 0x0252	Hall Dac current
 		RegWriteA(OPGSEL2, AMP_GAIN_AF_C003);		// 0x0255	Hall amp Gain AF
-	}else if( UcVerLow == 0x04 ){						// LGIT 5th Act. 150324
+	}else if( (UcVerLow == 0x04) || (UcVerLow == 0x06) ){	// LGIT 5th Act. 150324
 		RegWriteA( CMSDAC1, BIAS_CUR_AF_C004 ) ;		// 0x0252	Hall Dac current
 		RegWriteA( OPGSEL2, AMP_GAIN_AF_C004 ) ;		// 0x0255	Hall amp Gain AF
+	}else if( UcVerLow == 0x05 ){						// LGIT 5th Act(Type-G).
+		RegWriteA( CMSDAC1, BIAS_CUR_AF_C005 ) ;		// 0x0252	Hall Dac current
+		RegWriteA( OPGSEL2, AMP_GAIN_AF_C005 ) ;		// 0x0255	Hall amp Gain AF
 	} else if (UcVerLow == 0x10) {						// MTM
 		RegWriteA(CMSDAC1, BIAS_CUR_AF_C010);		// 0x0252	Hall Dac current
 		RegWriteA(OPGSEL2, AMP_GAIN_AF_C010);		// 0x0255	Hall amp Gain AF
@@ -5328,20 +5317,25 @@ void lc898122a_init_adjust_value(void)
 	RegWriteA( WC_RAMACCXY, 0x01 ) ;			// 0x018D	Filter copy on
 	#endif	//INI_SHORT4
 
-	if( (UcVerLow == 0x00) || (UcVerLow == 0x01) || (UcVerLow == 0x02) || (UcVerLow == 0x03) || (UcVerLow == 0x04) ){
+	if( (UcVerLow == 0x00) || (UcVerLow == 0x01) || (UcVerLow == 0x02) || (UcVerLow == 0x03) || (UcVerLow == 0x04) || (UcVerLow == 0x05) || (UcVerLow == 0x06) ){		// 0x04 5th LGIT Act / 0x05 5th LGIT Act(Type-G) / 0x06 5th LGIT Act
 		RamWrite32A(sxq, SXQ_INI_LGIT);			// 0x10E5	X axis output direction initial value
 		#ifdef	INI_SHORT4
 		#else	//INI_SHORT4
 		RamWrite32A(syq, SYQ_INI_LGIT);			// 0x11E5	Y axis output direction initial value
 		#endif	//INI_SHORT4
-	}else if (UcVerLow == 0x10 || (UcVerLow == 0x11) || (UcVerLow == 0x12) || (UcVerLow == 0x13)){
-		RamWrite32A(sxq, SXQ_INI_MTM);			// 0x10E5	X axis output direction initial value
+	}else if( (UcVerLow == 0x10) || (UcVerLow == 0x11) || (UcVerLow == 0x12) || (UcVerLow == 0x13) ){
+		RamWrite32A( sxq, SXQ_INI_MTM ) ;			// 0x10E5	X axis output direction initial value
 		#ifdef	INI_SHORT4
 		#else	//INI_SHORT4
 		RamWrite32A(syq, SYQ_INI_MTM);			// 0x11E5	Y axis output direction initial value
 		#endif	//INI_SHORT4
 	}
-	RamWrite32A(afag, AFAG_INI);				// 0x1203	CL-AF output direction initial value
+	if( (UcVerLow == 0x05) || (UcVerLow == 0x06) ){		// UcVerLow == 0x05 5th LGIT Act(Type-G) / LGIT 5th Act after 08/20
+		RamWrite32A( afag, AFAG_INI_LGIT_G ) ;		// 0x1203	CL-AF output direction initial value
+													//			3.5dB UP --> LoopGain 3.5dB Down
+	}else{
+		RamWrite32A( afag, AFAG_INI ) ;				// 0x1203	CL-AF output direction initial value
+	}
 
 #ifdef	CATCHMODE
 	RamWrite32A(gx45g, G_45G_INI);			// 0x1000
@@ -5386,6 +5380,8 @@ void lc898122a_init_adjust_value(void)
 
 	RegWriteA(WC_EQON, 0x01);			// 0x0101	Filter ON
 	lc898122a_pantilt_mode(ON);					/* Pan/Tilt OFF */
+	
+
 #else	//CATCHMODE
 
 	if ((UcVerLow == 0x00) || (UcVerLow == 0x01) || (UcVerLow == 0x10)) {
@@ -5766,6 +5762,7 @@ void lc898122a_gyro_control(uint8_t UcGyrCon)
 		RegWriteA(WG_PANSTT6, 0x00);				// 0x010A
 		//SetPanTiltMode(OFF);						// Pantilt OFF
 #endif	//CATCHMODE
+		SetDCoffsetContValue( OFF ) ;
 	} else if (UcGyrCon == SPC) {					// Gyro ON for LINE
 
 
@@ -5779,6 +5776,7 @@ void lc898122a_gyro_control(uint8_t UcGyrCon)
 		RamWrite32A(gy2x4xb, 0x3F800000);		// 0x1121
 		RamWrite32A(syggf, 0x3F800000);	// 0x11B5
 
+		SetDCoffsetContValue( OFF ) ;
 
 	} else {															// Gyro OFF
 
@@ -6131,10 +6129,6 @@ void lc898122a_set_di_filter(uint8_t UcSetNum)
 *********************************************************************/
 void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 {
-	#ifdef	INI_SHORT4
-	RegWriteA( WC_RAMACCXY, 0x01 ) ;			// 0x018D	Filter copy on
-	#endif	//INI_SHORT4
-
 	switch (UcSetNum) {
 #ifdef	CATCHMODE
 	case ACTMODE:				// initial
@@ -6145,32 +6139,30 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A(gxlmt6L, MINLMT_W);		/* 0x102D L-Limit */
 		RamWrite32A(gxlmt6H, MAXLMT_W);		/* 0x102E H-Limit */
 		RamWrite32A( gxmg,		CHGCOEF_W ) ;	/* 0x10AA Change coefficient gain */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A(gylmt6L, MINLMT_W);		/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT_W);		/* 0x112E H-Limit */
 		RamWrite32A(gymg,		CHGCOEF_W);		/* 0x11AA Change coefficient gain */
-		#endif	//INI_SHORT4
 #else	//CORRECT_1DEG
 		RamWrite32A(gxlmt6L, MINLMT);		/* 0x102D L-Limit */
 		RamWrite32A(gxlmt6H, MAXLMT);		/* 0x102E H-Limit */
 		RamWrite32A( gxmg,		CHGCOEF ) ;		/* 0x10AA Change coefficient gain */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A(gylmt6L, MINLMT);		/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT);		/* 0x112E H-Limit */
 		RamWrite32A(gymg,		CHGCOEF);		/* 0x11AA Change coefficient gain */
-#endif	//CORRECT_1DEG
  #endif	//CORRECT_1DEG
 		RamWrite32A(gxhc_tmp,	DIFIL_S2);	/* 0x100E Base Coef */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
 		RamWrite32A(gyhc_tmp,	DIFIL_S2);	/* 0x110E Base Coef */
-		#endif	//INI_SHORT4
+		
 		RegWriteA(WG_HCHR, 0x10);			// 0x011B	GmHChrOn[1]=0 Sw OFF	Tokoro 2014.11.28
+		RamWrite32A( gxh1c, DIFIL_S2 );			// 0x1012
+		RamWrite32A( gyh1c, DIFIL_S2 );			// 0x1112
 		break;
 	case S2MODE:				// cancel lvl change mode
 		RegWriteA(WG_HCHR, 0x10);			// 0x011B	GmHChrOn[1]=0 Sw OFF
+		RamWrite32A( gxh1c, DIFIL_S2 );			// 0x1012
+		RamWrite32A( gyh1c, DIFIL_S2 );			// 0x1112
 		break;
 	case MOVMODE:			// Movie mode
 		lc898122a_init_pan_mode(ON);						// Pan/Tilt setting (Movie)
@@ -6180,13 +6172,12 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A( gxlmt6H, MAXLMT ) ;		/* 0x102E H-Limit */
 		RamWrite32A( gxmg, CHGCOEF_MOV ) ;		/* 0x10AA Change coefficient gain */
 		RamWrite32A( gxhc_tmp, DIFIL_S2 ) ;		/* 0x100E Base Coef */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A(gylmt6L, MINLMT_MOV);	/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT);		/* 0x112E H-Limit */
 		RamWrite32A(gymg, CHGCOEF_MOV);		/* 0x11AA Change coefficient gain */
 		RamWrite32A(gyhc_tmp, DIFIL_S2);		/* 0x110E Base Coef */
-		#endif	//INI_SHORT4
+
 		RegWriteA(WG_HCHR, 0x12);			// 0x011B	GmHChrOn[1]=1 Sw ON
 		break;
 	case MOVMODE_W:			// Movie mode (wide)
@@ -6197,13 +6188,12 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A( gxlmt6H, MAXLMT_W ) ;		/* 0x102E H-Limit */
 		RamWrite32A( gxmg, CHGCOEF_MOV_W ) ;	/* 0x10AA Change coefficient gain */
 		RamWrite32A( gxhc_tmp, DIFIL_S2 ) ;		/* 0x100E Base Coef */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A(gylmt6L, MINLMT_MOV_W);	/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT_W);		/* 0x112E H-Limit */
 		RamWrite32A(gymg, CHGCOEF_MOV_W);		/* 0x11AA Change coefficient gain */
 		RamWrite32A(gyhc_tmp, DIFIL_S2);		/* 0x110E Base Coef */
-		#endif	//INI_SHORT4
+
 		RegWriteA( WG_HCHR, 0x12 ) ;			// 0x011B	GmHChrOn[1]=1 Sw ON
 		break;
 	case STILLMODE:				// Still mode
@@ -6215,14 +6205,15 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A( gxlmt6H, MAXLMT ) ;		/* 0x102E H-Limit */
 		RamWrite32A( gxmg,	CHGCOEF ) ;			/* 0x10AA Change coefficient gain */
 		RamWrite32A( gxhc_tmp, DIFIL_S2 ) ;		/* 0x100E Base Coef */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+
 		RamWrite32A(gylmt6L, MINLMT);		/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT);		/* 0x112E H-Limit */
 		RamWrite32A(gymg,	CHGCOEF);			/* 0x11AA Change coefficient gain */
 		RamWrite32A(gyhc_tmp, DIFIL_S2);		/* 0x110E Base Coef */
-		#endif	//INI_SHORT4
+
 		RegWriteA(WG_HCHR, 0x10);			// 0x011B	GmHChrOn[1]=0 Sw OFF	Tokoro 2014.11.28
+		RamWrite32A( gxh1c, DIFIL_S2 );			// 0x1012
+		RamWrite32A( gyh1c, DIFIL_S2 );			// 0x1112
 		break;
 	case STILLMODE_W:			// Still mode (Wide)
 		lc898122a_init_pan_mode(OFF);							// Pan/Tilt setting (Still)
@@ -6233,14 +6224,15 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A( gxlmt6H, MAXLMT_W ) ;		/* 0x102E H-Limit */
 		RamWrite32A( gxmg,	CHGCOEF_W ) ;		/* 0x10AA Change coefficient gain */
 		RamWrite32A( gxhc_tmp, DIFIL_S2 ) ;		/* 0x100E Base Coef */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A(gylmt6L, MINLMT_W);		/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT_W);		/* 0x112E H-Limit */
 		RamWrite32A(gymg,	CHGCOEF_W);			/* 0x11AA Change coefficient gain */
 		RamWrite32A(gyhc_tmp, DIFIL_S2);		/* 0x110E Base Coef */
-		#endif	//INI_SHORT4
+
 		RegWriteA(WG_HCHR, 0x10);			// 0x011B	GmHChrOn[1]=0 Sw OFF	Tokoro 2014.11.28
+		RamWrite32A( gxh1c, DIFIL_S2 );			// 0x1012
+		RamWrite32A( gyh1c, DIFIL_S2 );			// 0x1112
 		break;
 
 	default:
@@ -6253,13 +6245,11 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A( gxmg,	CHGCOEF ) ;			/* 0x10AA Change coefficient gain */
 		RamWrite32A( gxhc_tmp, DIFIL_S2 ) ;		/* 0x100E Base Coef */
 
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
 		RamWrite32A(gylmt6L, MINLMT);		/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT);		/* 0x112E H-Limit */
 		RamWrite32A(gymg,	CHGCOEF);			/* 0x11AA Change coefficient gain */
 		RamWrite32A(gyhc_tmp, DIFIL_S2);		/* 0x110E Base Coef */
-		#endif	//INI_SHORT4
+
 		RegWriteA( WG_HCHR, 0x12 ) ;			// 0x011B	GmHChrOn[1]=1 Sw ON
 		break;
 #else	//CATCHMODE
@@ -6276,12 +6266,11 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A(gxlmt6L, MINLMT);		/* 0x102D L-Limit */
 		RamWrite32A(gxlmt6H, MAXLMT);		/* 0x102E H-Limit */
 		RamWrite32A( gxmg, CHGCOEF ) ;			/* 0x10AA Change coefficient gain */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A(gylmt6L, MINLMT);		/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT);		/* 0x112E H-Limit */
 		RamWrite32A(gymg, CHGCOEF);			/* 0x11AA Change coefficient gain */
-		#endif	//INI_SHORT4
+
 #ifdef	INI_SHORT2
 		RamWrite32A(gxhc_tmp, DIFIL_S2);		/* 0x100E Base Coef */
 		RamWrite32A(gyhc_tmp, DIFIL_S2);		/* 0x110E Base Coef */
@@ -6289,26 +6278,26 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A(gyh1c, DIFIL_S2);		/* 0x1112 Base Coef */
 #else	//INI_SHORT2
 		RamWrite32A(gxhc_tmp, UlH1Coefval);	/* 0x100E Base Coef */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
 		RamWrite32A(gyhc_tmp, UlH1Coefval);	/* 0x110E Base Coef */
-		#endif	//INI_SHORT4
 #endif	//INI_SHORT2
 		RegWriteA(WG_HCHR, 0x10);			// 0x011B	GmHChrOn[1]=0 Sw OFF
+		RamWrite32A( gxh1c, DIFIL_S2 );			// 0x1012
+		RamWrite32A( gyh1c, DIFIL_S2 );			// 0x1112
 		break;
 	case S2MODE:				// cancel lvl change mode
+		RamWrite32A( gxh1c, DIFIL_S2 );			// 0x1012
+		RamWrite32A( gyh1c, DIFIL_S2 );			// 0x1112
 		break;
 	case MOVMODE:		/* Movie mode */
 		lc898122a_init_pan_mode(OFF);					/* Pan/Tilt setting (Movie) */
 		RamWrite32A(gxlmt6L, MINLMT_MOV);	/* 0x102D L-Limit */
 		RamWrite32A(gxlmt6H, MAXLMT_MOV);	/* 0x102E H-Limit */
 		RamWrite32A( gxmg, CHGCOEF_MOV ) ;		/* 0x10AA Change coefficient gain */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A(gylmt6L, MINLMT_MOV);	/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT_MOV);	/* 0x112E H-Limit */
 		RamWrite32A(gymg, CHGCOEF_MOV);		/* 0x11AA Change coefficient gain */
-		#endif	//INI_SHORT4
+
 #ifdef	INI_SHORT2
 #else	//INI_SHORT2
 		RamWrite32A(gxhc_tmp, UlH1Coefval);		/* 0x100E Base Coef */
@@ -6323,25 +6312,23 @@ void lc898122a_set_h1c_mode(uint8_t UcSetNum)
 		RamWrite32A(gxlmt6L, MINLMT);		/* 0x102D L-Limit */
 		RamWrite32A(gxlmt6H, MAXLMT);		/* 0x102E H-Limit */
 		RamWrite32A( gxmg, CHGCOEF ) ;			/* 0x10AA Change coefficient gain */
-		#ifdef	INI_SHORT4
-		#else	//INI_SHORT4
+		
 		RamWrite32A( gymg, CHGCOEF ) ;			/* 0x11AA Change coefficient gain */
 		RamWrite32A(gylmt6L, MINLMT);		/* 0x112D L-Limit */
 		RamWrite32A(gylmt6H, MAXLMT);		/* 0x112E H-Limit */
-		#endif	//INI_SHORT4
+
 #ifdef	INI_SHORT2
 #else	//INI_SHORT2
 		RamWrite32A(gxhc_tmp, UlH1Coefval);		/* 0x100E Base Coef */
 		RamWrite32A(gyhc_tmp, UlH1Coefval);		/* 0x110E Base Coef */
 #endif	//INI_SHORT2
 		RegWriteA(WG_HCHR, 0x10);			// 0x011B	GmHChrOn[1]=0 Sw OFF
+		RamWrite32A( gxh1c, DIFIL_S2 );			// 0x1012
+		RamWrite32A( gyh1c, DIFIL_S2 );			// 0x1112
 		break;
 #endif	//CATCHMODE
 
 	}
-	#ifdef	INI_SHORT4
-	RegWriteA( WC_RAMACCXY, 0x00 ) ;			// 0x018D	Simultaneously Setting Off
-	#endif	//INI_SHORT4
 }
 #endif
 
@@ -7209,7 +7196,7 @@ int32_t lgit_onsemi_ois_mode(struct msm_ois_ctrl_t *o_ctrl,
 		lc898122a_servo_command(Y_DIR, OFF);
 		break;
 	}
-
+	SetDCoffsetContValue(OFF);
 	lgit_ois_func_tbl.ois_cur_mode = mode;
 
 	CDBG("%s End\n", __func__);

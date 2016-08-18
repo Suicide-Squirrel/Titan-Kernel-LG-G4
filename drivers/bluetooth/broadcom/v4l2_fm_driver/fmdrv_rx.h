@@ -45,6 +45,7 @@ int fm_rx_config_deemphasis(struct fmdrv_ops *, unsigned char);
 int fm_rx_set_rssi_threshold(struct fmdrv_ops*, short);
 int fm_rx_set_snr_threshold(struct fmdrv_ops*,  short);
 int fm_rx_set_af_switch(struct fmdrv_ops *, u8);
+int fm_rx_set_rds_mode(struct fmdrv_ops *, u8);
 
 int fm_rx_get_frequency(struct fmdrv_ops*, unsigned int*);
 int fm_rx_get_mute_mode(struct fmdrv_ops*, unsigned char*);
@@ -54,6 +55,7 @@ int fm_rx_get_scan_step(struct fmdrv_ops *, unsigned char *);
 int fm_rx_get_band_frequencies(struct fmdrv_ops *,
                     unsigned int *, unsigned int *);
 int fm_rx_seek_station(struct fmdrv_ops *, unsigned char, unsigned char);
+int fm_rx_seek_station_abort(struct fmdrv_ops *);
 int fm_rx_read_curr_rssi_freq(struct fmdrv_ops *, unsigned char);
 void fm_rx_enable_rds(struct fmdrv_ops *);
 int fm_rx_is_rds_data_available(struct fmdrv_ops *, struct file *,

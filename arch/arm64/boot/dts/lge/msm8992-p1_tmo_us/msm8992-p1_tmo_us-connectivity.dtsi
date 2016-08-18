@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 &soc {
+
 	bcmdhd_wifi {
 		compatible = "lge,bcmdhd_wlan";
 

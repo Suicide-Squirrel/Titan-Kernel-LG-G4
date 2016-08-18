@@ -30,28 +30,6 @@ config CRYPTO_FIPS
 	  certification.  You should say no unless you know what
 	  this is.
 
-config CRYPTO_FIPS_INTEG_COPY_ADDRESS
-	hex "FIPS integrity check Image offset"
-		default 0x20000000
-        help
-          This options sets the offset from stext address where
-          Image will be copied for integrity check in FIPS mode.
-	      If you need to change this value, change in device
-	      specific configuration file instead of here.
-
-config CRYPTO_FIPS_INTEG_COPY_SIZE
-	hex "FIPS integrity check Image size"
-		default 0x2000000
-        help
-          This options sets the number of bytes of Image that
-          will be copied to CRYPTO_FIPS_INTEG_COPY_ADDRESS.
-          Since the actual Image size is not available in the
-          copy routine, this should be a value that is known to
-          be larger than the largest possible Image size.
-          The default is 0x2000000 (32 MB). If you need to change
-          this value, change in device specific configuration file
-          instead of here.
-
 config CRYPTO_ALGAPI
 	tristate
 	select CRYPTO_ALGAPI2

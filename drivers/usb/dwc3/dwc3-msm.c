@@ -315,40 +315,36 @@ static struct usb_ext_notification *usb_ext;
 static void vzw_drv_check_work(struct work_struct *w)
 {
 	struct dwc3_msm *mdwc = container_of(w, struct dwc3_msm, drv_check_work.work);
-	unsigned long delay;
 
 	pr_info("%s: drv_state: %d\n", __func__, mdwc->drv_state);
 	switch (mdwc->drv_state) {
 	case USB_DRV_STATE_UNDEFINED:
 		mdwc->drv_state = USB_DRV_STATE_CHECK_FLOATED_CHARGER;
-		delay = 0;
-		break;
 
 	case USB_DRV_STATE_CHECK_FLOATED_CHARGER:
-			if (mdwc->charger.chg_type == DWC3_FLOATED_CHARGER) {
+			if (mdwc->charger.chg_type == DWC3_FLOATED_CHARGER \
+					|| mdwc->charger.chg_type == DWC3_INVALID_CHARGER ) {
+				if (mdwc->charger.vzw_usb_config_state == VZW_USB_STATE_CONFIGURED) {
+					pr_info("%s: USB connection is established.\n", __func__);
+					power_supply_set_floated_charger(&mdwc->usb_psy, 0);
+					return;
+				}
 				pr_info("%s: Floated charger is detected - Send uevent.\n", __func__);
-				power_supply_set_online(&mdwc->usb_psy, 1);
 				power_supply_set_floated_charger(&mdwc->usb_psy, 1);
 				mdwc->drv_state = USB_DRV_STATE_DONE;
-				delay = 0;
 			} else {
-			    pr_info("%s: SDP is connected.\n", __func__);
-			    mdwc->drv_state = USB_DRV_STATE_DONE;
-				delay = 0;
+				pr_info("%s: USB connection is established.\n", __func__);
+				power_supply_set_floated_charger(&mdwc->usb_psy, 0);
+				mdwc->drv_state = USB_DRV_STATE_DONE;
 			}
-		break;
-
-	case USB_DRV_STATE_DISCONNECTED:
-		power_supply_set_online(&mdwc->usb_psy, 0);
-		power_supply_set_floated_charger(&mdwc->usb_psy, 0);
-		mdwc->drv_state = USB_DRV_STATE_DONE;
-		delay = 0;
-
 	case USB_DRV_STATE_DONE:
 		return;
-	}
 
-	queue_delayed_work(system_nrt_wq, &mdwc->drv_check_work, delay);
+	case USB_DRV_STATE_DISCONNECTED:
+		power_supply_set_floated_charger(&mdwc->usb_psy, 0);
+		mdwc->drv_state = USB_DRV_STATE_DONE;
+		return;
+	}
 }
 
 static void vzw_drv_check_state_work(struct work_struct *w)
@@ -1780,6 +1776,7 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
 #ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
 	cancel_delayed_work_sync(&mdwc->drv_check_work);
 	mdwc->drv_state = USB_DRV_STATE_UNDEFINED;
+	mdwc->charger.vzw_usb_config_state = VZW_USB_STATE_UNDEFINED;
 #endif
 
 	if (mdwc->otg_xceiv && mdwc->otg_xceiv->state == OTG_STATE_B_PERIPHERAL)
@@ -3755,6 +3752,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	if (mdwc->otg_xceiv) {
 #ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
 		mdwc->charger.drv_check_state_wq = &mdwc->drv_check_state_work;
+		mdwc->charger.vzw_usb_config_state = VZW_USB_STATE_UNDEFINED;
 #endif
 		/* Skip charger detection for simulator targets */
 		if (!mdwc->charger.skip_chg_detect) {

@@ -2321,6 +2321,24 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	 * suspend also.
 	 */
 	if (pinfo->ulps_suspend_enabled) {
+#if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
+		if(pinfo->lge_pan_info.panel_type == LGD_INCELL_CMD_PANEL) {
+			/* Do nothing for P1 LGD when suspend-ulps is enabled.
+			But for MIPI spec, DSI power must be enabled to keep MIPI lanes low.
+			And this change is just an w/a code, which could cause other side effects ,
+			and just for decrease of current consumption */
+			pr_info("%s: just skip to enable vregs for DSI_CTRL_PM, ulps_suspend_enabled\n", __func__);
+		} else {
+			rc = msm_dss_enable_vreg(
+				ctrl_pdata->power_data[DSI_CTRL_PM].vreg_config,
+				ctrl_pdata->power_data[DSI_CTRL_PM].num_vreg, 1);
+			if (rc) {
+				pr_err("%s: failed to enable vregs for DSI_CTRL_PM\n",
+					__func__);
+				return rc;
+			}
+		}
+#else
 		rc = msm_dss_enable_vreg(
 			ctrl_pdata->power_data[DSI_CTRL_PM].vreg_config,
 			ctrl_pdata->power_data[DSI_CTRL_PM].num_vreg, 1);
@@ -2329,6 +2347,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 				__func__);
 			return rc;
 		}
+#endif
 	}
 
 	if (pinfo->cont_splash_enabled) {

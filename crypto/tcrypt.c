@@ -1872,21 +1872,6 @@ static int __init tcrypt_mod_init(void)
 	else
 		err = do_test(mode);
 
-#ifdef CONFIG_CRYPTO_FIPS
-	if (fips_enabled) {
-		fips_integrity_check();
-		if (fips_error()) {
-			printk(KERN_ERR "FIPS: ERROR! could not start FIPS mode\n");
-			if (fips_panic)
-				panic("FIPS: ERROR! could not start FIPS mode\n");
-		} else {
-			printk(KERN_INFO "FIPS: now running in FIPS mode\n");
-		}
-	} else {
-		printk(KERN_INFO "FIPS: running in non-FIPS mode\n");
-	}
-#endif
-
 	/* We intentionaly return -EAGAIN to prevent keeping the module,
 	 * unless we're running in fips mode. It does all its work from
 	 * init() and doesn't offer any runtime functionality, but in

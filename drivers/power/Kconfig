@@ -585,6 +585,13 @@ config LGE_PM_FACTORY_PSEUDO_BATTERY
 	help
 	  LGE PM pseudo battery mode
 
+config LGE_PM_USB_CURRENT_MAX
+	tristate "LGE_PM Support USB current max"
+	default n
+	depends on MACH_LGE
+	help
+	  LGE PM USB current max mode
+
 config LGE_PM_FACTORY_TESTMODE
 	bool "Support factory testmode for AT Command"
 	default n

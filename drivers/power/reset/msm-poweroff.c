@@ -71,7 +71,7 @@ static void *emergency_dload_mode_addr;
 static bool scm_dload_supported;
 
 static int dload_set(const char *val, struct kernel_param *kp);
-static int download_mode = 1;
+static int download_mode = 0;
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
 static int panic_prep_restart(struct notifier_block *this,
@@ -299,6 +299,10 @@ static void msm_restart_prepare(const char *cmd)
             __raw_writel(0x77665580, restart_reason);
         } else if (!strncmp(cmd, "aat_enter", 9)) {
             __raw_writel(0x77665581, restart_reason);
+        }else if (!strncmp(cmd, "dm-verity device corrupted", 26 )) {
+            __raw_writel(0x77665506, restart_reason);
+        } else if (!strncmp(cmd, "wallpaper_fail", 14)) {
+            __raw_writel(0x77665507, restart_reason);
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			int ret;

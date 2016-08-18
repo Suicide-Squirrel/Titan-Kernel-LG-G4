@@ -83,6 +83,7 @@ struct msm_ois_ctrl_t {
 	struct platform_driver *pdriver;
 	struct platform_device *pdev;
 	struct msm_camera_i2c_client i2c_client;
+	struct msm_camera_i2c_client i2c_eeprom_client;
 	enum msm_camera_device_type_t ois_device_type;
 	struct msm_sd_subdev msm_sd;
 	struct mutex *ois_mutex;

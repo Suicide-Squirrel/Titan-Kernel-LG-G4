@@ -86,10 +86,23 @@ struct inet_request_sock {
 				wscale_ok  : 1,
 				ecn_ok	   : 1,
 				acked	   : 1,
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+				no_srccheck: 1,
+				mptcp_rqsk : 1,
+				saw_mpc    : 1;
+#else
 				no_srccheck: 1;
+#endif
 	kmemcheck_bitfield_end(flags);
 	u32                     ir_mark;
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+	union {
+	    struct ip_options_rcu	*opt;
+	    struct sk_buff		*pktopts;
+	};
+#else
 	struct ip_options_rcu	*opt;
+#endif
 };
 
 static inline struct inet_request_sock *inet_rsk(const struct request_sock *sk)

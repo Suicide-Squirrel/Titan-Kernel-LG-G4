@@ -99,7 +99,11 @@ static void __inet_twsk_kill(struct inet_timewait_sock *tw,
 	}
 }
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+void inet_twsk_free(struct inet_timewait_sock *tw)
+#else
 static noinline void inet_twsk_free(struct inet_timewait_sock *tw)
+#endif
 {
 	struct module *owner = tw->tw_prot->owner;
 	twsk_destructor((struct sock *)tw);

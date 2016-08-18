@@ -35,6 +35,13 @@
  * 2015.07.22 : Release Version 2.1.3-2
  *      - remove permission check based on appid
  *      - group id control based on runtime mount
+ * 2015.08.19 : Release Version 2.1.3-3
+ *      - use userid (mounted userID)
+ *      - Top of multi-user view should always be visible
+ *        to ensure secondary users can traverse inside
+ *      - Block "other" access to Adroid directories, since only apps
+ *        belonging to a speicfic user should be in there; we still
+ *        leave +x open for the default view.
  */
 
 #define SDCARDFS_VERSION "2.1.3-2"

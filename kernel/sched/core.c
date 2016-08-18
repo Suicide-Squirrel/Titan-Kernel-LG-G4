@@ -1212,6 +1212,8 @@ unsigned int min_capacity = 1024; /* min(rq->capacity) */
 unsigned int max_load_scale_factor = 1024; /* max possible load scale factor */
 unsigned int max_possible_capacity = 1024; /* max(rq->max_possible_capacity) */
 
+unsigned int capacity_scale = 1024;
+
 /* Mask of all CPUs that have  max_possible_capacity */
 cpumask_t mpc_mask = CPU_MASK_ALL;
 
@@ -1270,8 +1272,12 @@ static inline u64 scale_exec_time(u64 delta, struct rq *rq)
 
 	if (unlikely(cur_freq > max_possible_freq ||
 		     (cur_freq == rq->max_freq &&
-		      rq->max_freq < rq->max_possible_freq)))
-		cur_freq = rq->max_possible_freq;
+		      rq->max_freq < rq->max_possible_freq))){
+		if(sysctl_sched_cancun)
+			cur_freq = rq->max_freq; /* LG Cancun Project*/
+		else
+			cur_freq = rq->max_possible_freq;
+	}
 
 	/* round up div64 */
 	delta = div64_u64(delta * cur_freq + max_possible_freq - 1,
@@ -1687,6 +1693,18 @@ static void update_history(struct rq *rq, struct task_struct *p,
 		demand = avg;
 	else
 		demand = max(avg, runtime);
+
+	/* LG Cancun Project */
+	if(sysctl_sched_cancun){
+		if(rq->efficiency < max_possible_efficiency){
+			demand = max(avg, runtime);
+			p->ravg.demand_for_migration = avg;
+		}
+		else{
+			demand = min(avg, runtime);
+			p->ravg.demand_for_migration = demand;
+		}
+	}
 
 	p->ravg.demand = demand;
 
@@ -2341,16 +2359,25 @@ static void __update_min_max_capacity(void)
 {
 	int i;
 	int max = 0, min = INT_MAX;
+	int max_i = 0;
 
 	for_each_online_cpu(i) {
-		if (cpu_rq(i)->capacity > max)
+		if (cpu_rq(i)->capacity > max) {
 			max = cpu_rq(i)->capacity;
+			max_i = i;
+		}
 		if (cpu_rq(i)->capacity < min)
 			min = cpu_rq(i)->capacity;
 	}
 
 	max_capacity = max;
 	min_capacity = min;
+	if (cpu_rq(max_i)->efficiency != max_possible_efficiency) {
+		int temp = max;
+		max = min;
+		min = temp;
+	}
+	capacity_scale = DIV_ROUND_UP(1024 * max, min);
 }
 
 static void update_min_max_capacity(void)
@@ -5887,7 +5914,6 @@ int sched_setscheduler_nocheck(struct task_struct *p, int policy,
 	};
 	return __sched_setscheduler(p, &attr, false);
 }
-EXPORT_SYMBOL(sched_setscheduler_nocheck);
 
 static int
 do_sched_setscheduler(pid_t pid, int policy, struct sched_param __user *param)
@@ -9121,7 +9147,6 @@ void __init sched_init(void)
 		rq->wakeup_latency = 0;
 		rq->wakeup_energy = 0;
 #ifdef CONFIG_SCHED_HMP
-		cpumask_set_cpu(i, &rq->freq_domain_cpumask);
 		rq->cur_freq = 1;
 		rq->max_freq = 1;
 		rq->min_freq = 1;

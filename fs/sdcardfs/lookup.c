@@ -86,6 +86,9 @@ static struct inode *sdcardfs_iget(struct super_block *sb,
 	struct inode *inode; /* the new inode to return */
 	int err;
 
+    struct sdcardfs_sb_info *sbi;
+    int mask = 0;
+
 	inode = iget5_locked(sb, /* our superblock */
 			     /*
 			      * hashval: we use inode number, but we can
@@ -154,7 +157,9 @@ static struct inode *sdcardfs_iget(struct super_block *sb,
 	sdcardfs_copy_inode_attr(inode, lower_inode);
 	fsstack_copy_inode_size(inode, lower_inode);
 
-	fix_derived_permission(inode);
+    sbi = SDCARDFS_SB(sb);
+    mask = sbi->options.sdfs_mask;
+    fix_derived_permission(inode, mask);
 
 	unlock_new_inode(inode);
 	return inode;
@@ -340,6 +345,9 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 	int err = 0;
 	const struct cred *saved_cred = NULL;
 
+    struct sdcardfs_sb_info *sbi;
+    int mask = 0;
+
 	parent = dget_parent(dentry);
 
     if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name, 0)) {
@@ -374,7 +382,10 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 					sdcardfs_lower_inode(dentry->d_inode));
 		/* get drived permission */
 		get_derived_permission(parent, dentry);
-		fix_derived_permission(dentry->d_inode);
+
+        sbi = SDCARDFS_SB(dentry->d_sb);
+        mask = sbi->options.sdfs_mask;
+        fix_derived_permission(dentry->d_inode, mask);
 	}
 	/* update parent directory's atime */
 	fsstack_copy_attr_atime(parent->d_inode,

@@ -236,47 +236,6 @@ section_table:
 
 ENTRY(stext)
 
-#ifdef CONFIG_CRYPTO_FIPS
-	/* copy the kernel image elsewhere in memory, for FIPS integrity check,
-	   before anything has a chance to change the data section */
-
-	// source address: kernel RAM base
-	ldr x17, =FIPS_KERNEL_RAM_BASE
-
-	// destination address: to be HMACd later
-	ldr x18, =CONFIG_CRYPTO_FIPS_INTEG_COPY_ADDRESS
-
-	// number of bytes to copy, this is higher than the actual image size because
-	// the actual image size is unavailable at build time
-
-	ldr x19, =CONFIG_CRYPTO_FIPS_INTEG_COPY_SIZE
-
-	// copy the image
-
-	subs    x19, x19, #8
-	b.mi    2f
-1:	ldr     x20, [x17], #8
-	subs    x19, x19, #8
-	str     x20, [x18], #8
-	b.pl    1b
-2:	adds    x19, x19, #4
-	b.mi    3f
-	ldr     w20, [x17], #4
-	sub     x19, x19, #4
-	str     w20, [x18], #4
-3:	adds    x19, x19, #2
-	b.mi    4f
-	ldrh    w20, [x17], #2
-	sub     x19, x19, #2
-	strh    w20, [x18], #2
-4:	adds    x19, x19, #1
-	b.mi    5f
-	ldrb    w20, [x17]
-	strb    w20, [x18]
-5:
-
-#endif
-
 	mov	x21, x0				// x21=FDT
 	bl	el2_setup			// Drop to EL1, w20=cpu_boot_mode
 	bl	__calc_phys_offset		// x24=PHYS_OFFSET, x28=PHYS_OFFSET-PAGE_OFFSET
