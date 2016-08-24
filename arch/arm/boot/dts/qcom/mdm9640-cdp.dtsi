@@ -51,7 +51,6 @@
 		qcom,iterm-ma = <100>;
 		regulator-name = "smb1357_otg_supply";
 		qcom,charging-disabled;
-		qcom,id-line-not-connected;
 	};
 };
 

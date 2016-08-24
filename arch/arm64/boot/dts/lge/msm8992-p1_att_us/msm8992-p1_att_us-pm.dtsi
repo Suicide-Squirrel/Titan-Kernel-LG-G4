@@ -134,6 +134,7 @@
 			max17048,alert_threshold = <0x2>;
 			max17048,full_design = <0xbb8>;
 			max17048,empty = <0>;
+			max17048,batt_profile;
 			reg = <0x36>;
 		};
 	};

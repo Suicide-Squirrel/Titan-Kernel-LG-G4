@@ -72,10 +72,7 @@
 /* time in msec to wait for
  * line discipline to be installed
  */
-//BT_S : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
-#define LDISC_TIME             5000//1500 //1500 --> 5000
-#define LDISC_STOP_TIME        3000
-//BT_E : [CONBT-2342] LG_BT_COMMON_IMP_KERNEL_INCREASE_LDISC_START_TIMEOUT_VALUE
+#define LDISC_TIME             1500
 #define CMD_RESP_TIME          800
 #define CMD_WR_TIME            5000
 #define POR_RETRY_COUNT        5

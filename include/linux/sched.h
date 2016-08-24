@@ -1081,7 +1081,6 @@ struct ravg {
 #ifdef CONFIG_SCHED_FREQ_INPUT
 	u32 curr_window, prev_window;
 #endif
-	u32 demand_for_migration; /* LG Cancun Project */
 };
 
 struct sched_entity {
@@ -1753,8 +1752,6 @@ static inline unsigned long sched_get_busy(int cpu)
 {
 	return 0;
 }
-static inline void sched_get_cpus_busy(unsigned long *busy,
-				const struct cpumask *query_cpus) {};
 static inline void sched_set_io_is_busy(int val) {};
 #endif
 

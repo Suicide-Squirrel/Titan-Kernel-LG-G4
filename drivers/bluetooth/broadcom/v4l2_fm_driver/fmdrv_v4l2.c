@@ -65,10 +65,6 @@
 #define IOCTL_GET_CT_DATA _IOR(MAJOR_NUM, 7, char *)
 #define IOCTL_GET_TMC_CHANNEL _IOR(MAJOR_NUM, 8, char *)
 
-/* BRCM LOCAL[NO CSP] : Required to move sysfs entry registration/deregistration place for SELINUX. */
-#define SYSFS_ENTRY_REGISTRATION_FOR_SELINUX TRUE
-/* BRCM LOCAL[NO CSP] */
-
 /*These values are set and has to be sent together.*/
 /*Keep them as a set always, never try to further seperate them*/
 /*These are arguments to BRCM vsc HCI command to switch the FM-I2S pins */
@@ -161,7 +157,7 @@ static unsigned int fm_v4l2_fops_poll(struct file *file,
     int ret;
     struct fmdrv_ops *fmdev;
 
-    //V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(rds) %s", __func__ );
+    V4L2_FM_DRV_DBG(V4L2_DBG_RX, "(rds) %s", __func__ );
 
     fmdev = video_drvdata(file);
     /* Check if RDS data is available */
@@ -259,36 +255,6 @@ static ssize_t store_fmrx_af(struct device *dev,
     ret = fm_rx_set_af_switch(fmdev, af_mode);
     if (ret < 0) {
         V4L2_FM_DRV_ERR("Failed to set AF Switch\n");
-        return ret;
-    }
-
-    return size;
-}
-
-static ssize_t show_fmrx_rds_on(struct device *dev,
-        struct device_attribute *attr, char *buf)
-{
-    struct fmdrv_ops *fmdev = dev_get_drvdata(dev);
-
-    return sprintf(buf, "%d\n", fmdev->rx.rds.rds_flag);
-}
-
-static ssize_t store_fmrx_rds_on(struct device *dev,
-        struct device_attribute *attr, char *buf, size_t size)
-{
-    int ret;
-    unsigned long rds_flag;
-    struct fmdrv_ops *fmdev = dev_get_drvdata(dev);
-
-    if (kstrtoul(buf, 0, &rds_flag))
-        return -EINVAL;
-
-    if (rds_flag < 0 || rds_flag > 1)
-        return -EINVAL;
-
-    ret = fm_rx_set_rds_mode(fmdev, rds_flag);
-    if (ret < 0) {
-        V4L2_FM_DRV_ERR("Failed to set RDS mode\n");
         return ret;
     }
 
@@ -485,28 +451,11 @@ static ssize_t store_fmrx_channel_space(struct device *dev,
         default:
             chl_step= FM_STEP_100KHZ;
     };
-    ret = fmc_set_scan_step(fmdev, chl_step);
+    ret = fmc_set_scan_step(fmdev, chl_spacing);
     if (ret < 0) {
         V4L2_FM_DRV_ERR("Failed to set channel spacing\n");
         return ret;
     }
-
-    return size;
-}
-
-static ssize_t show_fmrx_search_abort(struct device *dev,
-        struct device_attribute *attr, char *buf)
-{
-    return sprintf(buf, "%s\n", "abort search read no impact.");
-}
-
-static ssize_t store_fmrx_search_abort(struct device *dev,
-        struct device_attribute *attr, char *buf, size_t size)
-{
-    struct fmdrv_ops *fmdev = dev_get_drvdata(dev);
-
-    fm_rx_seek_station_abort(fmdev);
-
 
     return size;
 }
@@ -531,10 +480,6 @@ __ATTR(fmrx_deemph_mode, 0666, (void *)show_fmrx_deemphasis,
 static struct kobj_attribute v4l2_fmrx_rds_af =
 __ATTR(fmrx_rds_af, 0666, (void *)show_fmrx_af, (void *)store_fmrx_af);
 
-/* To Enable/Disable FM RX RDS*/
-static struct kobj_attribute v4l2_fmrx_rds_on =
-__ATTR(fmrx_rds_on, 0666, (void *)show_fmrx_rds_on, (void *)store_fmrx_rds_on);
-
 /* To switch between Japan/US bands */
 static struct kobj_attribute v4l2_fmrx_band =
 __ATTR(fmrx_band, 0666, (void *)show_fmrx_band, (void *)store_fmrx_band);
@@ -558,23 +503,15 @@ __ATTR(fmrx_chl_lvl, 0666, (void *) show_fmrx_channel_space,
 static struct kobj_attribute v4l2_fmrx_fm_audio_pins =
 __ATTR(fmrx_fm_audio_pins, 0666, (void *)show_fmrx_fm_audio_pins, (void *)store_fmrx_fm_audio_pins);
 
-/* To set the search abort */
-static struct kobj_attribute v4l2_fmrx_search_abort =
-__ATTR(fmrx_search_abort, 0666, (void *) show_fmrx_search_abort,
-        (void *)store_fmrx_search_abort);
-
-
 static struct attribute *v4l2_fm_attrs[] = {
     &v4l2_fmrx_comp_scan.attr,
     &v4l2_fmrx_deemph_mode.attr,
     &v4l2_fmrx_rds_af.attr,
-    &v4l2_fmrx_rds_on.attr,
     &v4l2_fmrx_band.attr,
     &v4l2_fmrx_rssi_lvl.attr,
     &v4l2_fmrx_snr_lvl.attr,
     &v4l2_fmrx_channel_space.attr,
     &v4l2_fmrx_fm_audio_pins.attr,
-    &v4l2_fmrx_search_abort.attr,
     NULL,
 };
 static struct attribute_group v4l2_fm_attr_grp = {
@@ -640,10 +577,7 @@ static int fm_v4l2_fops_open(struct file *file)
         V4L2_FM_DRV_ERR("(fmdrv): Error setting Audio mode during FM enable operation");
         return ret;
     }
-/* BRCM LOCAL[NO CSP] : Required to move sysfs entry registration/deregistration place for SELINUX. */
-#if(defined(SYSFS_ENTRY_REGISTRATION_FOR_SELINUX) && SYSFS_ENTRY_REGISTRATION_FOR_SELINUX == TRUE)
 
-#else
     /* Register sysfs entries */
     ret = sysfs_create_group(&fmdev->radio_dev->dev.kobj,
             &v4l2_fm_attr_grp);
@@ -651,8 +585,6 @@ static int fm_v4l2_fops_open(struct file *file)
         V4L2_FM_DRV_ERR("failed to create sysfs entries");
         return ret;
     }
-#endif
-/* BRCM LOCAL[NO CSP] */
 
     /* Set Audio path */
     V4L2_FM_DRV_DBG(V4L2_DBG_OPEN,"(fmdrv): FM Set Audio path option : %d", DEF_V4L2_FM_AUDIO_PATH);
@@ -730,13 +662,8 @@ static int fm_v4l2_fops_release(struct file *file)
         V4L2_FM_DRV_ERR("(fmdrv): Error disabling FM. Continuing to release FM core..");
         ret = 0;
     }
-/* BRCM LOCAL[NO CSP] : Required to move sysfs entry registration/deregistration place for SELINUX. */
-#if(defined(SYSFS_ENTRY_REGISTRATION_FOR_SELINUX) && SYSFS_ENTRY_REGISTRATION_FOR_SELINUX == TRUE)
-
-#else
     sysfs_remove_group(&fmdev->radio_dev->dev.kobj, &v4l2_fm_attr_grp);
-#endif
-/* BRCM LOCAL[NO CSP] */
+
     ret = fmc_release(fmdev);
     if (ret < 0)
     {
@@ -1135,17 +1062,6 @@ int fm_v4l2_init_video_device(struct fmdrv_ops *fmdev, int radio_nr)
     }
 
     fmdev->radio_dev = gradio_dev;
-/* BRCM LOCAL[NO CSP] : Required to move sysfs entry registration/deregistration place for SELINUX. */
-#if(defined(SYSFS_ENTRY_REGISTRATION_FOR_SELINUX) && SYSFS_ENTRY_REGISTRATION_FOR_SELINUX == TRUE)
-    ret = sysfs_create_group(&fmdev->radio_dev->dev.kobj, &v4l2_fm_attr_grp);
-
-    if (ret) {
-        V4L2_FM_DRV_ERR("failed to create sysfs entries");
-        video_device_release(gradio_dev);
-        return ret;
-    }
-#endif
-/* BRCM LOCAL[NO CSP] */
     V4L2_FM_DRV_DBG(V4L2_DBG_INIT,"(fmdrv) registered with video device");
     ret = 0;
 
@@ -1157,11 +1073,6 @@ void *fm_v4l2_deinit_video_device(void)
     struct fmdrv_ops *fmdev;
 
     fmdev = video_get_drvdata(gradio_dev);
-/* BRCM LOCAL[NO CSP] : Required to move sysfs entry registration/deregistration place for SELINUX. */
-#if(defined(SYSFS_ENTRY_REGISTRATION_FOR_SELINUX) && SYSFS_ENTRY_REGISTRATION_FOR_SELINUX == TRUE)
-    sysfs_remove_group(&fmdev->radio_dev->dev.kobj, &v4l2_fm_attr_grp);
-#endif
-/* BRCM LOCAL[NO CSP] */
     /* Unregister RADIO device from V4L2 subsystem */
     video_unregister_device(gradio_dev);
 

@@ -478,10 +478,7 @@ static void bt_send_data_ldisc(struct work_struct *w)
 
     BT_DRV_DBG(V4L2_DBG_TX, "sending data to ldisc");
 
-//BT_S : [CONBT-2297][CASE#966325] improve a2dp chopping
-    //if (atomic_read(&bt_dev_p->tx_cnt))
-    while (atomic_read(&bt_dev_p->tx_cnt))
-//BT_E : [CONBT-2297][CASE#966325] improve a2dp chopping
+    if (atomic_read(&bt_dev_p->tx_cnt))
     {
         spin_lock_irqsave(&bt_dev_p->tx_q_lock, flags);
         skb = skb_dequeue(&bt_dev_p->tx_q);

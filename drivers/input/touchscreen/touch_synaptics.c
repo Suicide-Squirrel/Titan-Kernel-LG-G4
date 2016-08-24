@@ -7403,7 +7403,6 @@ enum error_type synaptics_ts_suspend(struct i2c_client *client)
 	}
 	ts->lpwg_ctrl.screen = 0;
 
-
 	return NO_ERROR;
 error:
 	return ERROR;
