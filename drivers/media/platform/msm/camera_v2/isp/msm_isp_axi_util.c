@@ -1503,14 +1503,9 @@ int msm_isp_drop_frame(struct vfe_device *vfe_dev,
 		src_info[SRC_TO_INTF(stream_info->stream_src)].frame_id;
 
 	if (done_buf) {
-		rc = vfe_dev->buf_mgr->ops->update_put_buf_cnt(vfe_dev->buf_mgr,
-			done_buf->bufq_handle, done_buf->buf_idx, frame_id);
-		if (rc == 0) {
-			vfe_dev->buf_mgr->ops->buf_done(vfe_dev->buf_mgr,
-				done_buf->bufq_handle, done_buf->buf_idx,
-				&ts->buf_time, frame_id,
-				stream_info->runtime_output_format);
-		}
+		vfe_dev->buf_mgr->ops->buf_done(vfe_dev->buf_mgr,
+			done_buf->bufq_handle, done_buf->buf_idx, &ts->buf_time,
+			frame_id, stream_info->runtime_output_format);
 
 		bufq = vfe_dev->buf_mgr->ops->get_bufq(vfe_dev->buf_mgr,
 			done_buf->bufq_handle);
@@ -1734,6 +1729,21 @@ static int msm_isp_init_stream_ping_pong_reg(
 	return rc;
 }
 
+static void msm_isp_deinit_stream_ping_pong_reg(
+	struct vfe_device *vfe_dev,
+	struct msm_vfe_axi_stream *stream_info)
+{
+	int i;
+	for (i = 0; i < 2; i++) {
+		struct msm_isp_buffer *buf;
+		buf = stream_info->buf[i];
+		if (buf) {
+			vfe_dev->buf_mgr->ops->put_buf(vfe_dev->buf_mgr,
+				buf->bufq_handle, buf->buf_idx);
+		}
+	}
+}
+
 static void msm_isp_get_stream_wm_mask(
 	struct msm_vfe_axi_stream *stream_info,
 	uint32_t *wm_reload_mask)
@@ -1817,11 +1827,14 @@ int msm_isp_axi_reset(struct vfe_device *vfe_dev,
 				continue;
 			}
 
-			vfe_dev->buf_mgr->ops->flush_buf(
-				vfe_dev->buf_mgr, bufq_handle,
-				MSM_ISP_BUFFER_FLUSH_ALL);
-			memset(&stream_info->buf, 0, sizeof(stream_info->buf));
-
+			if (bufq->buf_type != ISP_SHARE_BUF) {
+				msm_isp_deinit_stream_ping_pong_reg(vfe_dev,
+					stream_info);
+			} else {
+				vfe_dev->buf_mgr->ops->flush_buf(
+					vfe_dev->buf_mgr, bufq_handle,
+					MSM_ISP_BUFFER_FLUSH_ALL);
+			}
 			axi_data->src_info[SRC_TO_INTF(stream_info->
 				stream_src)]. frame_id = reset_cmd->frame_id;
 			msm_isp_reset_burst_count_and_frame_drop(vfe_dev,
@@ -1994,7 +2007,7 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
 	int ext_read =
 		(axi_data->src_info[VFE_PIX_0].input_mux == EXTERNAL_READ);
-	uint32_t src_mask = 0, intf, bufq_id = 0, bufq_handle = 0;
+	uint32_t src_mask = 0, intf;
 
 	if (stream_cfg_cmd->num_streams > MAX_NUM_STREAM ||
 		stream_cfg_cmd->num_streams == 0)
@@ -2101,16 +2114,7 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 	for (i = 0; i < stream_cfg_cmd->num_streams; i++) {
 		stream_info = &axi_data->stream_info[
 			HANDLE_TO_IDX(stream_cfg_cmd->stream_handle[i])];
-		for (bufq_id = 0; bufq_id < VFE_BUF_QUEUE_MAX; bufq_id++) {
-			bufq_handle = stream_info->bufq_handle[bufq_id];
-			if (!bufq_handle)
-				continue;
-
-			vfe_dev->buf_mgr->ops->flush_buf(
-				vfe_dev->buf_mgr, bufq_handle,
-				MSM_ISP_BUFFER_FLUSH_ALL);
-		}
-		memset(&stream_info->buf, 0, sizeof(stream_info->buf));
+		msm_isp_deinit_stream_ping_pong_reg(vfe_dev, stream_info);
 		vfe_dev->reg_update_requested &=
 			~(BIT(SRC_TO_INTF(stream_info->stream_src)));
 	}
@@ -2191,14 +2195,10 @@ static int msm_isp_return_empty_buffer(struct vfe_device *vfe_dev,
 		return rc;
 	}
 
-	rc = vfe_dev->buf_mgr->ops->update_put_buf_cnt(vfe_dev->buf_mgr,
-		buf->bufq_handle, buf->buf_idx, frame_id);
-	if (rc == 0) {
-		vfe_dev->buf_mgr->ops->buf_done(vfe_dev->buf_mgr,
-			buf->bufq_handle, buf->buf_idx,
-			&vfe_dev->axi_data.src_info[frame_src].time_stamp,
-			frame_id, stream_info->runtime_output_format);
-	}
+	vfe_dev->buf_mgr->ops->buf_done(vfe_dev->buf_mgr,
+		buf->bufq_handle, buf->buf_idx,
+		&vfe_dev->axi_data.src_info[frame_src].time_stamp, frame_id,
+		stream_info->runtime_output_format);
 
 	error_event.frame_id = frame_id;
 	error_event.timestamp =

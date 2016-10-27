@@ -234,7 +234,7 @@ static int msm_cpp_update_bandwidth(struct cpp_device *cpp_dev,
 
 	int rc;
 	struct msm_bus_paths *path;
-
+	cpp_dev->bus_idx = 3 - cpp_dev->bus_idx;
 	path = &(msm_cpp_bus_scale_data.usecase[cpp_dev->bus_idx]);
 	path->vectors[0].ab = ab;
 	path->vectors[0].ib = ib;
@@ -245,7 +245,6 @@ static int msm_cpp_update_bandwidth(struct cpp_device *cpp_dev,
 		pr_err("Fail bus scale update %d\n", rc);
 		return -EINVAL;
 	}
-	cpp_dev->bus_idx = 3 - cpp_dev->bus_idx;
 
 	return 0;
 }
@@ -702,7 +701,6 @@ static int cpp_init_mem(struct cpp_device *cpp_dev)
 	int rc = 0;
 
 	kref_init(&cpp_dev->refcount);
-	kref_get(&cpp_dev->refcount);
 	cpp_dev->client = msm_ion_client_create("cpp");
 
 	CPP_DBG("E\n");
@@ -2608,6 +2606,7 @@ STREAM_BUFF_END:
 				pr_err(" Fail to get clock index\n");
 				return -EINVAL;
 			}
+
 			if (cpp_dev->bus_master_flag)
 				rc = msm_cpp_update_bandwidth(cpp_dev,
 					clock_settings.avg,

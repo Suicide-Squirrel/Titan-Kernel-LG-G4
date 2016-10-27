@@ -1,19 +1,237 @@
-#ifndef	LGIT_IMX234_OIS_H
-#define	LGIT_IMX234_OIS_H
+/*Filter Calculator Version 4.02*/
+/*the time and date : 2015/4/9 18:49:13*/
+/*FC filename : LC898122_FIL_IMTech_V0002*/
+/*fs,23438Hz*/
+/*LSI No.,LC898122*/
+/*Comment,*/
 
-#define LAST_UPDATE  "15-03-11"	//LC898122A FW
-void lgit_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
+void imtech_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
+
+
+#define		USE_INVENSENSE		// INVENSENSE
+#ifdef USE_INVENSENSE
+//			#define		FS_SEL		0		/* ?262LSB/‹/s  */
+//			#define		FS_SEL		1		/* ?131LSB/‹/s  */
+//			#define		FS_SEL		2		/* ?65.5LSB/‹/s  */
+#define		FS_SEL		3		/* ?32.8LSB/‹/s  */
+
+#endif
+
+/**************** Model name *****************/
+#define		LC898122
+/**************** FW version *****************/
+#ifdef LC898122
+#define	MDL_VER			0x00
+#define	FW_VER			0x10
+#endif
+
+/**************** Select Mode **************/
+//#define		DEF_SET				// default value re-setting
+//#define		USE_EXTCLK_PWM		// USE Ext clk for PWM
+//#define		USE_VH_SYNC			// USE V/H Sync for PWM
+//#define		PWM_CAREER_TEST		// PWM_CAREER_TEST
+#define		NEUTRAL_CENTER		// Upper Position Current 0mA Measurement
+#define		MONITOR_OFF			// default Monitor output
+#define		MODULE_CALIBRATION		// for module maker   use float
+#define		ACCEPTANCE					// Examination of Acceptance
+#define		AF_BIDIRECTION
+
+#ifdef LC898122
+#define		SEL_CLOSED_AF			// Closed Loop AF Select
+#define		ACTREG_HEIDI		// Use
+#define		CORRECT_1DEG		// Correct 1deg   disable 0.5deg
+#define		PWM_BREAK			// PWM mode select (disable standby)
+#define		IDG2030			// Disable is IDG-2021
+#endif
+
 #define		CATCHMODE               // Catch mode
-#ifdef	CATCHMODE
-#define	CORRECT_1DEG			// Correct 1deg   disable 0.5deg
-//#define	G_45G_INI	0x3E3FECFF	// 32.8/175 = 0.187428571 = -14.543[dB]
-#define	G_45G_INI	0x3F003208	// 32.8/65.5 = 0.500763359 = -6[dB]
-#endif	//CATCHMODE
-#define		AF_SERVO_ON_SMOOTH
-#define		NEW_BIAS_ADJUST
 
-#define		OIS_FW_POLLING_PASS	0
-#define		OIS_FW_POLLING_FAIL	-1
+// Command Status
+#define		EXE_END		0x02		// Execute End (Adjust OK)
+#define		EXE_HXADJ	0x06		// Adjust NG : X Hall NG (Gain or Offset)
+#define		EXE_HYADJ	0x0A		// Adjust NG : Y Hall NG (Gain or Offset)
+#define		EXE_LXADJ	0x12		// Adjust NG : X Loop NG (Gain)
+#define		EXE_LYADJ	0x22		// Adjust NG : Y Loop NG (Gain)
+#define		EXE_GXADJ	0x42		// Adjust NG : X Gyro NG (offset)
+#define		EXE_GYADJ	0x82		// Adjust NG : Y Gyro NG (offset)
+#define		EXE_OCADJ	0x402		// Adjust NG : OSC Clock NG
+#define		EXE_CXADJ	0x102		// Adjust NG : X Lens Center NG
+#define		EXE_CYADJ	0x202		// Adjust NG : Y Lens Center NG
+
+#ifdef SEL_CLOSED_AF
+#define		EXE_AFOFF	0x802		// Adjust NG : AF Offset
+#define	EXE_HZADJ	0x1002		// Adjust NG : AF Hall NG (Gain or Offset)
+#define	EXE_LZADJ	0x2002		// Adjust NG : AF Loop NG (Gain)
+#endif
+#define		EXE_ERR		0x99		// Execute Error End
+
+#ifdef ACCEPTANCE
+// Hall Examination of Acceptance
+#define		EXE_HXMVER	0x06		// X Err
+#define		EXE_HYMVER	0x0A		// Y Err
+
+// Gyro Examination of Acceptance
+#define		EXE_GXABOVE	0x06		// X Above
+#define		EXE_GXBELOW	0x0A		// X Below
+#define		EXE_GYABOVE	0x12		// Y Above
+#define		EXE_GYBELOW	0x22		// Y Below
+#endif	//ACCEPTANCE
+
+// Common Define
+#define	SUCCESS			0x00		// Success
+#define	FAILURE			0x01		// Failure
+
+#ifndef ON
+#define	ON				0x01		// ON
+#define	OFF				0x00		// OFF
+#endif
+#define	SPC				0x02		// Special Mode
+
+#define	X_DIR			0x00		// X Direction
+#define	Y_DIR			0x01		// Y Direction
+#define	Z_DIR			0x02		// Z Direction(AF)
+#define	X2_DIR			0x10		// X Direction
+#define	Y2_DIR			0x11		// Y Direction
+#define	Z2_DIR			0x12		// Z Direction(AF)
+
+#define	NOP_TIME		0.00004166F
+
+// Standby mode
+#define		STB1_ON		0x00		// Standby1 ON
+#define		STB1_OFF	0x01		// Standby1 OFF
+#define		STB2_ON		0x02		// Standby2 ON
+#define		STB2_OFF	0x03		// Standby2 OFF
+#define		STB3_ON		0x04		// Standby3 ON
+#define		STB3_OFF	0x05		// Standby3 OFF
+#define		STB4_ON		0x06		// Standby4 ON			/* for Digital Gyro Read */
+#define		STB4_OFF	0x07		// Standby4 OFF
+#define		STB2_OISON	0x08		// Standby2 ON (only OIS)
+#define		STB2_OISOFF	0x09		// Standby2 OFF(only OIS)
+#define		STB2_AFON	0x0A		// Standby2 ON (only AF)
+#define		STB2_AFOFF	0x0B		// Standby2 OFF(only AF)
+
+
+// OIS Adjust Parameter
+#define		DAHLXO_INI		0x1372
+#define		DAHLXB_INI		0xEB05
+#define		DAHLYO_INI		0xFFE8
+#define		DAHLYB_INI		0xDF4B
+#define		SXGAIN_INI		0x3CA2
+#define		SYGAIN_INI		0x39F2
+#define		HXOFF0Z_INI		0xFF98
+#define		HYOFF1Z_INI		0x005A
+/* AF adjust parameter */
+#ifdef SEL_CLOSED_AF
+#define		DAHLZB_INI		0xF613
+#define		DAHLZO_INI		0x72FF
+#define		AFOFF4Z_INI		0x0DAE		// AF AD Offset OFF4Z
+#define		AFOFF6Z_INI		0x0000		// AF AD Offset OFF6Z
+#define		SZGAIN_INI		0x401A		// Hall Z Loop Gain
+#define		AFDROF_INI		0x10		//
+#else
+#define		DAHLZB_INI		0x8001
+#define		DAHLZO_INI		0x0000
+#define		BIAS_CUR_AF		0x00		//0.25mA
+#define		AMP_GAIN_AF		0x00		//x6
+#endif
+
+/* OSC Init */
+#define		OSC_INI			0x6E		/* VDD=2.8V */
+
+
+#ifdef ACTREG_HEIDI		// MTM 9.5/10.2ohm Actuator ***************************
+#define		BIAS_CUR_OIS	0x33		//3.0mA/3.0mA
+#define		AMP_GAIN_X		0x03		//x75
+#define		AMP_GAIN_Y		0x03		//x75
+#define		BIAS_CUR_AF		0x04		// 3.0mA	/* 0x03		//2mA */
+#define		AMP_GAIN_AF		0x04		//x100
+
+#define		A3_IEXP3		0x3EC0017F
+#define		A1_IEXP1		0x3F180130
+
+#endif
+
+// Digital Gyro offset Initial value
+#define		DGYRO_OFST_XH	0x00
+#define		DGYRO_OFST_XL	0x00
+#define		DGYRO_OFST_YH	0x00
+#define		DGYRO_OFST_YL	0x00
+
+#define		SXGAIN_LOP		0x3000
+#define		SYGAIN_LOP		0x3000
+#ifdef SEL_CLOSED_AF
+#define		SZGAIN_LOP		0x4000
+#endif
+
+#define		TCODEH_ADJ		0x0000
+
+#define		GYRLMT1H		0x3F800000		//1.0F
+
+#define		GYRLMT3_S1		0x3F0CCCCD	//0.55
+#define		GYRLMT3_S2		0x3F0CCCCD	//0.55
+
+#define		GYRLMT4_S1		0x3FB00000		//1.375F
+#define		GYRLMT4_S2		0x3FB00000		//1.375F
+
+#define		GYRA12_HGH		0x402CCCCD		/* 2.70F */
+#define		GYRA12_MID		0x3C23D70A		/* 0.01F */
+#define		GYRA34_HGH		0x3F000000		/* 0.5F */
+#define		GYRA34_MID		0x3C23D70A		/* 0.01F */
+
+#define		GYRB12_HGH		0x3E4CCCCD		/* 0.20F */
+#define		GYRB12_MID		0x3CA3D70A		/* 0.02F */
+#define		GYRB34_HGH		0x3CA3D70A		/* 0.02F */
+#define		GYRB34_MID		0x3C23D70A		/* 0.001F */
+
+#define		GYRISTP			0x3A51B700		/* -62dB */
+
+#ifdef LC898122
+#ifdef CORRECT_1DEG
+#define		MAXLMT		0x3FB00000				// 1.375
+#define		MINLMT		0x3F19999A				// 0.6
+#define		CHGCOEF		0xBD800000				// -0.031250
+#define		MINLMT_MOV	0x3F19999A				// 0.6
+#define		CHGCOEF_MOV	0xBD800000
+#else
+#define		MAXLMT		0x40000000				// 2.0
+#define		MINLMT		0x3F8CCCCD				// 1.1
+#define		CHGCOEF		0xBA4C71C7				//
+#define		MINLMT_MOV	0x00000000				// 0.0
+#define		CHGCOEF_MOV	0xB9700000
+#endif
+
+#define		SXQ_INI			0x3F800000
+#define		SYQ_INI			0x3F800000
+#define		AFAG_INI		0xBF800000
+
+#define		GXGAIN_INI		0xBEDF2DC0
+#define		GYGAIN_INI		0xBED399AA
+
+#define		GYROX_INI		0x43
+#define		GYROY_INI		0x45
+
+#define		GXHY_GYHX		0
+
+#define		G_45G_INI		0x3EBFED46		// 32.8/87.5=0.3748...
+
+#define		CRS_OX_OY		0
+
+#define		DIFIL_S2		0x3F7FF000
+#define		HALL_H_VAL		0x3F800000			/* 1.0 */
+
+#define		AF_STM_STP		0x0010			/* 0x1514*/
+#define		AF_SSMV1		0x3000			/* 0x1222*/
+#define		AF_SSMV2		0x5000			/* 0x1223*/
+#define		AF_STMA			0x0700			/* 0x121D*/
+#define		AF_STMB			0x0100			/* 0x121E*/
+#define		AF_STMC			0x7fff			/* 0x121F*/
+#endif
+
+
+/* Optical Center & Gyro Gain for Mode */
+#define	VAL_SET				0x00		// Setting mode
+#define	VAL_FIX				0x01		// Fix Set value
+#define	VAL_SPC				0x02		// Special mode
 
 // EEPROM Address Define	0900_0940
 #define		E2POFST				0x0900
@@ -24,6 +242,8 @@ void lgit_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
 #define		LOOP_GAIN_Z				(0x0006 + E2POFST)		// Z Hall Loopgain
 #define		DRV_OFFSET_Z			(0x0008 + E2POFST)		// Z Driver Offset	1ybte Setting
 #define		ADJ_HALL_Z_FLG			(0x0009 + E2POFST)		// Z Cal. Result Flag
+//#define							(0x000C + E2POFST)		// Not used area
+//#define							(0x000E + E2POFST)		// Not used area
 /****************** page ******************/
 // Hall Adjust
 #define		HALL_BIAS_X				(0x0010 + E2POFST)		// X Hall Bias
@@ -49,514 +269,305 @@ void lgit_imx234_onsemi_ois_init(struct msm_ois_ctrl_t *msm_ois_t);
 // Gyro GAIN
 #define		GYRO_GAIN_X				(0x002B + E2POFST)		// 4byte Setting
 #define		GYRO_GAIN_Y				(0x002F + E2POFST)		// 4byte Setting
-
 /****************** page ******************/
 // F/W Version Information
 #define		FW_VERSION_INFO			(0x0033 + E2POFST)		// FW Version
 /////////////////////////////////////////////////////////////////////////////
 #define		MSB_CHKSUM				(0x0035 + E2POFST)		// 1byte Setting
-#define   LSB_CHKSUM				(0x0036 + E2POFST)		// 1byte Setting
+#define     LSB_CHKSUM				(0x0036 + E2POFST)		// 1byte Setting
+//#define							(0x0037 + E2POFST)		// Not used area
+//#define							(0x0038 + E2POFST)		// Not used area
+//#define							(0x0039 + E2POFST)		// Not used area
+//#define							(0x003A + E2POFST)		// Not used area
+//#define							(0x003B + E2POFST)		// Not used area
+//#define							(0x003C + E2POFST)		// Not used area
+//#define							(0x003D + E2POFST)		// Not used area
+//#define							(0x003E + E2POFST)		// Not used area
+//#define							(0x003F + E2POFST)		// Not used area
 #define		SUCCESS_OIS_CAL			(0x0040 + E2POFST)		// 1byte
-// EEPROM Address Define END
-
-
-#define		EXE_END		0x02		// Execute End (Adjust OK)
-#define		EXE_HXADJ	0x06		// Adjust NG : X Hall NG (Gain or Offset)
-#define		EXE_HYADJ	0x0A		// Adjust NG : Y Hall NG (Gain or Offset)
-#define		EXE_LXADJ	0x12		// Adjust NG : X Loop NG (Gain)
-#define		EXE_LYADJ	0x22		// Adjust NG : Y Loop NG (Gain)
-#define		EXE_GXADJ	0x42		// Adjust NG : X Gyro NG (offset)
-#define		EXE_GYADJ	0x82		// Adjust NG : Y Gyro NG (offset)
-
-#define		EXE_CXADJ	0x102		// Adjust NG : X Lens Center NG
-#define		EXE_CYADJ	0x202		// Adjust NG : Y Lens Center NG
-#define		EXE_OCADJ	0x402		// Adjust NG : OSC Clock NG
-
-#define		EXE_AFOFF	0x802		// Adjust NG : AF Offset
-
-#define		EXE_HZADJ	0x1002		// Adjust NG : AF Hall NG (Gain or Offset)
-#define		EXE_LZADJ	0x2002		// Adjust NG : AF Loop NG (Gain)
-
-#define		EXE_ERR		0x99		// Execute Error End
-
-#ifndef ON
-#define	ON			0x01		// ON
-#define	OFF			0x00		// OFF
-#endif
-#define	SPC			0x02		// Special Mode
-#define		X_DIR		0x00		// X Direction
-#define		Y_DIR		0x01		// Y Direction
-#define		Z_DIR		0x02		// Z Direction(AF)
-
-#define		CLR_FRAM0	0x01
-#define		CLR_FRAM1	0x02
-#define		CLR_ALL_RAM 0x03
-
-#define		Mlnp		0			// Linear PWM
-#define		Mpwm		1			// PWM
-
-/* OSC Calibration */
-#define		OSC_INI			0x2E		/* OSC Init, VDD=2.8V */
-
-/* OIS Calibration Parameter */
-#define	DAHLXO_INI		0x0000		// Hall X Offset
-#define	DAHLXB_INI		0xF000		// Hall X Bias
-#define	DAHLYO_INI		0x0000		// Hall Y Offset
-#define	DAHLYB_INI		0xF000		// Hall X Bias
-#define	HXOFF0Z_INI		0x0000		// Hall X AD Offset
-#define	HYOFF1Z_INI		0x0000		// Hall Y AD Offset
-#define	SXGAIN_INI		0x4000		// Hall X Loop Gain
-#define	SYGAIN_INI		0x4000		// Hall Y Loop Gain
-#define	DGYRO_OFST_XH	0x00		// Digital Gyro X AD Offset H
-#define	DGYRO_OFST_XL	0x00		// Digital Gyro X AD Offset L
-#define	DGYRO_OFST_YH	0x00		// Digital Gyro Y AD Offset H
-#define	DGYRO_OFST_YL	0x00		// Digital Gyro Y AD Offset L
-#ifdef	CATCHMODE
- #define	GXGAIN_INI		0x3E75C202	// Gyro X Zoom Value	+0.24
- #define	GYGAIN_INI		0x3E75C202	// Gyro Y Zoom Value	+0.24
-#else	//CATCHMODE
-#define	GXGAIN_INI		0x3E99999A	// Gyro X Zoom Value
-#define	GYGAIN_INI		0x3E99999A	// Gyro Y Zoom Value
-#endif	//CATCHMODE
-
-/* AF Calibration Parameter */
-#define		DAHLZB_INI		0xe000		//0x0000	//0xFC00
-#define		DAHLZO_INI		0x6000		//0xB800
-#define		AFOFF4Z_INI		0x0000			// AF AD Offset
-#define		AFOFF6Z_INI		0x0000			// OFF6Z
-#define		SZGAIN_INI		0x4000			// Hall Z Loop Gain[-6dB]		//20140910 Komori
-#define		AFDROF_INI		0x10		//
-
-/* Actuator Select */
-#define		BIAS_CUR_OIS_C000		0x44		// 3.0mA/3.0mA
-#define		AMP_GAIN_X_C000			0x04		// x100
-#define		AMP_GAIN_Y_C000			0x04		// x100
-
-#define		BIAS_CUR_OIS_C001		0x44		// 3.0mA/3.0mA
-#define		AMP_GAIN_X_C001			0x04		// x100
-#define		AMP_GAIN_Y_C001			0x04		// x100
-
-#define		BIAS_CUR_OIS_C002		0x33		// 2.0mA/2.0mA
-#define		AMP_GAIN_X_C002			0x03		// x75
-#define		AMP_GAIN_Y_C002			0x03		// x75
-
-#define		BIAS_CUR_OIS_C003		0x33		// 2.0mA/2.0mA
-#define		AMP_GAIN_X_C003			0x03		// x75
-#define		AMP_GAIN_Y_C003			0x03		// x75
-
-#define		BIAS_CUR_OIS_C004		0x33		// 2.0mA/2.0mA
-#define		AMP_GAIN_X_C004			0x03		// x75
-#define		AMP_GAIN_Y_C004			0x03		// x75
-
-/* AF adjust parameter */
-#define		BIAS_CUR_AF_C000	0x02		//1.0mA		//LGIT 2nd Act. 141007
-#define		AMP_GAIN_AF_C000	0x03		//x75		//LGIT 2nd Act. 141007
-
-#define		BIAS_CUR_AF_C001	0x02		//1.0mA		//LGIT 3rd Act. 141105
-#define		AMP_GAIN_AF_C001	0x04		//x100		//LGIT 3rd Act. 141105
-
-#define		BIAS_CUR_AF_C002	0x02		//1.0mA		//LGIT 4th Act. 141208
-#define		AMP_GAIN_AF_C002	0x04		//x100		//LGIT 4th Act. 141208
-
-#define		BIAS_CUR_AF_C003	0x02		//1.0mA		//LGIT 4th Act. 141208
-#define		AMP_GAIN_AF_C003	0x04		//x100		//LGIT 4th Act. 141208
-
-#define		BIAS_CUR_AF_C004	0x01		//0.5mA		//LGIT 5th Act. 150324
-#define		AMP_GAIN_AF_C004	0x04		//x100		//LGIT 5th Act. 150324
-
-#define		BIAS_CUR_AF_C005	0x04		//3.0mA		//LGIT 5th Act(Type-G).
-#define		AMP_GAIN_AF_C005	0x04		//x100		//LGIT 5th Act(Type-G).
-
-#define		SXQ_INI_LGIT		0xBF800000
-#define		SYQ_INI_LGIT		0xBF800000
-
-/* Actuator Select MTM */
-#define		BIAS_CUR_OIS_C010	0x33		// 2.0mA	//MTM 1st Act.
-#define		AMP_GAIN_X_C010		0x04		// x100		//MTM 1st Act.
-#define		AMP_GAIN_Y_C010		0x04		// x100		//MTM 1st Act.
-
-#define		BIAS_CUR_OIS_C011	0x33		// 2.0mA	//MTM 2nd Act.
-#define		AMP_GAIN_X_C011		0x03		// x75		//MTM 2nd Act.
-#define		AMP_GAIN_Y_C011		0x03		// x75		//MTM 2nd Act.
-
-#define		BIAS_CUR_OIS_C012	0x33		// 2.0mA	//MTM 4th Act.
-#define		AMP_GAIN_X_C012		0x03		// x75		//MTM 4th Act.
-#define		AMP_GAIN_Y_C012		0x03		// x75		//MTM 4th Act.
-
-#define		BIAS_CUR_OIS_C013	0x33		// 2.0mA	//MTM 5th Act.
-#define		AMP_GAIN_X_C013		0x03		// x75		//MTM 5th Act.
-#define		AMP_GAIN_Y_C013		0x03		// x75		//MTM 5th Act.
-
-/* AF adjust parameter MTM */
-#define		BIAS_CUR_AF_C010	0x03		//2.0mA		//MTM 1st Act.
-#define		AMP_GAIN_AF_C010	0x04		//x100		//MTM 1st Act.
-
-#define		BIAS_CUR_AF_C011	0x04		//3.0mA		//MTM 2nd Act.
-#define		AMP_GAIN_AF_C011	0x04		//x100		//MTM 2nd Act.
-#define		BIAS_CUR_AF_C012	0x04		//3.0mA		//MTM 4th Act.
-#define		AMP_GAIN_AF_C012	0x04		//x100		//MTM 4th Act.
-
-#define		BIAS_CUR_AF_C013	0x04		//3.0mA		//MTM 5th Act.
-#define		AMP_GAIN_AF_C013	0x04		//x100		//MTM 5th Act.
-
-#define		SXQ_INI_MTM			0x3F800000
-#define		SYQ_INI_MTM			0x3F800000
-
-#define		AFAG_INI		0x3F800000
-#define		AFAG_INI_LGIT_G		0x3FBF84C0	// 3.5dB UP --> LoopGain 3.5dB Down
-
-#define		GYROX_INI		0x43	// Gyro X axis select
-#define		GYROY_INI		0x45	// Gyro Y axis select
-
-#define		GXQ_INI				0xBF800000
-#define		GYQ_INI				0xBF800000
-#define		GAIN_CONT				// Gain Control Mode
-#define		H1COEF_CHANGER			/* H1 coef lvl chage */
-#ifdef	CATCHMODE
-	#define		DIFIL_S2		0x3F7FF000  //0x3F7FF800  //0x3F7FFE00
-#else	//CATCHMODE
-#define		DIFIL_S2		0x3F7FFD80
-#endif	//CATCHMODE
-#define		INI_SHORT1
-#define		INI_SHORT2
-#define		INI_SHORT3
-#define		INI_SHORT4
-
-// Define According To Usage
-/************************ Description of Define *************************/
-/*	GAIN_CONT			Use Gain control								*/
-/*		(disable)		Use Tripod Mode									*/
-/*	INIT_PWMMODE		Select Driver mode PWM or CVL-PWM				*/
-/*							PWMMOD_CVL -> Use CVL-PWM MODE				*/
-/*	SXQ_INI, SYQ_INI	Check Hall Filter polarity						*/
-/************************************************************************/
-/* Driver Setting */
-#define		PWMMOD_CVL	0x00					// CVL PWM MODE
-#define		PWMMOD_PWM	0x01					// PWM MODE
-//#define		INIT_PWMMODE	PWMMOD_CVL			/* PWM/CVL MODE select */
-#define		PWM_BREAK							// PWM mode select (disable zero cross)
-
-#define		PWM_CAREER_MODE_A	0x00
-#define		PWM_CAREER_MODE_B	0x01
-#define		PWM_CAREER_MODE_C	0x02
-#define		PWM_CAREER_MODE_D	0x03
-#define		PWM_CAREER_MODE_E	0x04
-#define		PWM_CAREER_MODE_F	0x05
-#define		PWM_CAREER_MODE_G	0x06
-
-#ifdef	CATCHMODE
-#define	FS_SEL		2			/* 65.5 /DPS : IDG2021 */
-#else	//CATCHMODE
-/* Select Gyro Sensor */
-#define		FS_SEL		2		/* 175LSB  /DPS  */
-#endif	//CATCHMODE
-
-#ifdef	CATCHMODE
-/************* Wide *************/
-#define		GYRLMT3_S1_W	0x3F0CCCCD		//0.55F
-#define		GYRLMT3_S2_W	0x3F0CCCCD		//0.55F
- #define		GYRLMT3_S1_W_C004	0x3F000000		//0.50F
- #define		GYRLMT3_S2_W_C004	0x3F000000		//0.50F
-#define		GYRLMT4_S1_W	0x40300000		//2.75F
-#define		GYRLMT4_S2_W	0x40300000		//2.75F
-#define		GYRISTP_W		0x3A51B700		/* -62dB */
-//#define		GYRA12_HGH_W	0x40333333		/* 2.80F */
-#define		GYRA12_HGH_W	0x402CCCCD		/* 2.70F */
-
-/************* Narrow *************/
-#define		GYRLMT3_S1		0x3ECCCCCD		//0.40F
-#define		GYRLMT3_S2		0x3ECCCCCD		//0.40F
-#define		GYRLMT4_S1		0x40000000		//2.0F
-#define		GYRLMT4_S2		0x40000000		//2.0F
-#define		GYRISTP			0x39D1B700		/* -68dB */
-#define		GYRA12_HGH		0x3FE00000		/* 1.75F */
-
-/**********************************/
-#define		GYRLMT1H		0x3F800000		//1.0F
-
-#define		GYRA12_MID		0x3C23D70A		/* 0.01F */
-#define		GYRA34_HGH		0x3F000000		/* 0.5F */
-#define		GYRA34_MID		0x3C23D70A		/* 0.01F */
-
-#define		GYRB12_HGH		0x3E4CCCCD		/* 0.20F */
-#define		GYRB12_MID		0x3CA3D70A		/* 0.02F */
-#define		GYRB34_HGH		0x3CA3D70A		/* 0.02F */
-#define		GYRB34_MID		0x3C23D70A		/* 0.001F */
-
-#else	//CATCHMODE
-/*** Hall, Gyro Parameter Setting ***/
-#define		GYRLMT1H		0x3E4CCCCD	// 0.2F
-
-#define		GYRLMT3_S1		0x3EC2A07F	// 0.380F  pm 1.2[deg]
-#define		GYRLMT3_S2		0x3EC2A07F	// 0.380F  pm 1.2[deg]
-
-#define		GYRLMT4_S1		0x41058F12	// 8.347F  pm 2.2[deg]
-#define		GYRLMT4_S2		0x41058F12	// 8.347F  pm 2.2[deg]
-
-#define		GYRA12_HGH		0x40F2D594	// 7.588F  pm 2.00[deg]
-#define		GYRA12_MID		0x3F72D594	// 0.949F  pm 0.25[deg]
-#define		GYRA34_HGH		0x40B00E0B	// 5.502F  pm 1.45[deg]
-#define		GYRA34_MID		0x40424476	// 3.035F  pm 0.80[deg]
-#define		GYRA34_MID_M	0x3F72D594	// 0.949F  pm 0.25[deg]
-
-#define		GYRB12_HGH		0x3E40B3DD	// 0.1882F  pm 94.000[dps]
-#define		GYRB12_MID		0x38D1EC3E	// 0.0001F  pm  0.05 [dps]
-#define		GYRB34_HGH		0x3E40B3DD	// 0.1882F  pm 94.000[dps]
-#define		GYRB34_MID		0x38D1EC3E	// 0.0001F  pm  0.05 [dps]
-
-#define		GYRISTP			0x00000000	//
-#endif	//CATCHMODE
-//#define		NEW_PTST				// method of Pan/Tilt
-
-#define		STANDBY_MODE			// STANDBY Mode
-#ifdef	STANDBY_MODE
- // Standby mode
- #define		STB1_ON		0x00		// Standby1 ON
- #define		STB1_OFF	0x01		// Standby1 OFF
- #define		STB2_ON		0x02		// Standby2 ON
- #define		STB2_OFF	0x03		// Standby2 OFF
- #define		STB3_ON		0x04		// Standby3 ON
- #define		STB3_OFF	0x05		// Standby3 OFF
- #define		STB4_ON		0x06		// Standby4 ON			/* for Digital Gyro Read */
- #define		STB4_OFF	0x07		// Standby4 OFF
- #define		STB2_OISON	0x08		// Standby2 ON (only OIS)
- #define		STB2_OISOFF	0x09		// Standby2 OFF(only OIS)
- #define		STB2_AFON	0x0A		// Standby2 ON (only AF)
- #define		STB2_AFOFF	0x0B		// Standby2 OFF(only AF)
-
- #define		STB5_ON		0x0C		//
- #define		STB5_OFF	0x0D		//
-#endif	//STANDBY_MODE
-struct STHALREG {
-	uint16_t	UsRegAdd;
-	uint8_t		UcRegDat;
-};												// Hall Register Data Table
-
-struct STHALFIL {
-	uint16_t	UsRamAdd;
-	uint16_t	UsRamDat;
-};												// Hall Filter Coefficient Table
-
-struct STGYRFIL {
-	uint16_t	UsRamAdd;
-	uint32_t	UlRamDat;
-};												// Gyro Filter Coefficient Table
-
-struct STCALDAT {
-
-	struct {
-		uint16_t	UsHlxGan;				// Hall Gain Value
-		uint16_t	UsHlyGan;				// Hall Gain Value
-
-		uint16_t	UsHlxOff;				// Hall Offset Value
-		uint16_t	UsHlyOff;				// Hall Offset Value
-
-		uint16_t	UsHlzGan;				// Z Hall Gain Value
-		uint16_t	UsHlzOff;				// Z Hall Offset Value
-		uint16_t	UsAdzOff;				// Z Hall A/D Offset Value
-	} StHalAdj;
-
-	struct {
-		uint16_t	UsLxgVal;				// Loop Gain X
-		uint16_t	UsLygVal;				// Loop Gain Y
-		uint16_t	UsLzgVal;				// Loop Gain Z
-	} StLopGan;
-
-	struct {
-		uint16_t	UsLsxVal;				// Lens Center X
-		uint16_t	UsLsyVal;				// Lens Center Y
-	} StLenCen;
-
-	struct {
-		uint16_t	UsGxoVal;				// Gyro A/D Offset X
-		uint16_t	UsGyoVal;				// Gyro A/D Offset Y
-	} StGvcOff;
-
-
-	struct {
-		uint8_t	UcAfOff;				// AF Offset
-	} StAfOff;
-
-
-	uint8_t		UcOscVal;				// OSC value
-
-	uint16_t		UsAdjHallF;			// Adjustment Completion Flag
-	uint16_t		UsAdjGyroF;			// Adjustment Completion Flag
-	uint16_t		UsAdjLensF;			// Adjustment Completion Flag
-	uint16_t		UsAdjHallZF;			// Adjustment Completion Flag
-
-	uint32_t		UlGxgVal;				// Gyro Zoom Coefficient Value
-	uint32_t		UlGygVal;				// Gyro Zoom Coefficient Value
-
-	uint16_t		UsVerDat;				// Version Information
-} stCalDat;
 
 struct STFILREG {
 	uint16_t UsRegAdd;
-	uint8_t	UcRegDat;
-};												// Register Data Table
+	uint8_t UcRegDat;
+};													// Register Data Table
 
 struct STFILRAM {
 	uint16_t UsRamAdd;
 	uint32_t UlRamDat;
-};												// Filter Coefficient Table
+};													// Filter Coefficient Table
+
+struct STCMDTBL
+{
+	uint16_t Cmd;
+	unsigned int UiCmdStf;
+	void (*UcCmdPtr)(void);
+};
 
 /*** caution [little-endian] ***/
 
-// Float Data Union
-union	FLTVAL {
-	float			SfFltVal;
-	uint32_t	UlLngVal;
-	uint16_t	UsDwdVal[2];
+// Word Data Union
+union WRDVAL {
+	uint16_t UsWrdVal;
+	uint8_t UcWrkVal[2];
 	struct {
-		uint16_t	UsLowVal;
-		uint16_t	UsHigVal;
+		uint8_t UcLowVal;
+		uint8_t UcHigVal;
+	} StWrdVal;
+};
+
+typedef union WRDVAL UnWrdVal;
+
+union DWDVAL {
+	uint32_t UlDwdVal;
+	uint16_t UsDwdVal[2];
+	struct {
+		uint16_t UsLowVal;
+		uint16_t UsHigVal;
+	} StDwdVal;
+	struct {
+		uint8_t UcRamVa0;
+		uint8_t UcRamVa1;
+		uint8_t UcRamVa2;
+		uint8_t UcRamVa3;
+	} StCdwVal;
+};
+
+typedef union DWDVAL UnDwdVal;
+
+// Float Data Union
+union FLTVAL {
+	float SfFltVal;
+	uint32_t UlLngVal;
+	uint16_t UsDwdVal[2];
+	struct {
+		uint16_t UsLowVal;
+		uint16_t UsHigVal;
 	} StFltVal;
 };
 
-union FLTVAL UnFltVal;
+typedef union FLTVAL UnFltVal;
 
-union RM2VAL {
-	uint32_t UlLngVal;
+typedef struct STMEASGINFO {
 	struct {
-		uint16_t UsHalVal;
-		uint16_t UsDrvVal;
-	} StRamVal;
-};
+		uint32_t UlGyrXagl;				// X Gyro Angle
+		uint32_t UlGyrYagl;				// Y Gyro Angle
+	} StGyrAgl;
 
-union RM2VAL UnRm2Val;
-uint8_t UcOscAdjFlg;			// For Measure trigger
+	struct {
+		uint16_t UsGyrXamp;				// X Gyro Amp
+		uint16_t UsGyrYamp;				// Y Gyro Amp
+	} StGyrAmp;
 
-uint16_t	UsCntXof;				/* OPTICAL Center Xvalue */
-uint16_t	UsCntYof;				/* OPTICAL Center Yvalue */
+} stMeasGInfo;
 
-uint8_t	UcPwmMod;				/* PWM MODE */
-uint8_t	UcCvrCod;				/* CverCode LC898122A = 0xA1, LC898122 = 0x93*/
-struct STCALDAT StCalDat;	/* Execute Command Parameter*/
+stMeasGInfo StMeasGInfo;			//
 
-uint8_t	UcVerHig;				// System Version
-uint8_t	UcVerLow;				// Filter Version
+typedef struct STADJPAR {
+	struct {
+		uint8_t UcAdjPhs;				// Hall Adjust Phase
 
-int32_t lc898122a_i2c_check(void);
-int32_t	lc898122a_init(uint8_t ver);		/* Initial Top Function */
-void lc898122a_e2p_data_read(uint8_t ver);	/* Read calibration data from E2PROM */
-int32_t lc898122a_version_check(void);		/* Version Check */
-void lc898122a_init_clock(void);	/* Clock Setting */
-void lc898122a_init_io_port(void);	/* I/O Port Initial Setting */
-void	AutoGainContIni(void);
-void lc898122a_init_monitor(void);	/* Monitor & Other Initial Setting */
-void lc898122a_init_servo(void);	/* Servo Register Initial Setting */
-void lc898122a_init_gyro_setting(void);	/* Gyro Filter Register Initial Setting */
-int32_t	lc898122a_init_gyro_filter(void);
-void lc898122a_init_adjust_value(void);	/* Adjust Fix Value Setting */
-int32_t	lc898122a_init_digital_gyro(void);	/* Digital Gyro Initial Setting */
-void lc898122a_gyro_control(uint8_t);		/* Gyro Filter Control */
-int32_t	lc898122a_gyro_ram_clear(uint16_t, uint8_t);		/* Clear Gyro RAM */
+		uint16_t UsHlxCna;				// Hall Center Value after Hall Adjust
+		uint16_t UsHlxMax;				// Hall Max Value
+		uint16_t UsHlxMxa;				// Hall Max Value after Hall Adjust
+		uint16_t UsHlxMin;				// Hall Min Value
+		uint16_t UsHlxMna;				// Hall Min Value after Hall Adjust
+		uint16_t UsHlxGan;				// Hall Gain Value
+		uint16_t UsHlxOff;				// Hall Offset Value
+		uint16_t UsAdxOff;				// Hall A/D Offset Value
+		uint16_t UsHlxCen;				// Hall Center Value
 
-void lc898122a_wait_time(uint16_t);					/* Wait */
-void lc898122a_mem_clear(uint8_t *, uint16_t);/* Memory Clear Function */
-int32_t	lc898122a_acc_wait(uint8_t);					/* Acc Wait Function */
-void lc898122a_auto_gain_con(uint8_t);	/* Auto Gain Control Sw */
-#ifdef	CATCHMODE
-void StartUpGainContIni(void);
+		uint16_t UsHlyCna;				// Hall Center Value after Hall Adjust
+		uint16_t UsHlyMax;				// Hall Max Value
+		uint16_t UsHlyMxa;				// Hall Max Value after Hall Adjust
+		uint16_t UsHlyMin;				// Hall Min Value
+		uint16_t UsHlyMna;				// Hall Min Value after Hall Adjust
+		uint16_t UsHlyGan;				// Hall Gain Value
+		uint16_t UsHlyOff;				// Hall Offset Value
+		uint16_t UsAdyOff;				// Hall A/D Offset Value
+		uint16_t UsHlyCen;				// Hall Center Value
 
-uint8_t InitGainControl(uint8_t);
-void	SetDCoffsetContValue( unsigned char UcSelRange );
-#endif	//CATCHMODE
+#ifdef SEL_CLOSED_AF
+		uint16_t UsHlzCna;				// Z Hall Center Value after Hall Adjust
+		uint16_t UsHlzMax;				// Z Hall Max Value
+		uint16_t UsHlzMxa;				// Z Hall Max Value after Hall Adjust
+		uint16_t UsHlzMin;				// Z Hall Min Value
+		uint16_t UsHlzMna;				// Z Hall Min Value after Hall Adjust
+		uint16_t UsHlzGan;				// Z Hall Gain Value
+		uint16_t UsHlzOff;				// Z Hall Offset Value
+		uint16_t UsAdzOff;				// Z Hall A/D Offset Value
+		uint16_t UsHlzCen;				// Z Hall Center Value
+#endif
+	} StHalAdj;
 
-void lc898122a_driver_mode(uint8_t UcDrvSw);	/* Driver Mode setting function */
+	struct {
+		uint16_t UsLxgVal;				// Loop Gain X
+		uint16_t UsLygVal;				// Loop Gain Y
+		uint16_t UsLxgSts;				// Loop Gain X Status
+		uint16_t UsLygSts;				// Loop Gain Y Status
+#ifdef	SEL_CLOSED_AF
+		uint16_t UsLzgVal;				// Loop Gain Z
+		uint16_t UsLzgSts;				// Loop Gain Z Status
+#endif
+	} StLopGan;
 
-void lc898122a_servo_command(uint8_t, uint8_t);	/* Servo ON/OFF */
-uint8_t lc898122a_return_center(uint8_t);			/* Return to Center Function */
-void lc898122a_ois_enable(void);	/* OIS Enable Function */
-void lc898122a_ois_off(void);		/* Ois Off */
-void lc898122a_stabilizer_on(void);	/* Servo ON Slope mode */
-void lc898122a_init_pan_mode(uint8_t);	/* Pan_Tilt control Function */
-void lc898122a_ram_mode(uint8_t);	/* Ram Access Fix Mode setting function */
-void lc898122a_init_pan_average(void);
-void lc898122a_pantilt_mode(uint8_t);/* Pan/Tilt parameter setting by mode function */
+	struct {
+		uint16_t UsGxoVal;				// Gyro A/D Offset X
+		uint16_t UsGyoVal;				// Gyro A/D Offset Y
+		uint16_t UsGxoSts;				// Gyro Offset X Status
+		uint16_t UsGyoSts;				// Gyro Offset Y Status
+	} StGvcOff;
 
-void	SelectPtRange(uint8_t) ;
-void S2cPro(uint8_t);									// S2 Command Process Function
-void lc898122a_set_di_filter(uint8_t);		/* Set DI filter coefficient Function */
-uint32_t	UlH1Coefval;												// H1 coefficient value
+#ifdef AF_BIDIRECTION
+	struct {
+		uint8_t UcAfOff;				// AF Offset
+	} StAfOff;
+#endif	//AF_BIDIRECTION
+	uint8_t UcOscVal;				// OSC value
+} stAdjPar;
 
-#ifdef H1COEF_CHANGER
-uint8_t UcH1LvlMod;			/* H1 level coef mode */
-void lc898122a_set_h1c_mode(uint8_t);	/* Set H1C coefficient Level chang Function */
-#define		S2MODE		0x40
-#define		ACTMODE		0x80
-#ifdef	CATCHMODE
-#define		MOVMODE		0xFE
-#define		MOVMODE_W	0xFF
-#define		STILLMODE	0x00
-#define		STILLMODE_W	0x01
-#else	//CATCHMODE
-#define		MOVMODE		0xFF
-#define		STILLMODE	0x00
-#endif  //CATCHMODE
-#ifdef	CATCHMODE
-#define		MAXLMT_W		0x40400000				// 3.0
-#define		MINLMT_W		0x4019999A				// 2.4
-  #define		MINLMT_MOV_W	0x4019999A				// 2.4
-  #define		CHGCOEF_W		0xBB055555 //(-0.00203)  //0xBA855555(-0.00102)  //0xB9855555(-0.000254)
-  #define		CHGCOEF_MOV_W	0xBAA00000 //(-0.00122)  //0xBA200000(-0.00061)  //0xB9200000(-0.000153)
+stAdjPar StAdjPar;				// Execute Command Parameter
 
-#define		MAXLMT			0x40000000				// 2.0
-#define		MINLMT			0x3F99999A				// 1.2
-  #define		MINLMT_MOV		0x3F99999A				// 1.2
-  #define		CHGCOEF			0xBAC80000 //(-0.00153)  //0xBA480000(-0.00076)  //0xB9480000(-0.000191)
-  #define		CHGCOEF_MOV		0xBA700000 //(-0.00092)  //0xB9F00000(-0.00046)  //0xB8F00000(-0.000114)
-#else	//CATCHMODE
-#define		MAXLMT		0x4091B359			//  4.553  pm 1.200
-#define		MINLMT		0x00000000			//  0.000  pm 0.000
-#define		CHGCOEF		0xB6A8ACB9			// -0.000005
-
-#define		MAXLMT_MOV	0x40A9FBE7			//  5.312  pm 1.400
-#define		MINLMT_MOV	0x00000000			//  0.000  pm 0.000
-#define		CHGCOEF_MOV	0xB7B4B90F			// -0.000022
+#ifdef MODULE_CALIBRATION
+uint8_t	UcOscAdjFlg_imt;		// For Measure trigger
+#define	MEASSTR		0x01
+#define	MEASCNT		0x08
+#define	MEASFIX		0x80
 #endif
 
-#endif	//H1COEF_CHANGER
-void lc898122a_sel_gyro_sig_cont(void);		/* Slect Gyro Output Continuos Function */
-int16_t lc898122a_gen_measure(uint16_t, uint8_t);
-int32_t lc898122a_gyro_vc_offset(void);
-void lc898122a_select_gyro_sig(void);
-void lc898122a_setp_move_set_cl_af(void);
+uint16_t	UsCntXof_imt;				/* OPTICAL Center Xvalue */
+uint16_t	UsCntYof_imt;				/* OPTICAL Center Yvalue */
 
-void AfVcmCod(signed short);						// AF Code Write
-void IniClAf(void);								// Closed AF Initial Setting
-void SetDOFSTDAF(uint8_t);					//
-void SrvConAF(uint8_t);						// AF Servo ON/OFF
-void lc898122a_init_closed_af(void);
-void	AfSrvCurPos( void ) ;
-void StmvExeClAf(uint16_t);
-void StmvFinClAf(void);
-void PwmCareerSet(uint8_t);
+uint8_t	UcPwmMod_imt;				/* PWM MODE */
+#define		PWMMOD_CVL	0x00		// CVL PWM MODE
+#define		PWMMOD_PWM	0x01		// PWM MODE
 
-#ifdef	STANDBY_MODE
-void SelectGySleep(uint8_t);			// Select Gyro Mode Function
-void CtrStandby(uint8_t);				// Standby control ( Servo OIS control )
-void SetStandby(uint8_t);				// Standby control
-#endif	//STANDBY_MODE
-/*******************************************************************************
- *  OisDef.h - Header file for LC898122
- *
- *  ON Semiconductor
- *
- *  REVISION:
- *      2013/01/07 - First Edition, Y.Shigeoka
- ******************************************************************************/
+#define		INIT_PWMMODE	PWMMOD_CVL		// initial output mode
 
-/*********************************************************************
- PWM Register
-*********************************************************************/
+uint8_t	UcCvrCod_imt;				/* CverCode */
+#define	CVER122		0x93		 // LC898122
+#define	CVER122A	0xA1		 // LC898122A
+
+//EEPROM Data structure
+typedef struct STCALDAT {
+	struct {
+		uint16_t UsHlxGan;				// Hall Gain Value
+		uint16_t UsHlyGan;				// Hall Gain Value
+
+		uint16_t UsHlxOff;				// Hall Offset Value
+		uint16_t UsHlyOff;				// Hall Offset Value
+
+		uint16_t UsHlzGan;				// Z Hall Gain Value
+		uint16_t UsHlzOff;				// Z Hall Offset Value
+		uint16_t UsAdzOff;				// Z Hall A/D Offset Value
+	} StHalAdj;
+
+	struct {
+		uint16_t UsLxgVal;				// Loop Gain X
+		uint16_t UsLygVal;				// Loop Gain Y
+		uint16_t UsLzgVal;				// Loop Gain Z
+	} StLopGan;
+
+	struct {
+		uint16_t UsLsxVal;				// Lens Center X
+		uint16_t UsLsyVal;				// Lens Center Y
+	} StLenCen;
+
+	struct {
+		uint16_t UsGxoVal;				// Gyro A/D Offset X
+		uint16_t UsGyoVal;				// Gyro A/D Offset Y
+	} StGvcOff;
+
+	struct {
+		uint8_t UcAfOff;				// AF Offset
+	} StAfOff;
+
+	uint8_t UcOscVal;				// OSC value
+
+	uint16_t UsAdjHallF;			// Adjustment Completion Flag
+	uint16_t UsAdjGyroF;			// Adjustment Completion Flag
+	uint16_t UsAdjLensF;			// Adjustment Completion Flag
+	uint16_t UsAdjHallZF;			// Adjustment Completion Flag
+
+	uint32_t UlGxgVal;				// Gyro Zoom Coefficient Value
+	uint32_t UlGygVal;				// Gyro Zoom Coefficient Value
+
+	uint16_t UsVerDat;				// Version Information
+} stCalDat;
+
+void GyOutSignal_IMT(void);
+int IniSet_IMT(uint8_t ver);
+int OnsemiI2CCheck_IMT(void);
+void E2pDat_IMT(uint8_t ver);
+int VerInf_IMT(void);
+void IniClk_IMT(void);
+void IniIop_IMT(void);
+void IniSrv_IMT(void);
+#define CLR_FRAM0	0x01
+#define CLR_FRAM1	0x02
+#define CLR_ALL_RAM	0x03
+void ClrGyr_IMT(uint16_t UsClrFil, uint8_t UcClrMod);
+void RamAccFixMod_IMT(uint8_t UcAccMod);
+void DrvSw_IMT(uint8_t UcDrvSw);
+void IniGyr_IMT(void);
+void AutoGainControlSw_IMT(uint8_t UcModeSw);
+int IniFil_IMT(void);
+int IniDgy_IMT(void);
+int AccWit_IMT(uint8_t UcTrgDat);
+int CmdRdChk_IMT(void);
+#define READ_COUNT_NUM	6
+void IniAdj_IMT(void);
+void IniPtAve_IMT(void);
+void SetDOFSTDAF_IMT(uint8_t ucSetDat);
+void SetPanTiltMode_IMT(uint8_t UcPnTmod);
+void SetH1cMod_IMT(uint8_t UcSetNum);
+uint32_t UlH1Coefval_imt;		// H1 coefficient value
+uint8_t UcH1LvlMod_imt;		// H1 level coef mode
+#define		S2MODE		0x40
+#define		ACTMODE		0x80
+#define		MOVMODE		0xFF
+void IniClAf_IMT(void);
+void StmvSetClAf_IMT(void);
+void IniAf_IMT(void);
+void AfDrvSw_IMT(uint8_t UcDrvSw);
+void IniMon_IMT(void);
+void MemClr_IMT(uint8_t	*NcTgtPtr, uint16_t	UsClrSiz);				// Memory Clear Function
+void WitTim(uint16_t	UsWitTim);
+uint8_t	RtnCen_IMT(uint8_t UcCmdPar);									// Return to Center Function
+void GyrCon_IMT(uint8_t	UcGyrCon);
+void StbOnn_IMT(void);							// Servo ON Slope mode
+void SrvCon_IMT(uint8_t	UcDirSel, uint8_t	UcSwcCon);					// Servo ON/OFF
+void AfSrvOnOffset_IMT(void);
+void StmvExeClAf_IMT(uint16_t usRamDat);
+void OisEna_IMT(void);											// OIS Enable Function
+void OisOff_IMT(void);											// OIS Enable Function
+void AfVcmCod_IMT(signed short SsCodVal);
+
+uint8_t TneGvc_IMT(void);
+int16_t GenMes_IMT(uint16_t UsRamAdd, uint8_t UcMesMod);
+
+stCalDat StCalDat_imt;				// Execute Command Parameter
+uint8_t UcVerHig_imt;				// System Version
+uint8_t UcVerLow_imt;				// Filter Version
+
+//==============================================================================
+//PWM Register
+//==============================================================================
+//#define							0x0000
 #define		DRVFC				0x0001
 #define		DRVFC2				0x0002
 #define		DRVSELX				0x0003
 #define		DRVSELY				0x0004
 #define		DRVCH1SEL			0x0005
 #define		DRVCH2SEL			0x0006
+//#define							0x0007
+//#define							0x0008
+//#define							0x0009
+//#define							0x000A
+//#define							0x000B
+//#define							0x000C
+//#define							0x000D
+//#define							0x000E
+//#define							0x000F
 #define		PWMA				0x0010
 #define		PWMFC				0x0011
 #define		PWMDLYX				0x0012
@@ -564,6 +575,7 @@ void SetStandby(uint8_t);				// Standby control
 #define		PWMDLYTIMX			0x0014
 #define		PWMDLYTIMY			0x0015
 #define		PWMFC2				0x0016
+//#define							0x0017
 #define		PWMPERIODX			0x0018	// none (122)
 #define		PWMPERIODX2			0x0019	// none (122)
 #define		PWMPERIODY			0x001A	// PWMPERIODX (122)
@@ -571,42 +583,243 @@ void SetStandby(uint8_t);				// Standby control
 #define		STROBEFC			0x001C
 #define		STROBEDLYX			0x001D
 #define		STROBEDLYY			0x001E
+//#define							0x001F
 #define		CVA					0x0020
 #define		CVFC				0x0021
 #define		CVFC2				0x0022
 #define		CVSMTHX				0x0023
 #define		CVSMTHY				0x0024
+//#define							0x0025
+//#define							0x0026
+//#define							0x0027
+//#define							0x0028
+//#define							0x0029
+//#define							0x002A
+//#define							0x002B
+//#define							0x002C
+//#define							0x002D
+//#define							0x002E
+//#define							0x002F
 #define		PWMMONA				0x0030
 #define		PWMMONFC			0x0031
 #define		DACMONFC			0x0032
+//#define							0x0033
+//#define							0x0034
+//#define							0x0035
+//#define							0x0036
+//#define							0x0037
+//#define							0x0038
+//#define							0x0039
+//#define							0x003A
+//#define							0x003B
+//#define							0x003C
+//#define							0x003D
+//#define							0x003E
+//#define							0x003F
 #define		DACSLVADD			0x0040
 #define		DACMSTCODE			0x0041
 #define		DACFSCKRATE			0x0042
 #define		DACHSCKRATE			0x0043
 #define		DACI2CFC			0x0044
 #define		DACI2CA				0x0045
+//#define							0x0046
+//#define							0x0047
+//#define							0x0048
+//#define							0x0049
+//#define							0x004A
+//#define							0x004B
+//#define							0x004C
+//#define							0x004D
+//#define							0x004E
+//#define							0x004F
+//#define							0x0050
+//#define							0x0051
+//#define							0x0052
+//#define							0x0053
+//#define							0x0054
+//#define							0x0055
+//#define							0x0056
+//#define							0x0057
+//#define							0x0058
+//#define							0x0059
+//#define							0x005A
+//#define							0x005B
+//#define							0x005C
+//#define							0x005D
+//#define							0x005E
+//#define							0x005F
+//#define							0x0060
+//#define							0x0061
+//#define							0x0062
+//#define							0x0063
+//#define							0x0064
+//#define							0x0065
+//#define							0x0066
+//#define							0x0067
+//#define							0x0068
+//#define							0x0069
+//#define							0x006A
+//#define							0x006B
+//#define							0x006C
+//#define							0x006D
+//#define							0x006E
+//#define							0x006F
+//#define							0x0070
+//#define							0x0071
+//#define							0x0072
+//#define							0x0073
+//#define							0x0074
+//#define							0x0075
+//#define							0x0076
+//#define							0x0077
+//#define							0x0078
+//#define							0x0079
+//#define							0x007A
+//#define							0x007B
+//#define							0x007C
+//#define							0x007D
+//#define							0x007E
+//#define							0x007F
+//#define							0x0080
 #define		DRVFCAF				0x0081
 #define		DRVFC2AF			0x0082
 #define		DRVFC3AF			0x0083
 #define		DRVFC4AF			0x0084
 #define		DRVCH3SEL			0x0085
+//#define							0x0086
+//#define							0x0087
 #define		AFFC				0x0088
+//#define							0x0089
+//#define							0x008A
+//#define							0x008B
+//#define							0x008C
+//#define							0x008D
+//#define							0x008E
+//#define							0x008F
 #define		PWMAAF				0x0090
 #define		PWMFCAF				0x0091
 #define		PWMDLYAF			0x0092
 #define		PWMDLYTIMAF			0x0093
+//#define							0x0094
+//#define							0x0095
+//#define							0x0096
+//#define							0x0097
+//#define							0x0098
 #define		PWMPERIODAF			0x0099
+//#define							0x009A
+//#define							0x009B
+//#define							0x009C
+//#define							0x009D
+//#define							0x009E
+//#define							0x009F
 #define		CCAAF				0x00A0
 #define		CCFCAF				0x00A1
+//#define							0x00A2
+//#define							0x00A3
+//#define							0x00A4
+//#define							0x00A5
+//#define							0x00A6
+//#define							0x00A7
+//#define							0x00A8
+//#define							0x00A9
+//#define							0x00AA
+//#define							0x00AB
+//#define							0x00AC
+//#define							0x00AD
+//#define							0x00AE
+//#define							0x00AF
+//#define							0x00B0
+//#define							0x00B1
+//#define							0x00B2
+//#define							0x00B3
+//#define							0x00B4
+//#define							0x00B5
+//#define							0x00B6
+//#define							0x00B7
+//#define							0x00B8
+//#define							0x00B9
+//#define							0x00BA
+//#define							0x00BB
+//#define							0x00BC
+//#define							0x00BD
+//#define							0x00BE
+//#define							0x00BF
+//#define							0x00C0
+//#define							0x00C1
+//#define							0x00C2
+//#define							0x00C3
+//#define							0x00C4
+//#define							0x00C5
+//#define							0x00C6
+//#define							0x00C7
+//#define							0x00C8
+//#define							0x00C9
+//#define							0x00CA
+//#define							0x00CB
+//#define							0x00CC
+//#define							0x00CD
+//#define							0x00CE
+//#define							0x00CF
+//#define							0x00D0
+//#define							0x00D1
+//#define							0x00D2
+//#define							0x00D3
+//#define							0x00D4
+//#define							0x00D5
+//#define							0x00D6
+//#define							0x00D7
+//#define							0x00D8
+//#define							0x00D9
+//#define							0x00DA
+//#define							0x00DB
+//#define							0x00DC
+//#define							0x00DD
+//#define							0x00DE
+//#define							0x00DF
+//#define							0x00E0
+//#define							0x00E1
+//#define							0x00E2
+//#define							0x00E3
+//#define							0x00E4
+//#define							0x00E5
+//#define							0x00E6
+//#define							0x00E7
+//#define							0x00E8
+//#define							0x00E9
+//#define							0x00EA
+//#define							0x00EB
+//#define							0x00EC
+//#define							0x00ED
+//#define							0x00EE
+//#define							0x00EF
+//#define							0x00F0
+//#define							0x00F1
+//#define							0x00F2
+//#define							0x00F3
+//#define							0x00F4
+//#define							0x00F5
+//#define							0x00F6
+//#define							0x00F7
+//#define							0x00F8
+//#define							0x00F9
+//#define							0x00FA
+//#define							0x00FB
+//#define							0x00FC
+//#define							0x00FD
+//#define							0x00FE
+#define		MDLREG				0x00FF
 
-/*********************************************************************
- Filter Register
-*********************************************************************/
+
+//==============================================================================
+//Filter Register
+//==============================================================================
+//#define							0x0100
 #define		WC_EQON				0x0101
 #define		WC_RAMINITON		0x0102
 #define		WC_CPUOPEON			0x0103
 #define		WC_VMON				0x0104
 #define		WC_DPON				0x0105
+//#define							0x0106
 #define		WG_SHTON			0x0107
 #define		WG_ADJGANGO			0x0108
 #define		WG_PANON			0x0109
@@ -615,24 +828,39 @@ void SetStandby(uint8_t);				// Standby control
 #define		WG_CNTPICGO			0x010C
 #define		WG_NPANINION		0x010D
 #define		WG_NPANSTOFF		0x010E
+//#define							0x010F
 #define		WG_EQSW				0x0110
 #define		WG_DWNSMP1			0x0111
 #define		WG_DWNSMP2			0x0112
 #define		WG_DWNSMP3			0x0113
 #define		WG_DWNSMP4			0x0114
+//#define							0x0115
 #define		WG_SHTMOD			0x0116
 #define		WG_SHTDLYTMR		0x0117
 #define		WG_LMT3MOD			0x0118
 #define		WG_VREFADD			0x0119
+//#define							0x011A
 #define		WG_HCHR				0x011B
 #define		WG_GADSMP			0x011C
+//#define							0x011D
+//#define							0x011E
+//#define							0x011F
 #define		WG_LEVADD			0x0120
 #define		WG_LEVTMRLOW		0x0121
 #define		WG_LEVTMRHGH		0x0122
 #define		WG_LEVTMR			0x0123
+//#define							0x0124
+//#define							0x0125
+//#define							0x0126
+//#define							0x0127
 #define		WG_ADJGANADD		0x0128
 #define		WG_ADJGANGXATO		0x0129
 #define		WG_ADJGANGYATO		0x012A
+//#define							0x012B
+//#define							0x012C
+//#define							0x012D
+//#define							0x012E
+//#define							0x012F
 #define		WG_PANADDA			0x0130
 #define		WG_PANADDB			0x0131
 #define		WG_PANTRSON0		0x0132
@@ -674,6 +902,7 @@ void SetStandby(uint8_t);				// Standby control
 #define		WG_PANSTTSETISTP	0x0156
 #define		WG_PANSTTSETIFTR	0x0157
 #define		WG_PANSTTSETLFTR	0x0158
+//#define							0x0159
 #define		WG_PANSTTXXXTH		0x015A
 #define		WG_PANSTT1LEVTMR	0x015B
 #define		WG_PANSTT2LEVTMR	0x015C
@@ -702,17 +931,27 @@ void SetStandby(uint8_t);				// Standby control
 #define		WH_DWNSMP1			0x0172
 #define		WH_G2SDLY			0x0173
 #define		WH_HOFCON			0x0174
+//#define							0x0175
+//#define							0x0176
+//#define							0x0177
 #define		WH_EMGSTPON			0x0178
+//#define							0x0179
 #define		WH_EMGSTPTMR		0x017A
+//#define							0x017B
 #define		WH_SMTSRVON			0x017C
 #define		WH_SMTSRVSMP		0x017D
 #define		WH_SMTTMR			0x017E
+//#define							0x017F
 #define		WC_SINON			0x0180
 #define		WC_SINFRQ0			0x0181
 #define		WC_SINFRQ1			0x0182
 #define		WC_SINPHSX			0x0183
 #define		WC_SINPHSY			0x0184
+//#define							0x0185
+//#define							0x0186
+//#define							0x0187
 #define		WC_ADMODE			0x0188
+//#define							0x0189
 #define		WC_CPUOPE1ADD		0x018A
 #define		WC_CPUOPE2ADD		0x018B
 #define		WC_RAMACCMOD		0x018C
@@ -729,6 +968,9 @@ void SetStandby(uint8_t);				// Standby control
 #define		WC_MES2ADD1			0x0197
 #define		WC_MESABS			0x0198
 #define		WC_MESWAIT			0x0199
+//#define							0x019A
+//#define							0x019B
+//#define							0x019C
 #define		RC_MESST			0x019D
 #define		RC_MESLOOP0			0x019E
 #define		RC_MESLOOP1			0x019F
@@ -742,6 +984,8 @@ void SetStandby(uint8_t);				// Standby control
 #define		WC_AMJ1ADD1			0x01A7
 #define		WC_AMJ2ADD0			0x01A8
 #define		WC_AMJ2ADD1			0x01A9
+//#define							0x01AA
+//#define							0x01AB
 #define		RC_AMJST			0x01AC
 #define		RC_AMJERROR			0x01AD
 #define		RC_AMJLOOP0			0x01AE
@@ -774,13 +1018,26 @@ void SetStandby(uint8_t);				// Standby control
 #define		WC_DLYMON31			0x01C9
 #define		WC_DLYMON40			0x01CA
 #define		WC_DLYMON41			0x01CB
+//#define							0x01CC
+//#define							0x01CD
 #define		WC_INTMSK			0x01CE
+//#define							0x01CF
 #define		WC_FRCAD			0x01D0
 #define		WC_FRCADEN			0x01D1
 #define		WC_ADRES			0x01D2
 #define		WC_TSTMON			0x01D3
 #define		WC_RAMACCTM0		0x01D4
 #define		WC_RAMACCTM1		0x01D5
+//#define							0x01D6
+//#define							0x01D7
+//#define							0x01D8
+//#define							0x01D9
+//#define							0x01DA
+//#define							0x01DB
+//#define							0x01DC
+//#define							0x01DD
+//#define							0x01DE
+//#define							0x01DF
 #define		WC_EQSW				0x01E0
 #define		WC_STPMV			0x01E1
 #define		WC_STPMVMOD			0x01E2
@@ -791,6 +1048,12 @@ void SetStandby(uint8_t);				// Standby control
 #define		WC_DIFTMP			0x01E7
 #define		WC_L10				0x01E8
 #define		WC_L11				0x01E9
+//#define							0x01EA
+//#define							0x01EB
+//#define							0x01EC
+//#define							0x01ED
+//#define							0x01EE
+//#define							0x01EF
 #define		RG_XPANFIL			0x01F0
 #define		RG_YPANFIL			0x01F1
 #define		RG_XPANRAW			0x01F2
@@ -802,24 +1065,64 @@ void SetStandby(uint8_t);				// Standby control
 #define		RH_SMTSRVSTT		0x01F8
 #define		RC_CNTPIC			0x01F9
 #define		RC_LEVDIF			0x01FA
+//#define							0x01FB
+//#define							0x01FC
+//#define							0x01FD
 #define		RC_FLG0				0x01FE
 #define		RC_INT				0x01FF
 
-/*********************************************************************
- System Register
-*********************************************************************/
+
+//==============================================================================
+//System Register
+//==============================================================================
+//#define							0x0200
+//#define							0x0201
+//#define							0x0202
+//#define							0x0203
+//#define							0x0204
+//#define							0x0205
+//#define							0x0206
+//#define							0x0207
+//#define							0x0208
+//#define							0x0209
 #define		CLKTST				0x020A
 #define		CLKON				0x020B
 #define		CLKSEL				0x020C
+//#define							0x020D
+//#define							0x020E
+//#define							0x020F
 #define		PWMDIV				0x0210
 #define		SRVDIV				0x0211
 #define		GIFDIV				0x0212
 #define		AFPWMDIV			0x0213
 #define		OPAFDIV				0x0214
+//#define							0x0215
+//#define							0x0216
+//#define							0x0217
+//#define							0x0218
+//#define							0x0219
+//#define							0x021A
+//#define							0x021B
+//#define							0x021C
+//#define							0x021D
+//#define							0x021E
+//#define							0x021F
 #define		P0LEV				0x0220
 #define		P0DIR				0x0221
 #define		P0PON				0x0222
 #define		P0PUD				0x0223
+//#define							0x0224
+//#define							0x0225
+//#define							0x0226
+//#define							0x0227
+//#define							0x0228
+//#define							0x0229
+//#define							0x022A
+//#define							0x022B
+//#define							0x022C
+//#define							0x022D
+//#define							0x022E
+//#define							0x022F
 #define		IOP0SEL				0x0230
 #define		IOP1SEL				0x0231
 #define		IOP2SEL				0x0232
@@ -827,11 +1130,29 @@ void SetStandby(uint8_t);				// Standby control
 #define		IOP4SEL				0x0234
 #define		IOP5SEL				0x0235
 #define		DGINSEL				0x0236
+//#define							0x0237
 #define		IOP_CNT				0x0238
 #define		OUT56MON			0x0239
+//#define							0x023A
+//#define							0x023B
+//#define							0x023C
+//#define							0x023D
+//#define							0x023E
+//#define							0x023F
 #define		BSYSEL				0x0240
+//#define							0x0241
+//#define							0x0242
+//#define							0x0243
+//#define							0x0244
+//#define							0x0245
+//#define							0x0246
+//#define							0x0247
 #define		I2CSEL				0x0248
 #define		DLMODE				0x0249
+//#define							0x024A
+//#define							0x024B
+//#define							0x024C
+//#define							0x024D
 #define		TSTREG0				0x024E
 #define		TSTREG1				0x024F
 #define		STBB0				0x0250
@@ -855,22 +1176,41 @@ void SetStandby(uint8_t);				// Standby control
 #define		ADCTEST				0x0262
 #define		LDSTB				0x0263
 #define		STBB1				0x0264
+//#define							0x0265
+//#define							0x0266
+//#define							0x0267
+//#define							0x0268
+//#define							0x0269
+//#define							0x026A
+//#define							0x026B
+//#define							0x026C
+//#define							0x026D
+//#define							0x026E
+//#define							0x026F
 #define		MONSELA				0x0270
 #define		MONSELB				0x0271
 #define		MONSELC				0x0272
 #define		MONSELD				0x0273
 #define		CmMonTst			0x0274
+//#define							0x0275
+//#define							0x0276
+//#define							0x0277
 #define		SOFTRES1			0x0278
 #define		SOFTRES2			0x0279
+//#define							0x027A
+//#define							0x027B
+//#define							0x027C
+//#define							0x027D
 #define		CVER				0x027E
 #define		TESTRD				0x027F
 
-/*********************************************************************
- Digital Gyro I/F Register
-*********************************************************************/
+
+//==============================================================================
+//Digital Gyro I/F Register
+//==============================================================================
 #define		GRSEL				0x0280
 #define		GRINI				0x0281
-#define		SLOWMODE		0x04			/* 0:4MHz	1:1MHz	*/
+#define		SLOWMODE			0x04			/* 0:4MHz	1:1MHz	*/
 #define		GRACC				0x0282
 #define		GRADR0				0x0283
 #define		GRADR1				0x0284
@@ -899,37 +1239,200 @@ void SetStandby(uint8_t);				// Standby control
 #define		GRDAT5L				0x029B
 #define		GRDAT6H				0x029C
 #define		GRDAT6L				0x029D
+//#define							0x029E
+//#define							0x029F
 #define		IZAH				0x02A0
 #define		IZAL				0x02A1
 #define		IZBH				0x02A2
 #define		IZBL				0x02A3
+//#define							0x02A4
+//#define							0x02A5
+//#define							0x02A6
+//#define							0x02A7
+//#define							0x02A8
+//#define							0x02A9
+//#define							0x02AA
+//#define							0x02AB
+//#define							0x02AC
+//#define							0x02AD
+//#define							0x02AE
+//#define							0x02AF
+//#define							0x02B0
+//#define							0x02B1
+//#define							0x02B2
+//#define							0x02B3
+//#define							0x02B4
+//#define							0x02B5
+//#define							0x02B6
+//#define							0x02B7
 #define		GRFLG0				0x02B8
 #define		GRFLG1				0x02B9
+//#define							0x02BA
+//#define							0x02BB
+//#define							0x02BC
+//#define							0x02BD
+//#define							0x02BE
+//#define							0x02BF
+//#define							0x02C0
 #define		DGSTAT0				0x02C1
 #define		DGSTAT1				0x02C2
+//#define							0x02C3
+//#define							0x02C4
+//#define							0x02C5
+//#define							0x02C6
+//#define							0x02C7
+//#define							0x02C8
+//#define							0x02C9
+//#define							0x02CA
+//#define							0x02CB
+//#define							0x02CC
+//#define							0x02CD
+//#define							0x02CE
+//#define							0x02CF
+#define		VRREG				0x02D0			// USE TEST REG
+//#define							0x02D1
+//#define							0x02D2
+//#define							0x02D3
+//#define							0x02D4
+//#define							0x02D5
+//#define							0x02D6
+//#define							0x02D7
+//#define							0x02D8
+//#define							0x02D9
+//#define							0x02DA
+//#define							0x02DB
+//#define							0x02DC
+//#define							0x02DD
+//#define							0x02DE
+//#define							0x02DF
+//#define							0x02E0
+//#define							0x02E1
+//#define							0x02E2
+//#define							0x02E3
+//#define							0x02E4
+//#define							0x02E5
+//#define							0x02E6
+//#define							0x02E7
+//#define							0x02E8
+//#define							0x02E9
+//#define							0x02EA
+//#define							0x02EB
+//#define							0x02EC
+//#define							0x02ED
+//#define							0x02EE
+//#define							0x02EF
+//#define							0x02F0
+//#define							0x02F1
+//#define							0x02F2
+//#define							0x02F3
+//#define							0x02F4
+//#define							0x02F5
+//#define							0x02F6
+//#define							0x02F7
+//#define							0x02F8
+//#define							0x02F9
+//#define							0x02FA
+//#define							0x02FB
+//#define							0x02FC
+//#define							0x02FD
+//#define							0x02FE
+//#define							0x02FF
 
-/*********************************************************************
- Open AF Register
-*********************************************************************/
+
+//==============================================================================
+//Open AF Register
+//==============================================================================
+//#define							0x0300
+//#define							0x0301
 #define		FSTMODE				0x0302
 #define		FSTCTIME			0x0303
 #define		TCODEH				0x0304
 #define		TCODEL				0x0305
 #define		LTHDH				0x0306
 #define		LTHDL				0x0307
+//#define							0x0308
+//#define							0x0309
+//#define							0x030A
+//#define							0x030B
+//#define							0x030C
+//#define							0x030D
+//#define							0x030E
+//#define							0x030F
 #define		FSTOPTION			0x0310
+//#define							0x0311
+//#define							0x0312
+//#define							0x0313
+//#define							0x0314
+//#define							0x0315
+//#define							0x0316
+//#define							0x0317
+//#define							0x0318
+//#define							0x0319
+//#define							0x031A
+//#define							0x031B
+//#define							0x031C
+//#define							0x031D
+//#define							0x031E
+//#define							0x031F
 #define		OPAFEN				0x0320
+//#define							0x0321
+//#define							0x0322
+//#define							0x0323
+//#define							0x0324
+//#define							0x0325
+//#define							0x0326
+//#define							0x0327
+//#define							0x0328
+//#define							0x0329
+//#define							0x032A
+//#define							0x032B
+//#define							0x032C
+//#define							0x032D
+//#define							0x032E
+//#define							0x032F
 #define		OPAFSW				0x0330
+//#define							0x0331
+//#define							0x0332
+//#define							0x0333
+//#define							0x0334
 #define		OPAFST				0x0335
 
-#define		TREG_H					0x0380
+#define		TREG_H				0x0380
+#define		TREG_L				0x0381
+//#define							0x0382
+//#define							0x0383
+//#define							0x0384
+//#define							0x0385
+//#define							0x0386
+//#define							0x0387
+//#define							0x0388
+//#define							0x0389
+//#define							0x038A
+//#define							0x038B
+//#define							0x038C
+//#define							0x038D
+//#define							0x038E
+//#define							0x038F
+//#define							0x0390
+//#define							0x0391
+//#define							0x0392
+//#define							0x0393
+//#define							0x0394
+//#define							0x0395
 #define		RWEXD1_L			0x0396		// 2Byte access
+//#define							0x0397
 #define		RWEXD2_L			0x0398		// 2Byte access
+//#define							0x0399
 #define		RWEXD3_L			0x039A		// 2Byte access
+//#define							0x039B
+//#define							0x039C
+//#define							0x039D
+//#define							0x039E
+//#define							0x039F
 
-/*********************************************************************
- FILTER COEFFICIENT RAM
-*********************************************************************/
+//==============================================================================
+//FILTER COEFFICIENT RAM
+//==============================================================================
 #define		gx45g				0x1000
 #define		gx45x				0x1001
 #define		gx45y				0x1002
@@ -939,7 +1442,7 @@ void SetStandby(uint8_t);				// Standby control
 #define		gxic				0x1006
 #define		gxggain				0x1007
 #define		gxigain				0x1008
-#define		gxigain2			0x1009
+#define		gxggain2			0x1009
 #define		gx2x4xf				0x100A
 #define		gxadj				0x100B
 #define		gxgain				0x100C
@@ -1195,7 +1698,7 @@ void SetStandby(uint8_t);				// Standby control
 #define		gyic				0x1106
 #define		gyggain				0x1107
 #define		gyigain				0x1108
-#define		gyigain2			0x1109
+#define		gyggain2			0x1109
 #define		gy2x4xf				0x110A
 #define		gyadj				0x110B
 #define		gygain				0x110C
@@ -1507,9 +2010,9 @@ void SetStandby(uint8_t);				// Standby control
 #define		com10				0x123E
 #define		cop10				0x123F
 
-/*********************************************************************
- FILTER DELAY RAM
-*********************************************************************/
+//==============================================================================
+//FILTER DELAY RAM
+//==============================================================================
 #define		SINXZ				0x1400
 #define		GX45Z				0x1401
 #define		GXINZ				0x1402
@@ -1529,6 +2032,7 @@ void SetStandby(uint8_t);				// Standby control
 #define		SXDOFFZ2			0x1410
 #define		GXH1Z1				0x1411
 #define		GXH1Z2				0x1412
+//#define							0x1413
 #define		GXH2Z1				0x1414
 #define		GXH2Z2				0x1415
 #define		GXLEV2Z1			0x1416
@@ -1634,6 +2138,9 @@ void SetStandby(uint8_t);				// Standby control
 #define		DAXHLB				0x147A
 #define		TMPX2				0x147B
 #define		TMPX3				0x147C
+//#define							0x147D
+//#define							0x147E
+//#define							0x147F
 #define		SINYZ				0x1480
 #define		GY45Z				0x1481
 #define		GYINZ				0x1482
@@ -1653,6 +2160,7 @@ void SetStandby(uint8_t);				// Standby control
 #define		SYDOFFZ2			0x1490
 #define		GYH1Z1				0x1491
 #define		GYH1Z2				0x1492
+//#define							0x1493
 #define		GYH2Z1				0x1494
 #define		GYH2Z2				0x1495
 #define		GYLEV2Z1			0x1496
@@ -1758,6 +2266,9 @@ void SetStandby(uint8_t);				// Standby control
 #define		DAYHLB				0x14FA
 #define		TMPY2				0x14FB
 #define		TMPY3				0x14FC
+//#define							0x14FD
+//#define							0x14FE
+//#define							0x14FF
 #define		AFSINZ				0x1500
 #define		AFDIFTMP			0x1501
 #define		AFINZ				0x1502
@@ -1793,6 +2304,7 @@ void SetStandby(uint8_t);				// Standby control
 #define		VMXYZ				0x1520
 #define		VMZ1				0x1521
 #define		VMZ2				0x1522
+//#define							0x1523
 #define		OAFTHL				0x1524
 #define		PR					0x1525
 #define		AFRATO1				0x1526
@@ -1805,5 +2317,3 @@ void SetStandby(uint8_t);				// Standby control
 #define		AFDFZ				0x152D
 #define		pi_L1				0x152E
 #define		pi_L2				0x152F
-
-#endif
