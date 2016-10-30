@@ -122,10 +122,8 @@ typedef void (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
 /* File is opened with O_PATH; almost nothing can be done with it */
 #define FMODE_PATH		((__force fmode_t)0x4000)
 
-#ifdef CONFIG_SDCARD_FS_ANDROID_M
 /* File hasn't page cache and can't be mmaped, for stakable filesystem */
 #define FMODE_NOMAPPABLE	((__force fmode_t)0x8000)
-#endif
 
 /* File was opened by fanotify and shouldn't generate fanotify events */
 #define FMODE_NONOTIFY		((__force fmode_t)0x1000000)
