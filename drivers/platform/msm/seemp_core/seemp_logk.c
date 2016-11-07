@@ -129,7 +129,7 @@ void *seemp_logk_kernel_start_record(char **buf)
 	blk->version = OBSERVER_VERSION;
 	blk->pid = current->tgid;
 	blk->tid = current->pid;
-	blk->uid = current_uid();
+	blk->uid = from_kuid_munged(current_user_ns(), current_uid());
 	blk->sec = now.tv_sec;
 	blk->nsec = now.tv_nsec;
 	strlcpy(blk->appname, current->comm, TASK_COMM_LEN);
@@ -155,7 +155,7 @@ void seemp_logk_kernel_end_record(void *blck)
 		blk->len = strlen(blk->msg);
 		/*update status at the very end*/
 		blk->status |= 0x1;
-		current_uid = current_uid();
+		current_uid = __kuid_val(current_uid());
 		if (current_uid < USER_APP_START_UID) {
 			parsed_current_uid =
 				get_uid_from_message_for_system_event(blk->msg);
