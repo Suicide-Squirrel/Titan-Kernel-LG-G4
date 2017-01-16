@@ -20,7 +20,7 @@
 #include <linux/err.h>
 #include <linux/kref.h>
 
-#include "include/apparmor.h"
+#include "include/lib.h"
 #include "include/match.h"
 
 /**
