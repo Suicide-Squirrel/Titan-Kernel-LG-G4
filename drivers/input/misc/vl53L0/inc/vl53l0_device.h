@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2016, STMicroelectronics International N.V.
+Copyright ?2016, STMicroelectronics International N.V.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -124,22 +124,18 @@ typedef uint8_t VL53L0_GpioFunctionality;
 	/** mask existing bit in #VL53L0_REG_SYSRANGE_START*/
 	#define VL53L0_REG_SYSRANGE_MODE_MASK          0x0F
 	/** bit 0 in #VL53L0_REG_SYSRANGE_START write 1 toggle state in
-	 * continuous mode and arm next shot in single shot mode
-	 */
+	 * continuous mode and arm next shot in single shot mode */
 	#define VL53L0_REG_SYSRANGE_MODE_START_STOP    0x01
 	/** bit 1 write 0 in #VL53L0_REG_SYSRANGE_START set single shot mode */
 	#define VL53L0_REG_SYSRANGE_MODE_SINGLESHOT    0x00
 	/** bit 1 write 1 in #VL53L0_REG_SYSRANGE_START set back-to-back
-	 *  operation mode
-	 */
+	 *  operation mode */
 	#define VL53L0_REG_SYSRANGE_MODE_BACKTOBACK    0x02
 	/** bit 2 write 1 in #VL53L0_REG_SYSRANGE_START set timed operation
-	 *  mode
-	 */
+	 *  mode */
 	#define VL53L0_REG_SYSRANGE_MODE_TIMED         0x04
 	/** bit 3 write 1 in #VL53L0_REG_SYSRANGE_START set histogram operation
-	 *  mode
-	 */
+	 *  mode */
 	#define VL53L0_REG_SYSRANGE_MODE_HISTOGRAM     0x08
 
 

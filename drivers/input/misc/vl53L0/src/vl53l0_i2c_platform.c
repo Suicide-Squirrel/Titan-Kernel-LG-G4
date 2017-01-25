@@ -1,19 +1,18 @@
 /*
- *  Copyright (C) 2016 STMicroelectronics Imaging Division.
+ * COPYRIGHT (C) STMicroelectronics 2015. All rights reserved.
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This software is the confidential and proprietary information of
+ * STMicroelectronics ("Confidential Information").  You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with STMicroelectronics
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * Programming Golden Rule: Keep it Simple!
+ *
  */
 
 /*!
- * \file   VL53L0_i2c_platform.c
+ * \file   VL53L0_platform.c
  * \brief  Code function defintions for EWOK Platform Layer
  *
  */
@@ -22,8 +21,8 @@
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/delay.h>
-#include "stmvl53l0-i2c.h"
-#include "stmvl53l0-cci.h"
+#include "../stmvl53l0-i2c.h"
+#include "../stmvl53l0-cci.h"
 
 #include "vl53l0_platform.h"
 #include "vl53l0_i2c_platform.h"
@@ -76,18 +75,15 @@
     #define VL53L0_GetLocalBuffer(Dev, n_byte)  LocBuffer
 #elif I2C_BUFFER_CONFIG == 2
     /* user define buffer type declare DECL_I2C_BUFFER  as access  via
-     * VL53L0_GetLocalBuffer
-     */
+	VL53L0_GetLocalBuffer */
     #define DECL_I2C_BUFFER
 #else
 #error "invalid I2C_BUFFER_CONFIG "
 #endif
 
 
-/* none but could be for a flag var to
- * get/pass to mutex interruptible  return flags and try again
- */
-#define VL53L0_I2C_USER_VAR
+#define VL53L0_I2C_USER_VAR         /* none but could be for a flag var to
+		get/pass to mutex interruptible  return flags and try again */
 #define VL53L0_GetI2CAccess(Dev)    /* todo mutex acquire */
 #define VL53L0_DoneI2CAcces(Dev)    /* todo mutex release */
 

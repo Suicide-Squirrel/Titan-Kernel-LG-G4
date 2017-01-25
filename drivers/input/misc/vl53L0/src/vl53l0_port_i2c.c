@@ -7,11 +7,11 @@
 
 #include <linux/i2c.h>
 #include <linux/module.h>
-#include "stmvl53l0-i2c.h"
-#include "stmvl53l0-cci.h"
+#include "../stmvl53l0-i2c.h"
+#include "../stmvl53l0-cci.h"
 #include "vl53l0_platform.h"
 #include "vl53l0_i2c_platform.h"
-#include "stmvl53l0.h"
+#include "../stmvl53l0.h"
 
 #define I2C_M_WR			0x00
 #define STATUS_OK			0x00
@@ -25,8 +25,9 @@
  */
 int VL53L0_I2CWrite(VL53L0_DEV dev, uint8_t *buff, uint8_t len)
 {
-	int err = 0;
 
+
+	int err = 0;
 	if (dev->bus_type == CCI_BUS) {
 #ifdef CAMERA_CCI
 		uint16_t index;
@@ -76,8 +77,7 @@ int VL53L0_I2CWrite(VL53L0_DEV dev, uint8_t *buff, uint8_t len)
 		struct i2c_msg msg[1];
 		struct i2c_data *i2c_client_obj =
 					(struct i2c_data *)dev->client_object;
-		struct i2c_client *client =
-			(struct i2c_client *)i2c_client_obj->client;
+		struct i2c_client *client = (struct i2c_client*)i2c_client_obj->client;
 
 		msg[0].addr = client->addr;
 		msg[0].flags = I2C_M_WR;
@@ -132,9 +132,8 @@ int VL53L0_I2CRead(VL53L0_DEV dev, uint8_t *buff, uint8_t len)
 #ifndef CAMERA_CCI
 		struct i2c_msg msg[1];
 		struct i2c_data *i2c_client_obj =
-				(struct i2c_data *)dev->client_object;
-		struct i2c_client *client =
-			(struct i2c_client *) i2c_client_obj->client;
+					(struct i2c_data *)dev->client_object;
+		struct i2c_client *client = (struct i2c_client*) i2c_client_obj->client;
 
 		msg[0].addr = client->addr;
 		msg[0].flags = I2C_M_RD|client->flags;

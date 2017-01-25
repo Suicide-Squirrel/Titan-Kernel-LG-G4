@@ -29,20 +29,30 @@
 #define STMVL53L0_DRV_NAME	"stmvl53l0"
 #define STMVL53L0_SLAVE_ADDR	(0x52>>1)
 
-#define DRIVER_VERSION		"1.0.5"
+#define DRIVER_VERSION		"1.0.5.1"
 #define I2C_M_WR			0x00
 /* #define INT_POLLING_DELAY	20 */
 
-/* if don't want to have output from vl53l0_dbgmsg, comment out #DEBUG macro */
+/* if don't want to have output from vl6180_dbgmsg, comment out #DEBUG macro */
 #define DEBUG
+/* #define vl6180_dbgmsg(str, args...) pr_debug("%s: " str, __func__, ##args) */
 #define vl53l0_dbgmsg(str, args...)	\
-	pr_err("%s: " str, __func__, ##args)
+	pr_err("[LASER] %s: " str, __func__, ##args)
+/* #define vl6180_errmsg(str, args...) pr_err("%s: " str, __func__, ##args) */
 #define vl53l0_errmsg(str, args...) \
-	pr_err("%s: " str, __func__, ##args)
+	pr_err("[LASER] %s: " str, __func__, ##args)
+
+#define timing_dbgmsg(str, args...)	\
+	pr_err("[LASER][T_DEBUG] %s: " str, __func__, ##args)
+
+#define E(x...) pr_err("[LASER] " x)
+#define D(x...) pr_debug("[LASER] " x)
+#define I(x...) pr_info("[LASER] " x)
+#define W(x...) pr_warn("[LASER] " x)
 
 #define VL53L0_VDD_MIN      2600000
 #define VL53L0_VDD_MAX      3000000
-
+#define HTC
 typedef enum {
 	NORMAL_MODE = 0,
 	OFFSETCALIB_MODE = 1,
@@ -93,29 +103,27 @@ struct stmvl53l0_parameter {
  *  IOCTL Custom Use Case
  */
 struct stmvl53l0_custom_use_case {
-	FixPoint1616_t	signalRateLimit;
-	FixPoint1616_t	sigmaLimit;
-	uint32_t		preRangePulsePeriod;
-	uint32_t		finalRangePulsePeriod;
-	uint32_t		timingBudget;
+    FixPoint1616_t  signalRateLimit;
+    FixPoint1616_t  sigmaLimit;
+    uint32_t        preRangePulsePeriod;
+    uint32_t        finalRangePulsePeriod;
+    uint32_t        timingBudget;
 };
-
 
 /*
  *  driver data structs
  */
 struct stmvl53l0_data {
 
-	/* !<embed ST VL53L0 Dev data as "dev_data" */
-	VL53L0_DevData_t Data;
-	/*!< i2c device address user specific field*/
-	uint8_t   I2cDevAddr;
-	/*!< Type of comms : VL53L0_COMMS_I2C or VL53L0_COMMS_SPI */
-	uint8_t   comms_type;
-	/*!< Comms speed [kHz] : typically 400kHz for I2C */
-	uint16_t  comms_speed_khz;
-	/* CCI_BUS; I2C_BUS */
-	uint8_t   bus_type;
+	VL53L0_DevData_t Data;	/* !<embed ST VL53L0 Dev data as
+								"dev_data" */
+	uint8_t   I2cDevAddr;	/*!< i2c device address user specific field
+							*/
+	uint8_t   comms_type;	/*!< Type of comms : VL53L0_COMMS_I2C
+							or VL53L0_COMMS_SPI */
+	uint16_t  comms_speed_khz;	/*!< Comms speed [kHz] :
+						typically 400kHz for I2C */
+	uint8_t   bus_type;		/* CCI_BUS; I2C_BUS */
 
 	void *client_object; /* cci or i2c client */
 
@@ -137,34 +145,41 @@ struct stmvl53l0_data {
 	unsigned int enable_ps_sensor;
 
 	/* PS parameters */
+	//unsigned int ps_is_singleshot;
+	//unsigned int ps_is_started;
 	unsigned int ps_data;			/* to store PS data */
 
 	/* Calibration parameters */
 	unsigned int offsetCalDistance;
 	unsigned int xtalkCalDistance;
 
-	/* Calibration values */
-	uint32_t refSpadCount;
-	uint8_t isApertureSpads;
-	uint8_t VhvSettings;
-	uint8_t PhaseCal;
-	int32_t OffsetMicroMeter;
-	FixPoint1616_t XTalkCompensationRateMegaCps;
-	uint32_t  setCalibratedValue;
+    /* Calibration values */
+    uint32_t refSpadCount;
+    uint8_t isApertureSpads;
+    uint8_t VhvSettings;
+    uint8_t PhaseCal;
+    int32_t OffsetMicroMeter;
+    FixPoint1616_t XTalkCompensationRateMegaCps;
+    uint32_t  setCalibratedValue;
 
-	/* Custom values set by app */
-	FixPoint1616_t signalRateLimit;
-	FixPoint1616_t sigmaLimit;
-	uint32_t		preRangePulsePeriod;
-	uint32_t		finalRangePulsePeriod;
+#ifdef HTC
+    /* HTC */
+    int offset_kvalue;
+    FixPoint1616_t xtalk_kvalue;
+#endif
 
+    /* Custom values set by app */
+    FixPoint1616_t signalRateLimit;
+    FixPoint1616_t sigmaLimit;
+    uint32_t        preRangePulsePeriod;
+    uint32_t        finalRangePulsePeriod;
 
 	/* Range Data */
 	VL53L0_RangingMeasurementData_t rangeData;
 
 	/* Device parameters */
-	VL53L0_DeviceModes	deviceMode;
-	uint32_t		interMeasurems;
+	VL53L0_DeviceModes 			deviceMode;
+	uint32_t					interMeasurems;
 	VL53L0_GpioFunctionality gpio_function;
 	VL53L0_InterruptPolarity gpio_polarity;
 	FixPoint1616_t low_threshold;
@@ -174,13 +189,14 @@ struct stmvl53l0_data {
 	uint8_t delay_ms;
 
 	/* Timing Budget */
-	uint32_t	timingBudget;
+	uint32_t 	   timingBudget;
 	/* Use this threshold to force restart ranging */
 	uint32_t       noInterruptCount;
-	/* Use this flag to denote use case*/
-	uint8_t		useCase;
-	/* Use this flag to indicate an update of use case */
-	uint8_t			updateUseCase;
+    /* Use this flag to denote use case*/
+    uint8_t         useCase;
+    /* Use this flag to indicate an update of use case */
+    uint8_t         updateUseCase;
+
 	/* Polling thread */
 	struct task_struct *poll_thread;
 	/* Wait Queue on which the poll thread blocks */
@@ -188,15 +204,31 @@ struct stmvl53l0_data {
 
 	/* Recent interrupt status */
 	uint32_t		interruptStatus;
-
 	struct mutex work_mutex;
 
-	struct timer_list timer;
-	uint32_t flushCount;
+    struct timer_list timer;
+    uint32_t flushCount;
 
 	/* Debug */
 	unsigned int enableDebug;
+	unsigned int enableTimingDebug;
 	uint8_t interrupt_received;
+
+#ifdef HTC
+    /* HTC */
+    u32 pwdn_gpio;
+    u32 laser_irq_gpio;
+    struct regulator *camio_1v8;
+    struct regulator *power_2v8;
+    struct pinctrl *pinctrl;
+    struct pinctrl_state *gpio_state_init;
+    struct device *sensor_dev;
+    struct class *laser_class;
+    struct device *laser_dev;
+    bool laser_power;
+    FixPoint1616_t cali_distance;
+    u8 cali_status;
+#endif
 };
 
 /*

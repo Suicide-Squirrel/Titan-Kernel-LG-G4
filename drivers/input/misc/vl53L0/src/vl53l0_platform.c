@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2016, STMicroelectronics International N.V.
+Copyright ï¿½ 2016, STMicroelectronics International N.V.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -236,7 +236,7 @@ VL53L0_Error VL53L0_PollingDelay(VL53L0_DEV Dev)
 	VL53L0_Error status = VL53L0_ERROR_NONE;
 
 	LOG_FUNCTION_START("");
-	usleep_range(950, 1000);
+	msleep(1);
 	LOG_FUNCTION_END(status);
 	return status;
 }

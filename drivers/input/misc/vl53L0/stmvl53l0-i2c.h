@@ -19,7 +19,7 @@
 #ifndef STMVL53L0_I2C_H
 #define STMVL53L0_I2C_H
 #include <linux/types.h>
-
+#define HTC
 #ifndef CAMERA_CCI
 struct i2c_data {
 	struct i2c_client *client;
