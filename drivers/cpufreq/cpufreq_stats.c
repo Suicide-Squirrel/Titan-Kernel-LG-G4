@@ -139,6 +139,11 @@ static int uid_time_in_state_show(struct seq_file *m, void *v)
 
 	rcu_read_lock();
 	do_each_thread(temp, task) {
+		/* if this task has exited, we have already accounted for all
+		 * time in state
+		 */
+		if (!task->time_in_state)
+			continue;
 
 		uid_entry = find_or_register_uid(from_kuid_munged(
 			current_user_ns(), task_uid(task)));
