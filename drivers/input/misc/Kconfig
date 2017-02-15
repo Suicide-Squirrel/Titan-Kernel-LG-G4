@@ -864,5 +864,15 @@ config SENSORS_ISL29044A
 	help
 	 This option enables support for the INTERSIL ISL29044A P/L sensor.
 
+config INPUT_STMVL53L0
+	tristate "STM VL53L0 Proximity support"
+	depends on INPUT && I2C
+	help
+	 Say Y here if you want to use STMicroelectronics's proximity sensor
+	 through I2C interface.
+
+	 To compile this driver as a module, choose M here: the
+	 module will be called stmvl53l0.
+
 endif
 
