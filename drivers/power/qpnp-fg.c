@@ -1543,7 +1543,7 @@ static int set_prop_jeita_temp(struct fg_chip *chip,
 
 	cancel_delayed_work_sync(
 		&chip->update_jeita_setting);
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 		&chip->update_jeita_setting, 0);
 
 	return rc;
@@ -1825,7 +1825,7 @@ wait:
 	update_sram_data(chip, &resched_ms);
 
 out:
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 		&chip->update_sram_data,
 		msecs_to_jiffies(resched_ms));
 }
@@ -1940,22 +1940,22 @@ out:
 	}
 #ifdef CONFIG_LGE_PM
 #if defined(CONFIG_MACH_MSM8992_PPLUS) || defined(CONFIG_MACH_MSM8992_SJR)
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 		&chip->update_temp_work,
 		msecs_to_jiffies(TEMP_PERIOD_UPDATE_MS));
 #else
 	if (  temp == BATT_TEMP_ON_MISSING) {
-		schedule_delayed_work(
+		queue_delayed_work(system_power_efficient_wq,
 			&chip->update_temp_work,
 			msecs_to_jiffies(TEMP_PERIOD_MISSING_UPDATE_MS));
 	} else{
-		schedule_delayed_work(
+		queue_delayed_work(system_power_efficient_wq,
 			&chip->update_temp_work,
 			msecs_to_jiffies(TEMP_PERIOD_UPDATE_MS));
 	}
 #endif
 #else
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 		&chip->update_temp_work,
 		msecs_to_jiffies(TEMP_PERIOD_UPDATE_MS));
 #endif
@@ -3147,7 +3147,7 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *_chip)
 			INIT_COMPLETION(chip->batt_id_avail);
 			schedule_work(&chip->batt_profile_init);
 			cancel_delayed_work(&chip->update_sram_data);
-			schedule_delayed_work(
+			queue_delayed_work(system_power_efficient_wq,
 				&chip->update_sram_data,
 				msecs_to_jiffies(0));
 		} else {
@@ -3244,7 +3244,8 @@ static irqreturn_t fg_empty_soc_irq_handler(int irq, void *_chip)
 		pr_info("triggered 0x%x\n", soc_rt_sts);
 	if (fg_is_batt_empty(chip)) {
 		fg_stay_awake(&chip->empty_check_wakeup_source);
-		schedule_delayed_work(&chip->check_empty_work,
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->check_empty_work,
 			msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
 	} else {
 		chip->soc_empty = false;
@@ -5195,7 +5196,7 @@ static void delayed_init_work(struct work_struct *work)
 	/* release memory access before update_sram_data is called */
 	fg_mem_release(chip);
 
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 		&chip->update_jeita_setting,
 		msecs_to_jiffies(INIT_JEITA_DELAY_MS));
 
@@ -5481,7 +5482,7 @@ static void check_and_update_sram_data(struct fg_chip *chip)
 		time_left = 0;
 #endif
 
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 		&chip->update_temp_work, msecs_to_jiffies(time_left * 1000));
 
 #ifdef CONFIG_LGE_PM
@@ -5502,7 +5503,7 @@ static void check_and_update_sram_data(struct fg_chip *chip)
 		time_left = 0;
 #endif
 
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 		&chip->update_sram_data, msecs_to_jiffies(time_left * 1000));
 }
 
