@@ -2373,7 +2373,7 @@ static void smbchg_parallel_usb_enable(struct smbchg_chip *chip)
 			pr_smb(PR_LGE, "aicl is not complete. retry count is %d\n",
 							chip->aicl_complete_retry_cnt);
 			chip->aicl_complete_retry_cnt++;
-			schedule_delayed_work(
+			queue_delayed_work(system_power_efficient_wq,
 				&chip->parallel_en_work,
 				msecs_to_jiffies(RETRY_TIME_MS));
 
@@ -2545,7 +2545,7 @@ static void smbchg_parallel_usb_check_ok(struct smbchg_chip *chip)
 	mutex_lock(&chip->parallel.lock);
 	if (smbchg_is_parallel_usb_ok(chip)) {
 		smbchg_stay_awake(chip, PM_PARALLEL_CHECK);
-		schedule_delayed_work(
+		queue_delayed_work(system_power_efficient_wq,
 			&chip->parallel_en_work,
 			msecs_to_jiffies(PARALLEL_CHARGER_EN_DELAY_MS));
 	} else if (chip->parallel.current_max_ma != 0) {
@@ -3282,7 +3282,8 @@ static void smbchg_vfloat_adjust_check(struct smbchg_chip *chip)
 
 	smbchg_stay_awake(chip, PM_REASON_VFLOAT_ADJUST);
 	pr_smb(PR_STATUS, "Starting vfloat adjustments\n");
-	schedule_delayed_work(&chip->vfloat_adjust_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->vfloat_adjust_work, 0);
 }
 
 #define FV_STS_REG			0xC
@@ -4246,8 +4247,9 @@ stop:
 	return;
 
 reschedule:
-	schedule_delayed_work(&chip->vfloat_adjust_work,
-			msecs_to_jiffies(VFLOAT_RESAMPLE_DELAY_MS));
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->vfloat_adjust_work,
+		msecs_to_jiffies(VFLOAT_RESAMPLE_DELAY_MS));
 	return;
 }
 
@@ -4279,7 +4281,8 @@ static void smbchg_hvdcp_det_work(struct work_struct *work)
 		chip->usb_psy = power_supply_get_by_name("usb");
 		if (IS_ERR_OR_NULL(chip->usb_psy)) {
 			pr_smb(PR_LGE, "usb power supply is not registerd. retry later.\n");
-			schedule_delayed_work(&chip->hvdcp_det_work,
+			queue_delayed_work(system_power_efficient_wq,
+					&chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_RETRY_MS));
 			return;
 		}
@@ -4473,7 +4476,8 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 		wake_unlock(&chip->hvdcp_lock);
 #endif
 #ifdef CONFIG_LGE_PM_BMD
-	schedule_delayed_work(&chip->update_bmd_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+	&chip->update_bmd_work, 0);
 #endif
 }
 
@@ -4562,7 +4566,8 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 	}
 
 	if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP) {
-		schedule_delayed_work(&chip->hvdcp_det_work,
+		queue_delayed_work(system_power_efficient_wq,
+					&chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_NOTIFY_MS));
 		pr_smb(PR_STATUS, "schedule delayed work for the HVDCP detetct\n");
 	}
@@ -4593,7 +4598,8 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 		chip->enable_aicl_wake = true;
 	}
 #ifdef CONFIG_LGE_PM_BMD
-	schedule_delayed_work(&chip->update_bmd_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+	&chip->update_bmd_work, 0);
 #endif
 }
 
@@ -4661,11 +4667,13 @@ void usb_remove_work_select(struct smbchg_chip *chip)
 		if ((prop.intval == POWER_SUPPLY_TYPE_USB_DCP) ||
 			(prop.intval == POWER_SUPPLY_TYPE_USB_HVDCP)) {
 			/* DCP or HVDCP removed */
-			schedule_delayed_work(&chip->usb_remove_work,
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->usb_remove_work,
 				msecs_to_jiffies(LGE_TA_REMOVE_DELAY));
 		} else {
 			/* CDP or SDP removed */
-			schedule_delayed_work(&chip->usb_remove_work,
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->usb_remove_work,
 				msecs_to_jiffies(LGE_CABLE_REMOVE_DELAY));
 		}
 	}
@@ -4924,7 +4932,8 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_ENABLE_EVP_CHG:
 		chip->is_evp_ta = val->intval;
 		pr_smb(PR_LGE, "is_evp_ta = %d\n", chip->is_evp_ta);
-		schedule_delayed_work(&chip->enable_evp_chg_work, 0);
+		queue_delayed_work(system_power_efficient_wq,
+		&chip->enable_evp_chg_work, 0);
 		break;
 #endif
 #ifdef CONFIG_LGE_PM_QC20_SCENARIO
@@ -5883,7 +5892,8 @@ static irqreturn_t aicl_done_handler(int irq, void *_chip)
 #ifdef CONFIG_LGE_PM_AICL
 		if (aicl_rerun && (aicl_status == AICL_RERUN)) {
 			aicl_status = AICL_ENABLE;
-			schedule_delayed_work(&chip->aicl_work,
+			queue_delayed_work(system_power_efficient_wq,
+					&chip->aicl_work,
 					msecs_to_jiffies(AICL_RERUN_TIME));
 		}
 #endif
