@@ -1680,6 +1680,60 @@ static void init_xprt_cfg(struct edge_info *einfo, const char *name)
 }
 
 /**
+ * parse_qos_dt_params() - Parse the power states from DT
+ * @dev:	Reference to the platform device for a specific edge.
+ * @einfo:	Edge information for the edge probe function is called.
+ *
+ * Return: 0 on success, standard error code otherwise.
+ */
+static int parse_qos_dt_params(struct device_node *node,
+				struct edge_info *einfo)
+{
+	int rc;
+	int i;
+	char *key;
+	uint32_t *arr32;
+	uint32_t num_states;
+
+	key = "qcom,ramp-time";
+	if (!of_find_property(node, key, &num_states))
+		return -ENODEV;
+
+	num_states /= sizeof(uint32_t);
+
+	einfo->num_pw_states = num_states;
+
+	arr32 = kmalloc_array(num_states, sizeof(uint32_t), GFP_KERNEL);
+	if (!arr32)
+		return -ENOMEM;
+
+	einfo->ramp_time_us = kmalloc_array(num_states, sizeof(unsigned long),
+					GFP_KERNEL);
+	if (!einfo->ramp_time_us) {
+		rc = -ENOMEM;
+		goto mem_alloc_fail;
+	}
+
+	rc = of_property_read_u32_array(node, key, arr32, num_states);
+	if (rc) {
+		rc = -ENODEV;
+		goto invalid_key;
+	}
+	for (i = 0; i < num_states; i++)
+		einfo->ramp_time_us[i] = arr32[i];
+
+	kfree(arr32);
+	rc = 0;
+	return rc;
+
+invalid_key:
+	kfree(einfo->ramp_time_us);
+mem_alloc_fail:
+	kfree(arr32);
+	return rc;
+}
+
+/**
  * subsys_name_to_id() - translate a subsystem name to a processor id
  * @name:	The subsystem name to look up.
  *
