@@ -578,9 +578,11 @@ static struct cal_block_data *create_cal_block(struct cal_type_data *cal_type,
 done:
 	return cal_block;
 err:
-    kfree(cal_block->cal_info);
-    kfree(cal_block->client_info);
-    kfree(cal_block);
+	kfree(cal_block->cal_info);
+	cal_block->cal_info = NULL;
+	kfree(cal_block->client_info);
+	cal_block->client_info = NULL;
+	kfree(cal_block);
 	cal_block = NULL;
 	return cal_block;
 }
