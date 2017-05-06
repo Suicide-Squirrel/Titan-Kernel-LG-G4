@@ -82,4 +82,5 @@ obj-$(CONFIG_LGE_PM_CHARGER_CONTROLLER) += charger-controller.o
 obj-$(CONFIG_LGE_PM_LGE_CHARGER_CONTROLLER) += lge-charger-controller.o
 obj-$(CONFIG_LGE_PM_SMPL_COUNTER) += lge_smpl_count.o
 obj-y				+= qcom/
+obj-$(CONFIG_CHARGER_VOLTAGE)   += charger_voltage.o
 obj-$(CONFIG_FORCE_FAST_CHARGE) += fastcharge.o
