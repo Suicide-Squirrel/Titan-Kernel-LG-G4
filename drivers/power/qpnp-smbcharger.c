@@ -2232,6 +2232,10 @@ static void smbchg_parallel_usb_enable(struct smbchg_chip *chip)
 	if ( (ibat_table.pmi != chip->target_fastchg_current_ma) ||
 		(ibat_table.smb != chip->parallel.fastchg_current_max_ma) )
 	{
+#ifdef CONFIG_CHARGER_VOLTAGE
+		rc = power_supply_set_voltage_limit(chip->usb_psy,
+				(chip->vfloat_mv + 50) * 1000);
+#endif
 		chip->target_fastchg_current_ma = ibat_table.pmi;
 		smbchg_set_fastchg_current(chip, chip->target_fastchg_current_ma);
 		chip->parallel.fastchg_current_max_ma = ibat_table.smb;
@@ -2243,6 +2247,10 @@ static void smbchg_parallel_usb_enable(struct smbchg_chip *chip)
 		pr_smb(PR_LGE, "pmi/smb new fcc is as same as new fcc. skipping\n");
 	}
 #else
+#ifdef CONFIG_CHARGER_VOLTAGE
+	rc = power_supply_set_voltage_limit(chip->usb_psy,
+			(chip->vfloat_mv + 50) * 1000);
+#endif
 	chip->target_fastchg_current_ma = chip->cfg_fastchg_current_ma / 2;
 	smbchg_set_fastchg_current(chip, chip->target_fastchg_current_ma);
 	pval.intval = chip->target_fastchg_current_ma * 1000;
@@ -2952,8 +2960,13 @@ static int smbchg_float_voltage_set(struct smbchg_chip *chip, int vfloat_mv)
 
 	if (rc)
 		dev_err(chip->dev, "Couldn't set float voltage rc = %d\n", rc);
-	else
+	else {
 		chip->vfloat_mv = vfloat_mv;
+#ifdef CONFIG_CHARGER_VOLTAGE
+		power_supply_set_voltage_limit(chip->usb_psy,
+				chip->vfloat_mv * 1000);
+#endif
+	}
 
 	return rc;
 }
