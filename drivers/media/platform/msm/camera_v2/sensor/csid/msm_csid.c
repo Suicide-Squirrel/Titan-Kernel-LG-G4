@@ -168,7 +168,7 @@ static int msm_csid_config(struct csid_device *csid_dev,
 		return -EINVAL;
 	}
 
-	clk_rate = (csid_params->csi_clk > 0) ?
+	clk_rate = ((int)csid_params->csi_clk > 0) ?
 				(csid_params->csi_clk) : csid_dev->csid_max_clk;
 	round_rate = clk_round_rate(csid_clk_ptr[csid_dev->csid_clk_index],
 					clk_rate);
