@@ -398,6 +398,10 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 
 	account_kernel_stack(ti, 1);
 
+#ifdef CONFIG_FAULT_INJECTION
+	tsk->fail_nth = 0;
+#endif
+
 	return tsk;
 
 free_ti:
