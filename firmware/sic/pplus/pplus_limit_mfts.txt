@@ -1,0 +1,33 @@
+DOZE1_M2_Lower = {
+	4100,
+}
+DOZE1_M2_Upper = {
+	4500,
+}
+DOZE1_M2_34Ch_Lower = {
+	4000,
+}
+DOZE1_M2_34Ch_Upper = {
+	4600,
+}
+DOZE2_M2_Lower = {
+	3900,
+}
+DOZE2_M2_Upper = {
+	4700,
+}
+DOZE2_M1_Lower = {
+	300,
+}
+DOZE2_M1_Upper = {
+	1700,
+}
+NOISE_COUNT = {
+	3,
+}
+NOISE_TH = {
+	45,
+}
+NOISE_FRAME = {
+	150,
+}

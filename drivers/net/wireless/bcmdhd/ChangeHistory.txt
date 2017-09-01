@@ -1,0 +1,84 @@
+BCM43XX DHD 1.201.54 for L OS Release Note.
+
+DHD 1.201.54.1 (2014.10.06)
+  - Initial release for L OS
+
+DHD 1.201.54.2.1 (2014.11.14)
+  - Implemented Link statistics, Gscan and RTT features
+  - Enabled tailpadding for packets (CSP#854392)
+  - Disabled async suspend mode in case of PCIE (CSP#855409, CSP#857993)
+  - Enabled HT40 feature when config file had the option for it
+  - Disabled scb probe function in case of SDIO (CSP#849685)
+  - Fixed event mask length (CSP#854318)
+  - Changed message level due to excessive logs
+  - Fixed suspend entrance failure problem
+  - Fixed no interworking element in probe request frame (CSP#802673)
+  - Fixed kernel panic while disconnecting from AP (CSP#854980)
+  - Handled the case that rssi was 0 during scan operation (CSP#848536)
+  - Fixed unlocked wlan_wake lock problem (CSP#849645)
+
+DHD 1.201.54.3 (2014.12.26)
+  - Patched kernel crash of SoftAP (CSP#870210)
+  - Recovered link after dongle trap (CSP#865846)
+  - Patched system watchdog bark problem of SoftAP (CSP#859423)
+  - Patched to disable TDLS during P2P operation (CSP#860072)
+  - Disable phy watchdog during Miracast for 4339 only (CSP#864058)
+  - Allocated hanger memory to static buffer (CSP#867007)
+  - Applied to accept P2P probe request during P2P negotiation if there is no peer device's P2P probe request (CSP#868459)
+  - Patched wakelock problem on watchdog
+  
+DHD 1.201.54.4 (2015.02.03)
+  - Added private commands for WFDS; ADD_WFDS_HASH, DEL_WFDS_HASH (CSP#865694)
+     (This needs FW's supporting)
+  - Patched missing P2P IE for initial connection with LG DTV. (CSP#876196)
+  - Removed pointer of packet filter's union member for 64bit host CPU (CSP#877380)
+  - Added LPS feature (CSP#836412)
+  - Fixed packet count routine for TCP ack suppress not to numerate suppressed acks as dropped packets (CSP#881850)
+
+DHD 1.201.54.5 (2015.03.20)
+  - Added support for BCM43455
+
+DHD 1.201.54.6 (2015.03.23)
+  - Fixed invalid FW ram base address at BCM43455
+
+DHD 1.201.54.7 (2015.03.24)
+  - Added support for BCM4358
+
+DHD 1.201.54.8 (2015.06.16)
+  - Fixed kernel panic during pno operation (CSP#916549)
+  - Moved softAP BG mode definition to Kconfig (CSP#922520)
+  - Merged softAP throughput improvement parameters
+
+DHD 1.201.54.9 (2015.07.27)
+  - add private cmd interface for using roam_profile feature to support sameband roaming (CSP#944066)
+  
+DHD 1.201.54.10 (2016.05.13)
+  - add google security patches (CSP#1051460, CSP#1009440, CSP#1002266. CSP#100576)
+  - Fix Wi-Fi 802.11b 2.4GHz TIS Power loss 10dB (CSP#1000034)
+  
+DHD 1.201.54.11 (2016.06.24)
+  - Apply google security patches CVE-2016-0801. Security Enhancement for ETHER_TYPE_BRCM frame (CSP#1062605)
+  - These security patches have dependency with FW _6.37.32.23.43.18/7.35.170.12/7.45.61.2/7.45.87.3
+
+DHD 1.201.54.12 (2016.09.08)
+  - Google Security patch CVE-2016-3869 (CSP#1086098)
+  
+DHD 1.201.54.13 (2016.12.16)
+  - Google Security patch CVE-2016-3869 (CSP#1114036,  1104030, 1104026, 1104023)
+  
+DHD 1.201.54.14 (Not released)  
+ - CSP:1120247 Google Security patch A-32838767
+ - Google Security patch - ANDROID-32124445
+ - Google Security patch CVE-2017-0430
+ - Google Security patches - V2016122201, V2016122901, V2016122902
+ 
+DHD 1.201.54.15 - 2017.02.15
+  - CSP:1120247 Google Security patch A-32838767 (Build error fixed)
+ 
+DHD 1.201.54.16 - 2017.03.30
+ - CSP:1044652 Google Secuity patch A-34469904 prevent stack overflow in the wl_android_set_roampref function
+ - CSP:1137654 Google Security Patch  A-32474971 adding hotlist bssid counter element in wl_cfgvendor_hotlist_cfg
+ - CSP:1137656 Google Security Patch A-32125310 fix buffer overrun in wl_cfg80211_add_iw_ie
+ - CSP:1137656 Google Security Patch A-34197514 - fix buffer overrun in wl_run_escan
+ - CSP:1137656 Google Security Patch A-34203305 Fix buffer overrun in DHD dhd_wlfc_reorderinfo_indicate
+

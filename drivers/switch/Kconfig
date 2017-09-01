@@ -1,0 +1,25 @@
+menuconfig SWITCH
+	tristate "Switch class support"
+	help
+	  Say Y here to enable switch class support. This allows
+	  monitoring switches by userspace via sysfs and uevent.
+
+if SWITCH
+
+config SWITCH_GPIO
+	tristate "GPIO Swith support"
+	depends on GPIOLIB
+	help
+	  Say Y here to enable GPIO based switch support.
+
+endif # SWITCH
+
+config INPUT_IM401
+	tristate "Fortemeida IM401 voice trigger IC support"
+	depends on MACH_LGE
+	default n
+	help
+	  This option enables device driver support for IM401, a voice trigger IC.
+
+	  To compile this driver as module, choose M here: the
+	  module will be called i2c_im401.

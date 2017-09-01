@@ -1,0 +1,266 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/ {
+	memory {
+		ramoops_mem: ramoops_region@0ff00000 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			linux,remove-completely;
+			reg = <0 0x0ff00000 0 0x100000>;
+			label = "ramoops_mem";
+		};
+
+		dfps_data_mem: dfps_data_mem@0 {
+			status = "disabled";
+		};
+
+		cont_splash_mem: cont_splash_mem@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			reg = <0 0x03400000 0 0xc00000>;
+			label = "cont_splash_mem";
+		};
+
+		crash_fb_mem: crash_fb_mem@4000000 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			reg = <0 0x04000000 0 0xc00000>;
+			label = "crash_fb_mem";
+		};
+	};
+};
+
+&soc {
+	ramoops {
+		compatible = "ramoops";
+		mem-size = <0x80000>;
+		mem-address = <0x0ff00000>;
+		record-size = <4096>;
+		console-size = <0x40000>;
+		ftrace-size = <0x40000>;
+		dump-oops = <1>;
+	};
+
+	crash_fb {
+		compatible = "crash_fb";
+		mem-addr = <0x04000000>;
+		mem-size = <0xc00000>;
+	};
+
+	bootlog {
+		compatible = "bootlog";
+	};
+
+	earjack-debugger {
+		compatible = "serial,earjack-debugger";
+		status = "disabled";
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <77 0x0>;
+		serial,irq-gpio = <&msm_gpio 77 0x00>;
+		serial,power-gpio = <&pm8994_gpios 13 0x0>;
+		serial,hph-sw = <&pm8994_gpios 19 0x0>;
+	};
+
+	qcom,wdt@f9017000 {
+		qcom,bark-time = <16000>;
+	};
+
+	spmi_bus: qcom,spmi@fc4c0000 {
+		compatible = "qcom,spmi-pmic-arb";
+		qcom,pmic-arb-max-peripherals = <256>;
+		qcom,pmic-arb-max-periph-interrupts = <256>;
+	};
+
+	wlan_vreg: wlan_vreg {
+		regulator-name = "wlan_vreg";
+		status = "disabled";
+	};
+
+	bt_vreg: bt_vreg {
+		regulator-name = "bt_vreg";
+		status = "disabled";
+	};
+
+	qcom,msm-thermal {
+		compatible = "qcom,msm-thermal";
+		qcom,core-control-mask = <0x36>;
+		qcom,hotplug-temp = <105>;
+		qcom,hotplug-temp-hysteresis = <40>;
+		qcom,big-hotplug-temp = <105>;
+		qcom,big-hotplug-temp-hysteresis = <40>;
+		qcom,freq-mitigation-value = <960000>;
+	};
+
+	qcom,bcl {
+		/delete-property/ qcom,bcl-hotplug-list;
+		/delete-property/ qcom,bcl-soc-hotplug-list;
+		qcom,ibat-monitor {
+			qcom,high-threshold-uamp = <3800000>;
+			qcom,vph-high-threshold-uv = <3500000>;
+			qcom,vph-low-threshold-uv = <3300000>;
+			qcom,soc-low-threshold = <10>;
+		};
+	};
+
+	lge,monitor-thermal {
+		compatible = "lge,monitor-thermal";
+		lge,hot-poll-time = <10000>;
+		lge,hot-crit-temp = <48>;
+		lge,poll-time = <60000>;
+		qcom,monitor-thermal-vadc = <&pm8994_vadc>;
+	};
+
+	sound {
+		qcom,cdc-micbias3-cfilt-sel = <0x0>;
+		qcom,cdc-micbias4-cfilt-sel = <0x0>;
+	};
+
+	charger_controller: charger_controller {
+		status = "disabled";
+		compatible = "lge,charger-controller";
+		lge,chargercontroller-current-ibat-max = <2000>;
+		lge,chargercontroller-current-ibat-lcd_on = <1000>;
+		lge,chargercontroller-current-limit = <450>;
+		lge,chargercontroller-current-wlc-limit = <500>;
+		lge,chargercontroller-current-ibat-max-wireless = <1200>;
+		lge,chargercontroller-current-iusb-factory = <1500>;
+		lge,chargercontroller-current-ibat-factory = <500>;
+		lge,fuelgauge-psy-name = "fuelgauge";
+		lge,chargercontroller-iusb-qc20 = <1400 1400>;
+		lge,chargercontroller-ibat-qc20 = <2050 1000>;
+
+		lge,no-init-cable = <0 0 0>;
+		lge,cable-mhl-1k = <5000 500 500>;
+		lge,cable-u-28p7k = <5500 1800 500>;
+		lge,cable-28p7k = <6000 1800 500>;
+		lge,cable-56k = <200000 1800 1800>;
+		lge,cable-100k = <239000 1800 500>;
+		lge,cable-130k = <340000 1800 1800>;
+		lge,cable-180k = <400000 1800 500>;
+		lge,cable-200k = <410000 1800 500>;
+		lge,cable-220k = <485000 1800 500>;
+		lge,cable-270k = <560000 1800 500>;
+		lge,cable-330k = <735000 1800 500>;
+		lge,cable-620k = <955000 1800 500>;
+		lge,cable-910k = <1140000 1800 1800>;
+		lge,cable-none = <1900000 1800  500>;
+
+		qcom,chg-vadc = <&pmi8994_vadc>;
+	};
+
+	lge,unified_wlc{
+		status = "disabled";
+		compatible = "lge,unified_wlc";
+		lge,wlc_full_chg = <&pmi8994_gpios 3 0>;
+		lge,wlc_rx_off = <&pmi8994_gpios 6 0>;
+	};
+
+	lge,power-sysfs {
+		status = "ok";
+		compatible = "lge,power-sysfs";
+
+		sysfs,node =
+			/* group , user_node,  kernel node */
+			/* ADC/MPP */
+			"adc", "thermal", "/sys/class/thermal/",
+			"adc", "xo_therm", "/sys/class/hwmon/hwmon2/device/xo_therm",
+			"adc", "batt_therm", "/sys/class/power_supply/battery/temp",
+			"adc", "batt_id", "/sys/class/power_supply/battery_id/batt_id",
+			"adc", "pa_therm0", "/sys/class/hwmon/hwmon2/device/pa_therm0",
+			"adc", "pa_therm1", "NULL",
+			"adc", "usb_in", "/sys/class/hwmon/hwmon3/device/usbin",
+			"adc", "vcoin", "/sys/class/hwmon/hwmon2/device/vcoin",
+			"adc", "vph_pwr", "/sys/class/hwmon/hwmon2/device/vph_pwr",
+			"adc", "usb_id", "/sys/class/hwmon/hwmon2/device/usb_id_lv",
+			/* Battery */
+			"battery", "capacity", "/sys/class/power_supply/battery/capacity",
+			"battery", "health", "/sys/class/power_supply/battery/health",
+			"battery", "present", "/sys/class/power_supply/battery/present",
+			"battery", "pseudo_batt", "/sys/class/power_supply/charger_controller/pseudo_batt",
+			"battery", "status", "/sys/class/power_supply/battery/status",
+			"battery", "temp", "/sys/class/power_supply/battery/temp",
+			"battery", "valid_batt_id", "/sys/class/power_supply/battery/valid_batt_id",
+			"battery", "voltage_now", "/sys/class/power_supply/battery/voltage_now",
+			/* Charger */
+			"charger", "ac_online", "NULL",
+			"charger", "usb_online", "/sys/class/power_supply/usb/online",
+			"charger", "present", "/sys/class/power_supply/usb/present",
+			"charger", "wlc_online", "NULL",
+			"charger", "type", "/sys/class/power_supply/usb/type",
+			"charger", "time_out", "NULL",
+			"charger", "charging_enabled", "/sys/class/power_supply/battery/charging_enabled",
+			"charger", "ibat_current", "/sys/class/power_supply/battery/current_now",
+			"charger", "ichg_current", "/sys/class/power_supply/usb/current_max",
+			"charger", "iusb_control", "NULL",
+			"charger", "thermal_mitigation", "/sys/class/power_supply/battery/system_temp_level",
+			"charger", "wlc_thermal_mitigation", "NULL",
+			"charger", "usb_parallel_chg_status", "NULL",
+			"charger", "usb_parallel_charging_enabled", "NULL",
+			/* LCD Backlight */
+			"lcd", "brightness", "/sys/class/leds/lcd-backlight/brightness",
+			"lcd", "max_brightness", "/sys/class/leds/lcd-backlight/max_brightness",
+			/* KEY LED */
+			"key_led", "red_brightness", "/sys/class/leds/red/brightness",
+			"key_led", "green_brightness", "/sys/class/leds/green/brightness",
+			"key_led", "blue_brightness", "/sys/class/leds/blue/brightness",
+			/* CPU */
+			"cpu", "cpu_idle_modes", "/sys/module/lpm_levels/system/",
+			/* GPU */
+			"gpu", "busy", "/sys/class/kgsl/kgsl-3d0/gpubusy",
+			/* PLATFORM */
+			"platform", "speed_bin", "NULL",
+			"platform", "pvs_bin", "NULL",
+			"platform", "power_state", "/sys/power/autosleep",
+			"platform", "poweron_alarm", "/sys/module/qpnp_rtc/parameters/poweron_alarm",
+			"platform", "pcb_rev", "/sys/class/hwmon/hwmon2/device/pcb_rev",
+			/* testmode */
+			"testmode", "charge", "/sys/class/power_supply/charger_controller/device/at_charge",
+			"testmode", "chcomp", "/sys/class/power_supply/charger_controller/device/at_chcomp",
+			"testmode", "chgmodeoff", "/sys/class/power_supply/battery/charging_enabled",
+			"testmode", "fuelrst", "/sys/bus/i2c/drivers/max17048/6-0036/fuelrst",
+			"testmode", "rtc_time", "/dev/rtc0",
+			"testmode", "pmrst", "/sys/class/power_supply/charger_controller/device/at_pmrst",
+			"testmode", "battexit", "/sys/class/power_supply/battery/present"
+			;
+	};
+};
+
+&rpm_bus {
+	rpm-regulator-ldoa19 {
+		status = "disabled";
+		pm8994_l19: regulator-l19 {
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			qcom,init-voltage = <3000000>;
+			status = "disabled";
+		};
+	};
+};
+
+&pmi8994_charger {
+	qcom,charge-unknown-battery;
+	qcom,iterm-ma = <100>;
+	qcom,fastchg-current-ma = <1600>;
+	qcom,float-voltage-mv = <4400>;
+	qcom,resume-delta-mv = <200>;
+	qcom,charging-timeout-mins = <768>;
+	qcom,bmd-pin-src="bpd_thm";
+	qcom,dc-psy-type = "Wireless";
+	qcom,dc-psy-ma = <900>;
+	qcom,usbin-vadc = <&pmi8994_vadc>;
+	/delete-property/ qcom,chg-inhibit-fg;
+	qcom,jeita-temp-hard-limit = <0>;
+	vddcx-supply = <&pm8994_s1_corner>; /* HVDCP_VDD_CX_VOTE */
+	qcom,parallel-usb-min-current-ma = <1000>;
+	qcom,parallel-usb-9v-min-current-ma = <1000>;
+};

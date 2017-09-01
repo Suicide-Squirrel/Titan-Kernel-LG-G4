@@ -1,0 +1,47 @@
+&spi_10 {
+	mh1@0 {
+		status = "disable";
+		compatible = "mh1,spich";
+		reg = <0>;
+		lge.dev_name = "mh1";
+		interrupt-parent = <&pm8994_gpios>;
+		interrupts = <12 0x0>;
+		spi-max-frequency = <36000000>;
+		spi-cpol;
+		spi-cpha;
+
+		qcom,qup-id = <10>;
+
+		mh1,gpio_irq	=  <&pm8994_gpios 12 0x00>;
+		mh1,gpio_reset	= <&pm8994_gpios 14 0x00>;
+		mh1,mh1_gpio_cs	= <&msm_gpio 55 0x00>;
+		mh1,contexthub_gpio_cs	= <&msm_gpio 68 0x00>;
+
+		/* firmware & panel_spec path */
+		fw_image = "mh1/RS_MH1.BIN";
+		/*mh1,force_hwid = <0x8210>;      */
+	};
+
+	sensorhub@2 {
+		status = "disable";
+		compatible = "contexthub,spich";
+		lge.dev_name = "contexthub";
+		reg = <2>;
+		spi-max-frequency = <25000000>;
+		spi-cpol;
+		spi-cpha;
+
+		contexthub,ap2sh = <&pmi8994_gpios 4 0x00>;
+		contexthub,sh2ap = <&pmi8994_gpios 1 0x00>;
+		contexthub,nrst = <&pmi8994_gpios 5 0x00>;
+		contexthub,boot0 = <&pmi8994_gpios 7 0x00>;
+		contexthub,wakeup = <&pmi8994_gpios 8 0x00>;
+		contexthub,ldoen = <&pm8994_mpps 8 0x00>;
+		contexthub,cs0 = <&msm_gpio 55 0x00>;
+		contexthub,cs2 = <&msm_gpio 68 0x00>;
+		/* firmware & panel_spec path */
+		contexthub,fw_image = "stm/LGESENSORHUB.BIN";
+		contexthub,pre_reset_delay = <0>;
+                contexthub,gyro_vdd-supply = <&pm8994_l19>;
+	};
+};

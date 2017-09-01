@@ -1,0 +1,182 @@
+config FB_MSM_MDSS_WRITEBACK
+	bool "MDSS Writeback Panel"
+	---help---
+	The MDSS Writeback Panel provides support for routing the output of
+	MDSS frame buffer driver and MDP processing to memory.
+
+config FB_MSM_MDSS_HDMI_PANEL
+	depends on FB_MSM_MDSS
+	bool "MDSS HDMI Tx Panel"
+	default n
+	---help---
+	The MDSS HDMI Panel provides support for transmitting TMDS signals of
+	MDSS frame buffer data to connected hdmi compliant TVs, monitors etc.
+
+config FB_MSM_MDSS_HDMI_MHL_SII8334
+	depends on FB_MSM_MDSS_HDMI_PANEL
+	bool 'MHL SII8334 support '
+	default n
+	---help---
+	  Support the HDMI to MHL conversion.
+	  MHL (Mobile High-Definition Link) technology
+	  uses USB connector to output HDMI content
+
+config FB_MSM_MDSS_MHL3
+	depends on FB_MSM_MDSS_HDMI_PANEL
+	bool "MHL3 SII8620 Support"
+	default n
+	---help---
+	  Support the SiliconImage 8620 MHL Tx transmitter that uses
+	  USB connector to output HDMI content. Transmitter is an
+	  i2c device acting as an HDMI to MHL bridge. Chip supports
+	  MHL 3.0 standard.
+
+config FB_MSM_MDSS_DSI_CTRL_STATUS
+	tristate "DSI controller status check feature"
+	---help---
+	  Check DSI controller status periodically (default period is 5
+	  seconds) by sending Bus-Turn-Around (BTA) command. If DSI controller
+	  fails to acknowledge the BTA command, it sends PANEL_ALIVE=0 status
+	  to HAL layer to reset the controller.
+
+config FB_MSM_MDSS_EDP_PANEL
+	depends on FB_MSM_MDSS
+	bool "MDSS eDP Panel"
+	---help---
+	The MDSS eDP Panel provides support for eDP host controller driver
+	which runs in Video mode only and is responsible for transmitting
+	frame buffer from host SOC to eDP display panel.
+
+config FB_MSM_MDSS_MDP3
+	depends on FB_MSM_MDSS
+	bool "MDP3 display controller"
+	---help---
+	The MDP3 provides support for an older version display controller
+	included in latest display sub-system, known as MDSS.
+
+config LGE_MIPI_P1_INCELL_QHD_CMD_PANEL
+	bool "LGE_MIPI_P1_INCELL_QHD_CMD_PANEL"
+	default n
+	help
+	  if you say yes here you get support for the JDI Incell Panel.
+
+config LGE_MIPI_PP_INCELL_QHD_CMD_PANEL
+    bool "LGE_MIPI_PP_INCELL_QHD_CMD_PANEL"
+    default n
+    help
+      if you say yes here you get support for the LGD LGSIC4945 Incell Panel(PPLUS).
+
+config LGE_P1_DSV
+	bool "P1_DSV Power Management chip"
+	default n
+	select MACH_LGE
+	help
+	  if you say yes here you get support for the DW series of Power Management chips.
+
+config FB_MSM_MDSS_XLOG_DEBUG
+	depends on FB_MSM_MDSS
+	bool "Enable MDSS debugging"
+	---help---
+	The MDSS debugging provides support to enable display debugging
+	features to: Dump MDSS registers during driver errors, panic
+	driver during fatal errors and enable some display-driver logging
+	into an internal buffer (this avoids logging overhead).
+
+config LGE_DISPLAY_TUNING
+       bool "Enable sysfs for DISPLAY TUNING"
+       default n
+
+config LGE_LCD_OFF_DIMMING
+	bool "Enable LCD DIMMING for FOTA"
+	depends on MACH_LGE
+	default n
+	---help---
+	Support for LCD DIMMING (for FOTA)
+
+
+config LGE_SP_MIRRORING_CTRL_BL
+	bool "SP_MIRRORING_CTRL_BL"
+	default n
+	select MACH_LGE
+	help
+	  if you say yes here you get support for sp mirroring backlight control
+
+config LGE_PARTIAL_UPDATE
+     bool "Enable partail update"
+     default n
+
+config LGE_P1_SRE_SUPPORTED
+	bool "LGE_P1_SRE_SUPPORTED"
+	default n
+	help
+	  if you say yes here you get support for Display Driver IC SRE function.
+
+config LGE_PP_AD_SUPPORTED
+	bool "LGE_PPLUS_AD_SUPPORTED"
+	default n
+	help
+	  if you say yes here you get support for Display Driver AD function.
+
+config LGE_CAM_PREVIEW_TUNE
+    bool "Enable LGE_CAM_PREVIEW_TUNE"
+    default n
+
+config LGE_TE_SEL
+	bool "Select te pin(vsync)"
+	default n
+	help
+	  if you say yes here you get support for setting te pin.
+
+config LGE_DISPLAY_POWER_SEQUENCE
+     bool "lge panel power sequence"
+	default y
+	---help---
+	Support panel power sequence
+
+config LGE_DISPLAY_DFPS
+	bool "LG Dynamic LCD Refresh Driver"
+	select ARCH_HAS_OPP
+	select DEVFREQ_GOV_SIMPLE_ONDEMAND
+	default n
+	---help---
+	This adds the DEVFREQ driver for LG display
+
+config LGE_DISPLAY_VSYNC_SKIP
+	bool "MDSS VSYNC Skip scheme"
+	default n
+	---help---
+	This feature provides VSYNC skip scheme.
+config MACH_MSM8992_PPLUS
+	bool "MACH_MSM8992_PPLUS"
+	---help---
+	This feature for MACH_MSM8992_PPLUS
+
+config LGE_DISPLAY_DUAL_BACKLIGHT
+	bool "LG DUAL Backlight"
+	depends on MACH_MSM8992_PPLUS
+	default n
+	---help---
+	Support dual backlight
+
+config LGE_DISPLAY_EXTENDED_PANEL
+	bool "LGE_DISPLAY_EXTENDED_PANEL"
+	default n
+	help
+	  if you say yes here you get support for the extended panel
+
+config LGE_VSYNC_SKIP
+	bool "MDSS VSYNC Skip scheme"
+	default n
+	---help---
+	This feature provides VSYNC skip scheme.
+
+config LGE_BLMAP_STORE_MODE
+	bool "Enable LGE_BLMAP_STORE_MODE"
+	default n
+
+config LGE_READER_MODE
+	depends on FB_MSM_MDSS
+	bool "LGE reader mode"
+	---help---
+	The reader mode provides support to change color temperature
+	by sending proper cmds to panel.

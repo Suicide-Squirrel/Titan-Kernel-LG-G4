@@ -1,0 +1,10 @@
+#
+# Configuration for initramfs
+#
+
+config ITSON_API
+	tristate "ItsOn API Kernel module support"
+	default n
+	---help---
+	This module adds support for ItsOn API Kernel Module.
+

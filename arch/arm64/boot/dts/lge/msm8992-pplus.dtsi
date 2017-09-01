@@ -1,0 +1,47 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	/delete-property/ qcom,mdss-has-bwc;
+};
+
+&soc {
+	/delete-node/ qcom,pcie@fc520000;
+};
+
+&rpm_bus {
+	rpm-regulator-ldoa19 {
+		status = "okay";
+		pm8994_l19: regulator-l19 {
+			status = "okay";
+			regulator-always-on;
+		};
+	};
+};
+
+&soc {
+	charger_controller: charger_controller {
+		status = "ok";
+		lge,chargercontroller-current-ibat-max = <2000>;
+		lge,chargercontroller-current-ibat-lcd_on = <1000>;
+		lge,chargercontroller-current-limit = <450>;
+		lge,chargercontroller-current-wlc-limit = <500>;
+		lge,chargercontroller-current-ibat-max-wireless = <1200>;
+		lge,chargercontroller-current-iusb-factory = <1500>;
+		lge,chargercontroller-current-ibat-factory = <500>;
+		lge,fuelgauge-psy-name = "fuelgauge";
+		lge,chargercontroller-iusb-qc20 = <1800 1800>;
+		lge,chargercontroller-ibat-qc20 = <3000 1000>;
+		lge,chargercontroller-iusb-evp = <1800 1800>;
+		lge,chargercontroller-ibat-evp = <2000 1000>;
+	};
+};
