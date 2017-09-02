@@ -69,3 +69,5 @@ endif
 obj-$(CONFIG_FB_MSM_MDSS) += lge-display-mdss.o
 
 obj-$(CONFIG_LGE_READER_MODE) += lge/panel/reader_mode.o
+
+obj-$(CONFIG_FB_MSM_MDSS_KCAL_CTRL) += mdss_mdp_kcal_ctrl.o
