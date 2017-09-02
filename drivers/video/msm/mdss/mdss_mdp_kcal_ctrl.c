@@ -3,7 +3,6 @@
  * Copyright (c) 2013, LGE Inc. All rights reserved
  * Copyright (c) 2014 savoca <adeddo27@gmail.com>
  * Copyright (c) 2014 Paul Reioux <reioux@gmail.com>
- * Copyright (c) 2016 Pal Zoltan Illes <palilles@gmail.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -41,40 +40,6 @@ struct kcal_lut_data {
 	int cont;
 };
 
-struct mdss_mdp_ctl *fb0_ctl = 0;
-
-static int mdss_mdp_kcal_store_fb0_ctl(void)
-{
-	int i;
-	struct mdss_mdp_ctl *ctl;
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-
-	if (fb0_ctl) return 1;
-	if (!mdata) {
-		pr_err("%s mdata is NULL...",__func__);
-		return 0;
-	}
-
-	for (i = 0; i < mdata->nctl; i++) {
-		ctl = mdata->ctl_off + i;
-		if (!ctl) {
-			pr_err("%s ctl is NULL...\n",__func__);
-			return 0;
-		}
-		if (!(ctl->mfd)) {
-			pr_err("%s MFD is NULL...\n",__func__);
-			return 0;
-		}
-		pr_err("%s panel name %s\n",__func__,ctl->mfd->panel_info->panel_name);
-		if ( ctl->mfd->panel_info->fb_num  == 0 ) {
-			pr_err("%s panel found...\n",__func__);
-			fb0_ctl = ctl;
-			return 1;
-		}
-	}
-	return 0;
-}
-
 static int mdss_mdp_kcal_display_commit(void)
 {
 	int i;
@@ -100,7 +65,6 @@ static void mdss_mdp_kcal_update_pcc(struct kcal_lut_data *lut_data)
 {
 	u32 copyback = 0;
 	struct mdp_pcc_cfg_data pcc_config;
-	struct mdp_pcc_data_v1_7 *payload;
 
 	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
 
@@ -111,7 +75,6 @@ static void mdss_mdp_kcal_update_pcc(struct kcal_lut_data *lut_data)
 	lut_data->blue = lut_data->blue < lut_data->minimum ?
 		lut_data->minimum : lut_data->blue;
 
-	pcc_config.version = mdp_pcc_v1_7;
 	pcc_config.block = MDP_LOGICAL_BLOCK_DISP_0;
 	pcc_config.ops = lut_data->enable ?
 		MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE :
@@ -119,24 +82,16 @@ static void mdss_mdp_kcal_update_pcc(struct kcal_lut_data *lut_data)
 	pcc_config.r.r = lut_data->red * PCC_ADJ;
 	pcc_config.g.g = lut_data->green * PCC_ADJ;
 	pcc_config.b.b = lut_data->blue * PCC_ADJ;
-	
+
 	if (lut_data->invert) {
-	pcc_config.r.c = pcc_config.g.c =
-		pcc_config.b.c = 0x7ff8;
+		pcc_config.r.c = pcc_config.g.c =
+			pcc_config.b.c = 0x7ff8;
 		pcc_config.r.r |= (0xffff << 16);
 		pcc_config.g.g |= (0xffff << 16);
 		pcc_config.b.b |= (0xffff << 16);
 	}
 
-	payload = kzalloc(sizeof(struct mdp_pcc_data_v1_7),GFP_USER);
-	payload->r.r = pcc_config.r.r;
-	payload->g.g = pcc_config.g.g;
-	payload->b.b = pcc_config.b.b;
-	pcc_config.cfg_payload = payload;
-
-	if (!mdss_mdp_kcal_store_fb0_ctl()) return;
-	mdss_mdp_pcc_config(fb0_ctl->mfd, &pcc_config, &copyback);
-	kfree(payload);
+	mdss_mdp_pcc_config(&pcc_config, &copyback);
 }
 
 static void mdss_mdp_kcal_read_pcc(struct kcal_lut_data *lut_data)
@@ -149,7 +104,7 @@ static void mdss_mdp_kcal_read_pcc(struct kcal_lut_data *lut_data)
 	pcc_config.block = MDP_LOGICAL_BLOCK_DISP_0;
 	pcc_config.ops = MDP_PP_OPS_READ;
 
-	mdss_mdp_pcc_config(fb0_ctl->mfd, &pcc_config, &copyback);
+	mdss_mdp_pcc_config(&pcc_config, &copyback);
 
 	/* LiveDisplay disables pcc when using default values and regs
 	 * are zeroed on pp resume, so throw these values out.
@@ -168,9 +123,6 @@ static void mdss_mdp_kcal_update_pa(struct kcal_lut_data *lut_data)
 	struct mdp_pa_cfg_data pa_config;
 	struct mdp_pa_v2_cfg_data pa_v2_config;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-	struct mdp_pa_data_v1_7 *payload;
-
-	if (!mdss_mdp_kcal_store_fb0_ctl()) return;
 
 	if (mdata->mdp_rev < MDSS_MDP_HW_REV_103) {
 		memset(&pa_config, 0, sizeof(struct mdp_pa_cfg_data));
@@ -184,11 +136,10 @@ static void mdss_mdp_kcal_update_pa(struct kcal_lut_data *lut_data)
 		pa_config.pa_data.val_adj = lut_data->val;
 		pa_config.pa_data.cont_adj = lut_data->cont;
 
-		mdss_mdp_pa_config(fb0_ctl->mfd, &pa_config, &copyback);
+		mdss_mdp_pa_config(&pa_config, &copyback);
 	} else {
 		memset(&pa_v2_config, 0, sizeof(struct mdp_pa_v2_cfg_data));
 
-		pa_v2_config.version = mdp_pa_v1_7;
 		pa_v2_config.block = MDP_LOGICAL_BLOCK_DISP_0;
 		pa_v2_config.pa_v2_data.flags = lut_data->enable ?
 			MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE :
@@ -205,18 +156,8 @@ static void mdss_mdp_kcal_update_pa(struct kcal_lut_data *lut_data)
 		pa_v2_config.pa_v2_data.global_sat_adj = lut_data->sat;
 		pa_v2_config.pa_v2_data.global_val_adj = lut_data->val;
 		pa_v2_config.pa_v2_data.global_cont_adj = lut_data->cont;
-		pa_v2_config.flags = pa_v2_config.pa_v2_data.flags;
 
-		payload = kzalloc(sizeof(struct mdp_pa_data_v1_7),GFP_USER);
-		payload->mode = pa_v2_config.flags;
-		payload->global_hue_adj = lut_data->hue;
-		payload->global_sat_adj = lut_data->sat;
-		payload->global_val_adj = lut_data->val;
-		payload->global_cont_adj = lut_data->cont;
-		pa_v2_config.cfg_payload = payload;
-
-		mdss_mdp_pa_v2_config(fb0_ctl->mfd, &pa_v2_config, &copyback);
-		kfree(payload);
+		mdss_mdp_pa_v2_config(&pa_v2_config, &copyback);
 	}
 }
 
@@ -317,7 +258,7 @@ static ssize_t kcal_invert_store(struct device *dev,
 		(lut_data->invert == kcal_invert))
 		return -EINVAL;
 
-	lut_data->invert = 0; /* invert always disabled */
+	lut_data->invert = kcal_invert;
 
 	mdss_mdp_kcal_update_pcc(lut_data);
 	mdss_mdp_kcal_display_commit();
