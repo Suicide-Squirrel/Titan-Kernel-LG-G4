@@ -92,7 +92,8 @@ if BLOCK
 menu "DOS/FAT/NT Filesystems"
 
 source "fs/fat/Kconfig"
-source "fs/ntfs/Kconfig"
+ssource "fs/exfat/Kconfig"
+ource "fs/ntfs/Kconfig"
 
 endmenu
 endif # BLOCK
