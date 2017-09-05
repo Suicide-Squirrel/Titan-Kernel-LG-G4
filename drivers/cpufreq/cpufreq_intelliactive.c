@@ -129,11 +129,11 @@ static bool io_is_busy = 1;
  * up_threshold_any_cpu_freq then do not let the frequency to drop below
  * sync_freq
  */
-static unsigned int up_threshold_any_cpu_load = 95;
-static unsigned int sync_freq = 700000;
-static unsigned int up_threshold_any_cpu_freq = 920000;
+static unsigned int up_threshold_any_cpu_load = 80;
+static unsigned int sync_freq = 960000;
+static unsigned int up_threshold_any_cpu_freq = 1574400;
 
-static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1134000} ;
+static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 2265600} ;
 
 static int cpufreq_governor_intelliactive(struct cpufreq_policy *policy,
 		unsigned int event);
@@ -864,9 +864,9 @@ static ssize_t show_target_loads(
 		ret += sprintf(buf + ret, "%u%s", target_loads[i],
 			       i & 0x1 ? ":" : " ");
 
-	ret += sprintf(buf + (ret - 1), "\n");
+	ret += sprintf(buf + --ret, "\n");
 	spin_unlock_irqrestore(&target_loads_lock, flags);
-	return ret - 1;
+	return ret;
 }
 
 static ssize_t store_target_loads(
@@ -907,9 +907,9 @@ static ssize_t show_above_hispeed_delay(
 		ret += sprintf(buf + ret, "%u%s", above_hispeed_delay[i],
 			       i & 0x1 ? ":" : " ");
 
-	ret += sprintf(buf + (ret - 1), "\n");
+	ret += sprintf(buf + --ret, "\n");
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
-	return ret - 1;
+	return ret;
 }
 
 static ssize_t store_above_hispeed_delay(
@@ -1269,7 +1269,6 @@ static int input_dev_filter(const char *input_dev_name)
 {
 	if (strstr(input_dev_name, "touchscreen") ||
 	    strstr(input_dev_name, "touch_dev") ||
-	    strstr(input_dev_name, "atmel_mxt224e") ||
 	    strstr(input_dev_name, "sec-touchscreen") ||
 	    strstr(input_dev_name, "keypad")) {
 		return 0;
