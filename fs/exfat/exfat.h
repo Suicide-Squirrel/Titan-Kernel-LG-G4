@@ -19,10 +19,8 @@
 #ifndef _EXFAT_H
 #define _EXFAT_H
 
-#include <asm/byteorder.h>
-
+#include "exfat_config.h"
 #include "exfat_global.h"
-
 #include "exfat_data.h"
 #include "exfat_oal.h"
 
@@ -36,7 +34,7 @@
 extern "C" {
 #endif
 
-#ifdef CONFIG_EXFAT_DEBUG
+#if EXFAT_CONFIG_KERNEL_DEBUG
 #define EXFAT_IOC_GET_DEBUGFLAGS       _IOR('f', 100, long)
 #define EXFAT_IOC_SET_DEBUGFLAGS       _IOW('f', 101, long)
 
@@ -144,7 +142,7 @@ extern "C" {
             (p_dst)[7]=(UINT8)(((UINT64)(src)) >> 56);    \
         } while (0)
 
-#ifdef __LITTLE_ENDIAN
+#if (FFS_CONFIG_LITTLE_ENDIAN == 1)
 #define GET16_A(p_src)          (*((UINT16 *)(p_src)))
 #define GET32_A(p_src)          (*((UINT32 *)(p_src)))
 #define GET64_A(p_src)          (*((UINT64 *)(p_src)))
