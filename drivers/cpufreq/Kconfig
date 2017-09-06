@@ -149,7 +149,7 @@ config CPU_FREQ_DEFAULT_GOV_ELEMENTALX
 	bool "elementalx"
 	select CPU_FREQ_GOV_ELEMENTALX
 	help
-		Use the CPUFreq governor 'elementalx' as default. This allows
+	  Use the CPUFreq governor 'elementalx' as default. This allows
 	  you to get a full dynamic cpu frequency capable system by simply
 	  loading your cpufreq low-level hardware driver, using the
 	  'elementalx' governor for latency-sensitive workloads.
