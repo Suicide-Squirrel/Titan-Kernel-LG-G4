@@ -432,6 +432,9 @@ static void do_input_boost(struct work_struct *work)
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
 
+	if (!input_boost_ms)
+	return;
+
 	cancel_delayed_work_sync(&input_boost_rem);
 	if (sched_boost_active) {
 		sched_set_boost(0);
@@ -465,6 +468,9 @@ static void do_input_boost_multi(struct work_struct *work)
 {
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
+
+	if (!input_boost_ms)
+	return;
 
 	if (multi_boost_ms == 0) {
 
