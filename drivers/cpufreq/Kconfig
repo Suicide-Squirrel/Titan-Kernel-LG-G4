@@ -316,6 +316,22 @@ config CPU_FREQ_GOV_INTELLIDEMAND
 	  module will be called cpufreq_intellidemand.
 
 	  If in doubt, say N.
+	  
+config CPU_FREQ_GOV_ELEMENTALX
+	tristate "'elementalx' cpufreq policy governor"
+	help
+	  'elementalx' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  interactive workloads.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_elementalx.
+
+	  If in doubt, say N.
+
 
 config LGE_LBFC
 	tristate "Cpu Freq Helper Driver"
