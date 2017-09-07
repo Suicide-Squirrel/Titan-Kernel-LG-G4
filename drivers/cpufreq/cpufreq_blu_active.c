@@ -81,7 +81,7 @@ static struct mutex sched_lock;
 #define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
-#define DEFAULT_TIMER_RATE (100 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_RATE (80 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY (40 * USEC_PER_MSEC)
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY };
