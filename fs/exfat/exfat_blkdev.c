@@ -16,10 +16,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include "exfat_global.h"
+
 #include <linux/blkdev.h>
 
-#include "exfat_config.h"
-#include "exfat_global.h"
 #include "exfat_blkdev.h"
 #include "exfat_data.h"
 #include "exfat_api.h"
@@ -37,77 +37,13 @@ INT32 bdev_shutdown(void)
 
 INT32 bdev_open(struct super_block *sb)
 {
-	struct buffer_head *bh;
-	PBR_SECTOR_T *p_pbr;
-	BPBEX_T *p_bpb;
 	BD_INFO_T *p_bd = &(EXFAT_SB(sb)->bd_info);
-	INT32 sector_size;
-	INT32 bdev_sector_size;
-#if EXFAT_CONFIG_PAGESIZE_ALIGNED_BLOCK
-	struct exfat_sb_info *sbi = EXFAT_SB(sb);
-	u16 shift;
-	u32 ma_sector_size;
-	int ret_size;
-#endif
 
 	if (p_bd->opened) return(FFS_SUCCESS);
 
-	bh = sb_bread(sb, 0);
-	if (bh == NULL)
-		return FFS_ERROR;
-
-	p_pbr = (PBR_SECTOR_T *) bh->b_data;
-	p_bpb = (BPBEX_T *) p_pbr->bpb;
-
-
-#if EXFAT_CONFIG_PAGESIZE_ALIGNED_BLOCK
-	ma_sector_size = sector_size = (1 << p_bpb->sector_size_bits);
-	sbi->fat_start =  GET32(p_bpb->fat_offset);
-	sbi->fat_len =  GET32(p_bpb->fat_length);
-	sbi->clu_start =  GET32(p_bpb->clu_offset);
-	sbi->clu_len =  (GET32(p_bpb->clu_count) << p_bpb->sectors_per_clu_bits);
-
-	for (shift = 3; shift > 0; shift--) {
-		if (!(sbi->fat_start & ((1 << shift) - 1)) &&
-			(!(sbi->fat_len & ((1 << shift) - 1))) &&
-			(!(sbi->clu_start & ((1 << shift) - 1))) &&
-			(!(sbi->clu_len & ((1 << shift) - 1))) &&
-			((sector_size << shift) <= 4096) &&
-			((p_bpb->sectors_per_clu_bits - shift) >= 0)) {
-				ma_sector_size <<= shift;
-				break;
-		}
-	}
-
-	if (shift)
-		sbi->shift = shift;
-	//sbi->sector_size_bits = 12;
-	if (sector_size != ma_sector_size) {
-		sector_size = ma_sector_size;
-	}
-
-	ret_size = sb_min_blocksize(sb, sector_size);
-	if (ret_size) {
-		printk("[EXFAT] blk size: %d\n", ret_size);
-	} else {
-		printk("[EXFAT] Error, set blk size\n");
-		return FFS_ERROR;
-	}
-#else
-	sector_size = (1 << p_bpb->sector_size_bits);
-#endif
-
-	/*
-	 * Set up sbi->bd_info
-	 */
-	bdev_sector_size = bdev_logical_block_size(sb->s_bdev);
-	if (sector_size > bdev_sector_size)
-		p_bd->sector_size = sector_size;
-	else
-		p_bd->sector_size = bdev_sector_size;
-
+	p_bd->sector_size      = bdev_logical_block_size(sb->s_bdev);
 	p_bd->sector_size_bits = my_log2(p_bd->sector_size);
-	p_bd->sector_size_mask = (p_bd->sector_size - 1);
+	p_bd->sector_size_mask = p_bd->sector_size - 1;
 	p_bd->num_sectors      = i_size_read(sb->s_bdev->bd_inode) >> p_bd->sector_size_bits;
 
 	p_bd->opened = TRUE;
@@ -129,7 +65,7 @@ INT32 bdev_read(struct super_block *sb, UINT32 secno, struct buffer_head **bh, U
 {
 	BD_INFO_T *p_bd = &(EXFAT_SB(sb)->bd_info);
 	FS_INFO_T *p_fs = &(EXFAT_SB(sb)->fs_info);
-#if EXFAT_CONFIG_KERNEL_DEBUG
+#ifdef CONFIG_EXFAT_DEBUG
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	long flags = sbi->debug_flags;
 
@@ -159,7 +95,7 @@ INT32 bdev_write(struct super_block *sb, UINT32 secno, struct buffer_head *bh, U
 	struct buffer_head *bh2;
 	BD_INFO_T *p_bd = &(EXFAT_SB(sb)->bd_info);
 	FS_INFO_T *p_fs = &(EXFAT_SB(sb)->fs_info);
-#if EXFAT_CONFIG_KERNEL_DEBUG
+#ifdef CONFIG_EXFAT_DEBUG
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	long flags = sbi->debug_flags;
 
@@ -169,15 +105,9 @@ INT32 bdev_write(struct super_block *sb, UINT32 secno, struct buffer_head *bh, U
 	if (!p_bd->opened) return(FFS_MEDIAERR);
 
 	if (secno == bh->b_blocknr) {
-
-#if EXFAT_CONFIG_BLKDEV_LOCK_BUFFER
-		lock_buffer(bh);
-#endif
 		set_buffer_uptodate(bh);
 		mark_buffer_dirty(bh);
-#if EXFAT_CONFIG_BLKDEV_LOCK_BUFFER
-		unlock_buffer(bh);
-#endif
+
 		if (sync && (sync_dirty_buffer(bh) != 0))
 			return (FFS_MEDIAERR);
 	} else {
@@ -212,7 +142,7 @@ no_bh:
 INT32 bdev_sync(struct super_block *sb)
 {
 	BD_INFO_T *p_bd = &(EXFAT_SB(sb)->bd_info);
-#if EXFAT_CONFIG_KERNEL_DEBUG
+#ifdef CONFIG_EXFAT_DEBUG
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	long flags = sbi->debug_flags;
 
@@ -222,4 +152,25 @@ INT32 bdev_sync(struct super_block *sb)
 	if (!p_bd->opened) return(FFS_MEDIAERR);
 
 	return sync_blockdev(sb->s_bdev);
+}
+
+INT32 bdev_reada(struct super_block *sb, UINT32 secno, UINT32 num_secs)
+{
+	BD_INFO_T *p_bd = &(EXFAT_SB(sb)->bd_info);
+	UINT32 sects_per_page = (PAGE_SIZE >> sb->s_blocksize_bits);
+	struct blk_plug plug;
+	UINT32 i;
+
+	if (!p_bd->opened)
+		return (FFS_MEDIAERR);
+
+	blk_start_plug(&plug);
+	for (i = 0; i < num_secs; i++) {
+		if (i && !(i & (sects_per_page - 1)))
+			blk_flush_plug_list(&plug, false);
+		sb_breadahead(sb, secno + i);
+	}
+	blk_finish_plug(&plug);
+
+	return 0;
 }
