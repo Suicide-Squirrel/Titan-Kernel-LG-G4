@@ -244,6 +244,8 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 
 		min = max(b_min, ib_min);
 
+		min = min(min, policy->max);
+
 		pr_debug("CPU%u policy min before boost: %u kHz\n",
 			 cpu, policy->min);
 		pr_debug("CPU%u boost min: %u kHz\n", cpu, min);
@@ -264,6 +266,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 
 static struct notifier_block boost_adjust_nb = {
 	.notifier_call = boost_adjust_notify,
+	.priority = INT_MAX,
 };
 
 static void do_boost_rem(struct work_struct *work)
@@ -285,7 +288,8 @@ static void update_policy_online(void)
 	get_online_cpus();
 	for_each_online_cpu(i) {
 		pr_debug("Updating policy for CPU%d\n", i);
-		cpufreq_update_policy(i);
+		if (i == 0 || i == 4)
+			cpufreq_update_policy(i);
 	}
 	put_online_cpus();
 }
@@ -432,9 +436,6 @@ static void do_input_boost(struct work_struct *work)
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
 
-	if (!input_boost_ms)
-	return;
-
 	cancel_delayed_work_sync(&input_boost_rem);
 	if (sched_boost_active) {
 		sched_set_boost(0);
@@ -468,9 +469,6 @@ static void do_input_boost_multi(struct work_struct *work)
 {
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
-
-	if (!input_boost_ms)
-	return;
 
 	if (multi_boost_ms == 0) {
 
@@ -555,7 +553,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	}
 
 	now = ktime_to_us(ktime_get());
-	if (now - last_input_time < MIN_INPUT_INTERVAL)
+	if (now - last_input_time < (input_boost_ms * USEC_PER_MSEC))
 		return;
 
 	if (work_pending(&input_boost_work))

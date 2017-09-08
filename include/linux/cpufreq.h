@@ -219,6 +219,9 @@ struct cpufreq_driver {
 	/* should be defined, if possible */
 	unsigned int	(*get)	(unsigned int cpu);
 
+        unsigned int (*getavg)	(struct cpufreq_policy *policy,
+                                 unsigned int cpu);
+
 	/* optional */
 	int	(*bios_limit)	(int cpu, unsigned int *limit);
 
@@ -397,6 +400,9 @@ struct cpufreq_governor {
 	struct module		*owner;
 };
 
+extern int __cpufreq_driver_getavg(struct cpufreq_policy *policy,
+                                   unsigned int cpu);
+
 /* Pass a target to the cpufreq driver */
 int cpufreq_driver_target(struct cpufreq_policy *policy,
 				 unsigned int target_freq,
@@ -499,4 +505,13 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
 
 void acct_update_power(struct task_struct *p, cputime_t cputime);
 
+#ifdef CONFIG_TASK_CPUFREQ_STATS
+void update_time_in_state(struct task_struct *p, int cpu);
+void update_cumulative_time_in_state(struct task_struct *p,
+				     struct task_struct *parent,
+				     int cpu);
+int cpufreq_stats_get_max_state(int cpu);
+void update_freq_table(unsigned int* freq_table, int cpu,
+		       unsigned int max_state);
+#endif
 #endif /* _LINUX_CPUFREQ_H */
