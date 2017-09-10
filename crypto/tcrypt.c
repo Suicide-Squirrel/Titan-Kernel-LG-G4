@@ -1862,6 +1862,11 @@ static int __init tcrypt_mod_init(void)
 			goto err_free_tv;
 	}
 
+#ifdef CONFIG_CRYPTO_FIPS
+	testmgr_crypto_proc_init();
+	printk(KERN_INFO "FIPS: running power-on self-tests\n");
+#endif
+
 	if (alg)
 		err = do_alg_test(alg, type, mask);
 	else
