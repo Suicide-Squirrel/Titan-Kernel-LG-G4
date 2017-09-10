@@ -5473,7 +5473,7 @@ int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)
 {
 	#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	unsigned int val;
+	unsigned int val __attribute__((unused));
 	#endif
 	int ret;
 	struct wcd9xxx *wcd9xxx = codec->control_data;
