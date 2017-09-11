@@ -178,7 +178,11 @@ struct cs_dbs_tuners {
 	unsigned int sampling_down_factor;
 	unsigned int up_threshold;
 	unsigned int down_threshold;
+	unsigned int down_threshold_suspended;
 	unsigned int freq_step;
+	unsigned int boost_enabled;
+	unsigned int boost_count;
+	unsigned int boost_ceiling;
 };
 
 /* Common Governor data across policies */
@@ -212,6 +216,18 @@ struct common_dbs_data {
 struct dbs_data {
 	struct common_dbs_data *cdata;
 	unsigned int min_sampling_rate;
+	struct cpufreq_frequency_table *freq_table;
+	bool freq_table_desc;
+	unsigned int freq_table_size;
+	unsigned int pol_min;
+	unsigned int pol_max;
+	unsigned int min_scaling_freq;
+	unsigned int limit_table_start;
+	unsigned int limit_table_end;
+	unsigned int max_scaling_freq_hard;
+	unsigned int max_scaling_freq_soft;
+	unsigned int scaling_mode_up;
+	unsigned int scaling_mode_down;
 	int usage_count;
 	void *tuners;
 
@@ -256,6 +272,8 @@ static ssize_t show_sampling_rate_min_gov_pol				\
 	struct dbs_data *dbs_data = policy->governor_data;		\
 	return sprintf(buf, "%u\n", dbs_data->min_sampling_rate);	\
 }
+
+extern struct mutex cpufreq_governor_lock;
 
 void dbs_check_cpu(struct dbs_data *dbs_data, int cpu);
 bool need_load_eval(struct cpu_dbs_common_info *cdbs,

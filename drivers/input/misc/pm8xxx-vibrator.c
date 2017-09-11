@@ -25,8 +25,8 @@
 #define VIB_DRV_SEL_SHIFT	0x03
 #define VIB_DRV_EN_MANUAL_MASK	0xfc
 
-#define VIB_MAX_LEVEL_mV	(3100)
-#define VIB_MIN_LEVEL_mV	(1200)
+#define VIB_MAX_LEVEL_mV	(3000)
+#define VIB_MIN_LEVEL_mV	(1000)
 #define VIB_MAX_LEVELS		(VIB_MAX_LEVEL_mV - VIB_MIN_LEVEL_mV)
 
 #define MAX_FF_SPEED		0xff
