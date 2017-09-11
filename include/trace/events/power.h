@@ -75,7 +75,7 @@ TRACE_EVENT(cpu_frequency_switch_start,
 
 TRACE_EVENT(cpu_frequency_limits,
 
-	TP_PROTO(unsigned int max_freq, unsigned int min_freq,
+	TP_PROTO(unsigned int min_freq, unsigned int max_freq,
 		unsigned int cpu_id),
 
 	TP_ARGS(max_freq, min_freq, cpu_id),
