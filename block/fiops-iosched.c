@@ -16,10 +16,10 @@
 #define VIOS_SCALE_SHIFT 10
 #define VIOS_SCALE (1 << VIOS_SCALE_SHIFT)
 
-#define VIOS_READ_SCALE (1)
-#define VIOS_WRITE_SCALE (1)
-#define VIOS_SYNC_SCALE (2)
-#define VIOS_ASYNC_SCALE (5)
+#define VIOS_READ_SCALE (8)
+#define VIOS_WRITE_SCALE (12)
+#define VIOS_SYNC_SCALE (8)
+#define VIOS_ASYNC_SCALE (10)
 
 #define VIOS_PRIO_SCALE (5)
 
