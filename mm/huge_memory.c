@@ -129,8 +129,6 @@ static int set_recommended_min_free_kbytes(void)
 			      (unsigned long) nr_free_buffer_pages() / 20);
 	recommended_min <<= (PAGE_SHIFT-10);
 
-	if (recommended_min > min_free_kbytes)
-		min_free_kbytes = recommended_min;
 	setup_per_zone_wmarks();
 	return 0;
 }
