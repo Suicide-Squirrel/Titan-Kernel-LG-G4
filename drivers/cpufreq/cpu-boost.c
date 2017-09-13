@@ -53,7 +53,7 @@ module_param(sync_threshold, uint, 0644);
 
 static bool input_boost_enabled;
 
-static unsigned int input_boost_ms = 2000;
+static unsigned int input_boost_ms = 1500;
 module_param(input_boost_ms, uint, 0644);
 
 static unsigned int migration_load_threshold = 20;
