@@ -262,6 +262,7 @@ static void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 	}
 	if ((val == CPUFREQ_POSTCHANGE && ci->old != ci->new) ||
 	    (val == CPUFREQ_RESUMECHANGE || val == CPUFREQ_SUSPENDCHANGE)) {
+		schedule_work(&policy->update);
 		loops_per_jiffy = cpufreq_scale(l_p_j_ref, l_p_j_ref_freq,
 								ci->new);
 		pr_debug("scaling loops_per_jiffy to %lu "
