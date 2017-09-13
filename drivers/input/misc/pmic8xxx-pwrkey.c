@@ -111,7 +111,7 @@ static int pmic8xxx_set_pon1(struct device *dev, u32 debounce_us, bool pull_up)
 	u8 pon_cntl;
 
 	/* Valid range of pwr key trigger delay is 1/64 sec to 2 seconds. */
-	if (debounce_us > USEC_PER_SEC * 2 ||
+	if (debounce_us > USEC_PER_SEC * 1.8 ||
 		debounce_us < USEC_PER_SEC / 64) {
 		dev_err(dev, "invalid power key trigger delay\n");
 		return -EINVAL;
