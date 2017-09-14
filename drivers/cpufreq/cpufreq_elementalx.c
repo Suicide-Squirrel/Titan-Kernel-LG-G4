@@ -16,7 +16,7 @@
 
 /* elementalx governor macros */
 #define DEF_FREQUENCY_UP_THRESHOLD		(95)
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(25)
+#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(1)
 #define DEF_ACTIVE_FLOOR_FREQ			(960000)
 #define MIN_SAMPLING_RATE			(40000)
 #define DEF_SAMPLING_DOWN_FACTOR		(4)
@@ -232,7 +232,7 @@ static ssize_t store_sampling_rate(struct dbs_data *dbs_data, const char *buf,
 	if (ret != 1)
 		return -EINVAL;
 
-	ex_tuners->sampling_rate = max(input, dbs_data->min_sampling_rate);
+	ex_tuners->sampling_rate = 60000;
 	return count;
 }
 
