@@ -120,6 +120,6 @@ struct zram {
 	 * we can store in a disk.
 	 */
 	u64 disksize;	/* bytes */
-	char compressor[12];
+	char compressor[10];
 };
 #endif
