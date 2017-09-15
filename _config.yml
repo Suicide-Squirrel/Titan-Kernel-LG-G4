@@ -1,1 +1,56 @@
 theme: jekyll-theme-midnight
+# Dependencies
+markdown:       kramdown
+highlighter:    rouge
+
+kramdown:
+  auto_ids:     true
+
+# Permalinks
+permalink:      pretty
+
+# Server
+source:         "."
+destination:    ./_gh_pages
+port:           9001
+baseurl:        ""
+url:            "https://forum.xda-developers.com/g4/development/g4-t3667878"
+encoding:       UTF-8
+exclude:
+  - .git
+  - .github
+  - assets/scss/
+  - build
+  - js
+  - node_modules
+  - nuget
+  - scss
+  - vendor
+  - bower.json
+  - composer.json
+  - Gemfile
+  - Gemfile.lock
+  - Gruntfile.js
+  - package.js
+  - package.json
+  - package-lock.json
+  - sache.json
+
+plugins:
+  - jekyll-redirect-from
+  - jekyll-sitemap
+  - jekyll-toc
+
+# Social
+title:              Titan kernel
+description:        "Nougat sources for LG G4."
+twitter:            Titan kernel
+authors:            "kessaras"
+social_image_path:  https://img.xda-cdn.com/TjhonXYQnoxfwDL2laofboiBXng=/https%3A%2F%2Fdl.xda-developers.com%2F4%2F2%2F6%2F2%2F7%2F0%2F8%2Ftitan.jpg%3Fkey%3D_qLle5lMd52XN-M64ImbMA%26ts%3D1504549697
+social_logo_path:   https://img.xda-cdn.com/TjhonXYQnoxfwDL2laofboiBXng=/https%3A%2F%2Fdl.xda-developers.com%2F4%2F2%2F6%2F2%2F7%2F0%2F8%2Ftitan.jpg%3Fkey%3D_qLle5lMd52XN-M64ImbMA%26ts%3D1504549697
+
+# Custom variables
+current_version:    v6
+docs_version:       4.0
+download:
+  source:           "https://github.com/Suicide-Squirrel/Titan-Kernel-LG-G4"
