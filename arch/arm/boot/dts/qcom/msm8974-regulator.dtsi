@@ -15,7 +15,7 @@
 
 &pm8941_lsid1 {
 	pm8941_boost: regulator@a000 {
-		regulator-min-microvolt = <5000000>;
+		regulator-min-microvolt = <4900000>;
 		regulator-max-microvolt = <5000000>;
 		qcom,enable-time = <500>;
 		status = "okay";
@@ -61,26 +61,26 @@
 		status = "okay";
 		pm8841_s1: regulator-s1 {
 			regulator-min-microvolt = <600000>
-			regulator-max-microvolt = <1050000>;
+			regulator-max-microvolt = <1000000>;
 			status = "okay";
 		};
 		pm8841_s1_ao: regulator-s1-ao {
 			regulator-name = "8841_s1_ao";
 			qcom,set = <1>;
 			regulator-min-microvolt = <600000>
-			regulator-max-microvolt = <1050000>;
+			regulator-max-microvolt = <1000000>;
 			status = "okay";
 			compatible = "qcom,rpm-smd-regulator";
 			proxy-supply = <&pm8841_s1_ao>;
-			qcom,proxy-consumer-voltage = <1050000 1050000>;
+			qcom,proxy-consumer-voltage = <1000000 1000000>;
 			qcom,proxy-consumer-enable;
 		};
 		pm8841_s1_so: regulator-s1-so {
 			regulator-name = "8841_s1_so";
 			qcom,set = <2>;
 			regulator-min-microvolt = <600000>;
-			regulator-max-microvolt = <1050000>;
-			qcom,init-voltage = <675000>;
+			regulator-max-microvolt = <1000000>;
+			qcom,init-voltage = <650000>;
 			status = "okay";
 			compatible = "qcom,rpm-smd-regulator";
 		};
@@ -89,8 +89,8 @@
 	rpm-regulator-smpb2 {
 		status = "okay";
 		pm8841_s2: regulator-s2 {
-			regulator-min-microvolt = <500000>;
-			regulator-max-microvolt = <1050000>;
+			regulator-min-microvolt = <600000>;
+			regulator-max-microvolt = <1000000>;
 			status = "okay";
 		};
 		pm8841_s2_corner: regulator-s2-corner {
@@ -127,9 +127,9 @@
 	rpm-regulator-smpb3 {
 		status = "okay";
 		pm8841_s3: regulator-s3 {
-			regulator-min-microvolt = <1050000>;
+			regulator-min-microvolt = <1000000>;
 			regulator-max-microvolt = <1050000>;
-			qcom,init-voltage = <1050000>;
+			qcom,init-voltage = <1005000>;
 			status = "okay";
 		};
 	};
@@ -137,8 +137,8 @@
 	rpm-regulator-smpb4 {
 		status = "okay";
 		pm8841_s4: regulator-s4 {
-			regulator-min-microvolt = <815000>;
-			regulator-max-microvolt = <900000>;
+			regulator-min-microvolt = <810000>;
+			regulator-max-microvolt = <850000>;
 			status = "okay";
 		};
 		pm8841_s4_corner: regulator-s4-corner {
@@ -164,9 +164,9 @@
 	rpm-regulator-smpa1 {
 		status = "okay";
 		pm8941_s1: regulator-s1 {
-			regulator-min-microvolt = <1300000>;
-			regulator-max-microvolt = <1300000>;
-			qcom,init-voltage = <1300000>;
+			regulator-min-microvolt = <1250000>;
+			regulator-max-microvolt = <1250000>;
+			qcom,init-voltage = <1250000>;
 			status = "okay";
 		};
 	};
@@ -174,9 +174,9 @@
 	rpm-regulator-smpa2 {
 		status = "okay";
 		pm8941_s2: regulator-s2 {
-			regulator-min-microvolt = <2150000>;
-			regulator-max-microvolt = <2150000>;
-			qcom,init-voltage = <2150000>;
+			regulator-min-microvolt = <2100000>;
+			regulator-max-microvolt = <2100000>;
+			qcom,init-voltage = <2100000>;
 			status = "okay";
 		};
 	};
@@ -184,9 +184,9 @@
 	rpm-regulator-smpa3 {
 		status = "okay";
 		pm8941_s3: regulator-s3 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			qcom,init-voltage = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
+			qcom,init-voltage = <1750000>;
 			status = "okay";
 		};
 	};
@@ -194,9 +194,9 @@
 	rpm-regulator-ldoa1 {
 		status = "okay";
 		pm8941_l1: regulator-l1 {
-			regulator-min-microvolt = <1225000>;
-			regulator-max-microvolt = <1225000>;
-			qcom,init-voltage = <1225000>;
+			regulator-min-microvolt = <1220000>;
+			regulator-max-microvolt = <1220000>;
+			qcom,init-voltage = <1220000>;
 			status = "okay";
 		};
 	};
@@ -214,9 +214,9 @@
 	rpm-regulator-ldoa3 {
 		status = "okay";
 		pm8941_l3: regulator-l3 {
-			regulator-min-microvolt = <1225000>;
-			regulator-max-microvolt = <1225000>;
-			qcom,init-voltage = <1225000>;
+			regulator-min-microvolt = <1220000>;
+			regulator-max-microvolt = <1220000>;
+			qcom,init-voltage = <1220000>;
 			status = "okay";
 		};
 	};
@@ -224,9 +224,9 @@
 	rpm-regulator-ldoa4 {
 		status = "okay";
 		pm8941_l4: regulator-l4 {
-			regulator-min-microvolt = <1225000>;
-			regulator-max-microvolt = <1225000>;
-			qcom,init-voltage = <1225000>;
+			regulator-min-microvolt = <1220000>;
+			regulator-max-microvolt = <1220000>;
+			qcom,init-voltage = <1220000>;
 			status = "okay";
 		};
 	};
@@ -234,9 +234,9 @@
 	rpm-regulator-ldoa5 {
 		status = "okay";
 		pm8941_l5: regulator-l5 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			qcom,init-voltage = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
+			qcom,init-voltage = <1750000>;
 			status = "okay";
 		};
 	};
@@ -244,9 +244,9 @@
 	rpm-regulator-ldoa6 {
 		status = "okay";
 		pm8941_l6: regulator-l6 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			qcom,init-voltage = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
+			qcom,init-voltage = <1750000>;
 			status = "okay";
 		};
 	};
@@ -254,9 +254,9 @@
 	rpm-regulator-ldoa7 {
 		status = "okay";
 		pm8941_l7: regulator-l7 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			qcom,init-voltage = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
+			qcom,init-voltage = <1750000>;
 			status = "okay";
 		};
 	};
@@ -264,9 +264,9 @@
 	rpm-regulator-ldoa8 {
 		status = "okay";
 		pm8941_l8: regulator-l8 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			qcom,init-voltage = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
+			qcom,init-voltage = <1750000>;
 			status = "okay";
 		};
 	};
@@ -274,9 +274,9 @@
 	rpm-regulator-ldoa9 {
 		status = "okay";
 		pm8941_l9: regulator-l9 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <2950000>;
-			qcom,init-voltage = <2950000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <2900000>;
+			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
 	};
@@ -284,9 +284,9 @@
 	rpm-regulator-ldoa10 {
 		status = "okay";
 		pm8941_l10: regulator-l10 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <2950000>;
-			qcom,init-voltage = <2950000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <2900000>;
+			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
 	};
@@ -294,8 +294,8 @@
 	rpm-regulator-ldoa11 {
 		status = "okay";
 		pm8941_l11: regulator-l11 {
-			regulator-min-microvolt = <1225000>;
-			regulator-max-microvolt = <1350000>;
+			regulator-min-microvolt = <1220000>;
+			regulator-max-microvolt = <1300000>;
 			qcom,init-voltage = <1300000>;
 			status = "okay";
 		};
@@ -304,9 +304,9 @@
 	rpm-regulator-ldoa12 {
 		status = "okay";
 		pm8941_l12: regulator-l12 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			qcom,init-voltage = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
+			qcom,init-voltage = <1750000>;
 			proxy-supply = <&pm8941_l12>;
 			qcom,proxy-consumer-enable;
 			status = "okay";
@@ -314,8 +314,8 @@
 		pm8941_l12_ao: regulator-l12-ao {
 			regulator-name = "8941_l12_ao";
 			qcom,set = <1>;
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
 			status = "okay";
 			compatible = "qcom,rpm-smd-regulator";
 		};
@@ -325,8 +325,8 @@
 		status = "okay";
 		pm8941_l13: regulator-l13 {
 			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <2950000>;
-			qcom,init-voltage = <2950000>;
+			regulator-max-microvolt = <2900000>;
+			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
 	};
@@ -334,9 +334,9 @@
 	rpm-regulator-ldoa14 {
 		status = "okay";
 		pm8941_l14: regulator-l14 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			qcom,init-voltage = <1800000>;
+			regulator-min-microvolt = <1750000>;
+			regulator-max-microvolt = <1750000>;
+			qcom,init-voltage = <1750000>;
 			status = "okay";
 		};
 	};
@@ -344,9 +344,9 @@
 	rpm-regulator-ldoa15 {
 		status = "okay";
 		pm8941_l15: regulator-l15 {
-			regulator-min-microvolt = <2050000>;
-			regulator-max-microvolt = <2050000>;
-			qcom,init-voltage = <2050000>;
+			regulator-min-microvolt = <2000000>;
+			regulator-max-microvolt = <2000000>;
+			qcom,init-voltage = <2000000>;
 			status = "okay";
 		};
 	};
@@ -354,9 +354,9 @@
 	rpm-regulator-ldoa16 {
 		status = "okay";
 		pm8941_l16: regulator-l16 {
-			regulator-min-microvolt = <2700000>;
-			regulator-max-microvolt = <2700000>;
-			qcom,init-voltage = <2700000>;
+			regulator-min-microvolt = <2650000>;
+			regulator-max-microvolt = <2650000>;
+			qcom,init-voltage = <2650000>;
 			status = "okay";
 		};
 	};
@@ -364,9 +364,9 @@
 	rpm-regulator-ldoa17 {
 		status = "okay";
 		pm8941_l17: regulator-l17 {
-			regulator-min-microvolt = <2850000>;
-			regulator-max-microvolt = <2850000>;
-			qcom,init-voltage = <2850000>;
+			regulator-min-microvolt = <2800000>;
+			regulator-max-microvolt = <2800000>;
+			qcom,init-voltage = <2800000>;
 			status = "okay";
 		};
 	};
@@ -374,9 +374,9 @@
 	rpm-regulator-ldoa18 {
 		status = "okay";
 		pm8941_l18: regulator-l18 {
-			regulator-min-microvolt = <2850000>;
-			regulator-max-microvolt = <2850000>;
-			qcom,init-voltage = <2850000>;
+			regulator-min-microvolt = <2800000>;
+			regulator-max-microvolt = <2800000>;
+			qcom,init-voltage = <2800000>;
 			status = "okay";
 		};
 	};
@@ -384,9 +384,9 @@
 	rpm-regulator-ldoa19 {
 		status = "okay";
 		pm8941_l19: regulator-l19 {
-			regulator-min-microvolt = <2900000>;
-			regulator-max-microvolt = <3300000>;
-			qcom,init-voltage = <2900000>;
+			regulator-min-microvolt = <2850000>;
+			regulator-max-microvolt = <3250000>;
+			qcom,init-voltage = <2850000>;
 			status = "okay";
 		};
 	};
@@ -394,9 +394,9 @@
 	rpm-regulator-ldoa20 {
 		status = "okay";
 		pm8941_l20: regulator-l20 {
-			regulator-min-microvolt = <2950000>;
-			regulator-max-microvolt = <2950000>;
-			qcom,init-voltage = <2950000>;
+			regulator-min-microvolt = <2900000>;
+			regulator-max-microvolt = <2900000>;
+			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
 	};
@@ -404,9 +404,9 @@
 	rpm-regulator-ldoa21 {
 		status = "okay";
 		pm8941_l21: regulator-l21 {
-			regulator-min-microvolt = <2950000>;
-			regulator-max-microvolt = <2950000>;
-			qcom,init-voltage = <2950000>;
+			regulator-min-microvolt = <2900000>;
+			regulator-max-microvolt = <2900000>;
+			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
 	};
@@ -414,9 +414,9 @@
 	rpm-regulator-ldoa22 {
 		status = "okay";
 		pm8941_l22: regulator-l22 {
-			regulator-min-microvolt = <3000000>;
-			regulator-max-microvolt = <3000000>;
-			qcom,init-voltage = <3000000>;
+			regulator-min-microvolt = <2900000>;
+			regulator-max-microvolt = <2900000>;
+			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
 	};
@@ -424,9 +424,9 @@
 	rpm-regulator-ldoa23 {
 		status = "okay";
 		pm8941_l23: regulator-l23 {
-			regulator-min-microvolt = <3000000>;
-			regulator-max-microvolt = <3000000>;
-			qcom,init-voltage = <3000000>;
+			regulator-min-microvolt = <2900000>;
+			regulator-max-microvolt = <2900000>;
+			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
 	};
@@ -434,9 +434,9 @@
 	rpm-regulator-ldoa24 {
 		status = "okay";
 		pm8941_l24: regulator-l24 {
-			regulator-min-microvolt = <3070000>;
-			regulator-max-microvolt = <3075000>;
-			qcom,init-voltage = <3075000>;
+			regulator-min-microvolt = <3050000>;
+			regulator-max-microvolt = <3055000>;
+			qcom,init-voltage = <3055000>;
 			status = "okay";
 		};
 	};
@@ -490,8 +490,8 @@
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
 			qcom,retention-voltage = <600000>;
-			qcom,ldo-default-voltage = <750000>;
-			qcom,ldo-threshold-voltage = <850000>;
+			qcom,ldo-default-voltage = <745000>;
+			qcom,ldo-threshold-voltage = <800000>;
 			qcom,ldo-delta-voltage = <50000>;
 			qcom,cpu-num = <0>;
 			krait0_adj_reg: regulator@0 {
@@ -510,8 +510,8 @@
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
 			qcom,retention-voltage = <600000>;
-			qcom,ldo-default-voltage = <750000>;
-			qcom,ldo-threshold-voltage = <850000>;
+			qcom,ldo-default-voltage = <745000>;
+			qcom,ldo-threshold-voltage = <800000>;
 			qcom,ldo-delta-voltage = <50000>;
 			qcom,cpu-num = <1>;
 			krait1_adj_reg: regulator@0 {
@@ -530,8 +530,8 @@
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
 			qcom,retention-voltage = <600000>;
-			qcom,ldo-default-voltage = <750000>;
-			qcom,ldo-threshold-voltage = <850000>;
+			qcom,ldo-default-voltage = <745000>;
+			qcom,ldo-threshold-voltage = <800000>;
 			qcom,ldo-delta-voltage = <50000>;
 			qcom,cpu-num = <2>;
 			krait2_adj_reg: regulator@0 {
@@ -550,8 +550,8 @@
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
 			qcom,retention-voltage = <600000>;
-			qcom,ldo-default-voltage = <750000>;
-			qcom,ldo-threshold-voltage = <850000>;
+			qcom,ldo-default-voltage = <745000>;
+			qcom,ldo-threshold-voltage = <800000>;
 			qcom,ldo-delta-voltage = <50000>;
 			qcom,cpu-num = <3>;
 			krait3_adj_reg: regulator@0 {
@@ -585,7 +585,7 @@
 };
 
 &pm8941_chg_boost {
-	regulator-min-microvolt = <5000000>;
+	regulator-min-microvolt = <4900000>;
 	regulator-max-microvolt = <5000000>;
 	regulator-name = "8941_smbb_boost";
 };
