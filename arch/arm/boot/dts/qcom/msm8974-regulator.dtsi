@@ -60,14 +60,14 @@
 	rpm-regulator-smpb1 {
 		status = "okay";
 		pm8841_s1: regulator-s1 {
-			regulator-min-microvolt = <675000>;
+			regulator-min-microvolt = <600000>
 			regulator-max-microvolt = <1050000>;
 			status = "okay";
 		};
 		pm8841_s1_ao: regulator-s1-ao {
 			regulator-name = "8841_s1_ao";
 			qcom,set = <1>;
-			regulator-min-microvolt = <675000>;
+			regulator-min-microvolt = <600000>
 			regulator-max-microvolt = <1050000>;
 			status = "okay";
 			compatible = "qcom,rpm-smd-regulator";
@@ -78,7 +78,7 @@
 		pm8841_s1_so: regulator-s1-so {
 			regulator-name = "8841_s1_so";
 			qcom,set = <2>;
-			regulator-min-microvolt = <675000>;
+			regulator-min-microvolt = <600000>;
 			regulator-max-microvolt = <1050000>;
 			qcom,init-voltage = <675000>;
 			status = "okay";
@@ -385,7 +385,7 @@
 		status = "okay";
 		pm8941_l19: regulator-l19 {
 			regulator-min-microvolt = <2900000>;
-			regulator-max-microvolt = <3350000>;
+			regulator-max-microvolt = <3300000>;
 			qcom,init-voltage = <2900000>;
 			status = "okay";
 		};
@@ -434,7 +434,7 @@
 	rpm-regulator-ldoa24 {
 		status = "okay";
 		pm8941_l24: regulator-l24 {
-			regulator-min-microvolt = <3075000>;
+			regulator-min-microvolt = <3070000>;
 			regulator-max-microvolt = <3075000>;
 			qcom,init-voltage = <3075000>;
 			status = "okay";
@@ -489,7 +489,7 @@
 			regulator-min-microvolt = <500000>;
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
-			qcom,retention-voltage = <675000>;
+			qcom,retention-voltage = <600000>;
 			qcom,ldo-default-voltage = <750000>;
 			qcom,ldo-threshold-voltage = <850000>;
 			qcom,ldo-delta-voltage = <50000>;
@@ -509,7 +509,7 @@
 			regulator-min-microvolt = <500000>;
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
-			qcom,retention-voltage = <675000>;
+			qcom,retention-voltage = <600000>;
 			qcom,ldo-default-voltage = <750000>;
 			qcom,ldo-threshold-voltage = <850000>;
 			qcom,ldo-delta-voltage = <50000>;
@@ -529,7 +529,7 @@
 			regulator-min-microvolt = <500000>;
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
-			qcom,retention-voltage = <675000>;
+			qcom,retention-voltage = <600000>;
 			qcom,ldo-default-voltage = <750000>;
 			qcom,ldo-threshold-voltage = <850000>;
 			qcom,ldo-delta-voltage = <50000>;
@@ -549,7 +549,7 @@
 			regulator-min-microvolt = <500000>;
 			regulator-max-microvolt = <1100000>;
 			qcom,headroom-voltage = <150000>;
-			qcom,retention-voltage = <675000>;
+			qcom,retention-voltage = <600000>;
 			qcom,ldo-default-voltage = <750000>;
 			qcom,ldo-threshold-voltage = <850000>;
 			qcom,ldo-delta-voltage = <50000>;
