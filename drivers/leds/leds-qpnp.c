@@ -34,15 +34,15 @@
 
 /* wled control registers */
 #define WLED_OVP_INT_STATUS(base)		(base + 0x10)
-#define WLED_BRIGHTNESS_CNTL_LSB(base, n)	(base + 0x40 + 2*n)
-#define WLED_BRIGHTNESS_CNTL_MSB(base, n)	(base + 0x41 + 2*n)
+#define WLED_BRIGHTNESS_CNTL_LSB(base, n)	(base + 0x35 + 2*n)
+#define WLED_BRIGHTNESS_CNTL_MSB(base, n)	(base + 0x36 + 2*n)
 #define WLED_MOD_CTRL_REG(base)			(base + 0x46)
 #define WLED_SYNC_REG(base)			(base + 0x47)
 #define WLED_FDBCK_CTRL_REG(base)		(base + 0x48)
-#define WLED_SWITCHING_FREQ_REG(base)		(base + 0x4C)
-#define WLED_OVP_CFG_REG(base)			(base + 0x4D)
-#define WLED_BOOST_LIMIT_REG(base)		(base + 0x4E)
-#define WLED_CURR_SINK_REG(base)		(base + 0x4F)
+#define WLED_SWITCHING_FREQ_REG(base)		(base + 0x4D)
+#define WLED_OVP_CFG_REG(base)			(base + 0x4E)
+#define WLED_BOOST_LIMIT_REG(base)		(base + 0x4f)
+#define WLED_CURR_SINK_REG(base)		(base + 0x51)
 #define WLED_HIGH_POLE_CAP_REG(base)		(base + 0x58)
 #define WLED_CURR_SINK_MASK		0xE0
 #define WLED_CURR_SINK_SHFT		0x05
@@ -54,20 +54,20 @@
 #define WLED_OVP_VAL_BIT_SHFT		0x00
 #define WLED_BOOST_LIMIT_MASK		0x07
 #define WLED_BOOST_LIMIT_BIT_SHFT	0x00
-#define WLED_BOOST_ON			0x80
+#define WLED_BOOST_ON			0x70
 #define WLED_BOOST_OFF			0x00
 #define WLED_EN_MASK			0x80
 #define WLED_NO_MASK			0x00
 #define WLED_CP_SELECT_MAX		0x03
 #define WLED_CP_SELECT_MASK		0x02
 #define WLED_USE_EXT_GEN_MOD_SRC	0x01
-#define WLED_CTL_DLY_STEP		200
-#define WLED_CTL_DLY_MAX		1400
+#define WLED_CTL_DLY_STEP		250
+#define WLED_CTL_DLY_MAX		1300
 #define WLED_MAX_CURR			25
 #define WLED_NO_CURRENT			0x00
-#define WLED_OVP_DELAY			1000
-#define WLED_OVP_DELAY_INT		200
-#define WLED_OVP_DELAY_LOOP		100
+#define WLED_OVP_DELAY			1500
+#define WLED_OVP_DELAY_INT		250
+#define WLED_OVP_DELAY_LOOP		150
 #define WLED_MSB_MASK			0x0F
 #define WLED_MAX_CURR_MASK		0x1F
 #define WLED_OP_FDBCK_MASK		0x07
@@ -115,8 +115,8 @@
 #define FLASH_PERIPHERAL_SUBTYPE(base)	(base + 0x05)
 #define FLASH_CURRENT_RAMP(base)	(base + 0x54)
 
-#define FLASH_MAX_LEVEL			0x4F
-#define TORCH_MAX_LEVEL			0x0F
+#define FLASH_MAX_LEVEL			0x51
+#define TORCH_MAX_LEVEL			0x0E
 #define	FLASH_NO_MASK			0x00
 
 #define FLASH_MASK_1			0x20
@@ -155,7 +155,7 @@
 
 #define FLASH_CURRENT_PRGM_MIN		1
 #define FLASH_CURRENT_PRGM_SHIFT	1
-#define FLASH_CURRENT_MAX		0x4F
+#define FLASH_CURRENT_MAX		0x51
 #define FLASH_CURRENT_TORCH		0x07
 
 #define FLASH_DURATION_200ms		0x13
@@ -309,7 +309,7 @@ enum led_mode {
 
 static u8 wled_debug_regs[] = {
 	/* brightness registers */
-	0x40, 0x41, 0x42, 0x43, 0x44, 0x45,
+	0x35, 0x36, 0x37, 0x38, 0x39, 0x3a,
 	/* common registers */
 	0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
 	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
