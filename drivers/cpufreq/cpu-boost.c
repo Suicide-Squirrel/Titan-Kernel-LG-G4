@@ -53,7 +53,7 @@ module_param(sync_threshold, uint, 0644);
 
 static bool input_boost_enabled;
 
-static unsigned int input_boost_ms = 1500;
+static unsigned int input_boost_ms = 1000;
 module_param(input_boost_ms, uint, 0644);
 
 static unsigned int migration_load_threshold = 20;
@@ -69,7 +69,7 @@ static bool sched_boost_active;
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
-#define MIN_INPUT_INTERVAL (100 * USEC_PER_MSEC)
+#define MIN_INPUT_INTERVAL (60 * USEC_PER_MSEC)
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
@@ -140,11 +140,11 @@ module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
 static DEFINE_PER_CPU(unsigned int, multi_boost_freq_sync_info);
 
-#define INPUT_SAMPLING_TIME (35 * USEC_PER_MSEC)
+#define INPUT_SAMPLING_TIME (80 * USEC_PER_MSEC)
 #define MAX_MULTI_BOOST 200
 
 static bool multi_boost_enabled;
-static unsigned int multi_boost_ms = 1000;
+static unsigned int multi_boost_ms = 600;
 static bool multi_boost_started;
 
 static struct work_struct input_boost_multi;
@@ -245,9 +245,6 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 		min = max(b_min, ib_min);
 
 		min = min(min, policy->max);
-
-		if (policy->cur >= ib_min)
-			break;
 
 		pr_debug("CPU%u policy min before boost: %u kHz\n",
 			 cpu, policy->min);
@@ -438,6 +435,9 @@ static void do_input_boost(struct work_struct *work)
 {
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
+
+	if (!input_boost_ms)
+		return;
 
 	cancel_delayed_work_sync(&input_boost_rem);
 	if (sched_boost_active) {
