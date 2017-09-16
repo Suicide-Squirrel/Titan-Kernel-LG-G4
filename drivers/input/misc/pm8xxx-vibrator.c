@@ -169,7 +169,7 @@ static int pm8xxx_vib_play_effect(struct input_dev *dev, void *data,
 {
 	struct pm8xxx_vib *vib = input_get_drvdata(dev);
 
-	vib->speed = effect->u.rumble.strong_magnitude >> 8;
+	vib->speed = effect->u.rumble.strong_magnitude >> 9;
 	if (!vib->speed)
 		vib->speed = effect->u.rumble.weak_magnitude >> 9;
 
