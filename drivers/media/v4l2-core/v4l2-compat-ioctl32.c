@@ -398,7 +398,8 @@ static int get_v4l2_buffer32(struct v4l2_buffer *kp, struct v4l2_buffer32 __user
 		get_user(kp->index, &up->index) ||
 		get_user(kp->type, &up->type) ||
 		get_user(kp->flags, &up->flags) ||
-		get_user(kp->memory, &up->memory))
+		get_user(kp->memory, &up->memory) ||
+		get_user(kp->length, &up->length))
 			return -EFAULT;
 
 	if (V4L2_TYPE_IS_OUTPUT(kp->type))
@@ -506,7 +507,8 @@ static int put_v4l2_buffer32(struct v4l2_buffer *kp, struct v4l2_buffer32 __user
 		copy_to_user(&up->timecode, &kp->timecode, sizeof(struct v4l2_timecode)) ||
 		put_user(kp->sequence, &up->sequence) ||
 		put_user(kp->reserved2, &up->reserved2) ||
-		put_user(kp->reserved, &up->reserved))
+		put_user(kp->reserved, &up->reserved) ||
+		put_user(kp->length, &up->length))
 			return -EFAULT;
 
 	if (V4L2_TYPE_IS_PRIVATE(kp->type)) {
