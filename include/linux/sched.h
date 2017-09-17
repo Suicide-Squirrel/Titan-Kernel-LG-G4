@@ -1651,22 +1651,21 @@ static inline pid_t task_session_vnr(struct task_struct *tsk)
 	return __task_pid_nr_ns(tsk, PIDTYPE_SID, NULL);
 }
 
-static inline pid_t task_tgid_nr_ns(struct task_struct *tsk, struct pid_namespace *ns)
-{
-	return __task_pid_nr_ns(tsk, __PIDTYPE_TGID, ns);
-}
-
-static inline pid_t task_tgid_vnr(struct task_struct *tsk)
-{
-	return __task_pid_nr_ns(tsk, __PIDTYPE_TGID, NULL);
-}
-
-/* obsolete, do not use */
 static inline pid_t task_pgrp_nr(struct task_struct *tsk)
 {
 	return task_pgrp_nr_ns(tsk, &init_pid_ns);
 }
+static inline pid_t task_tgid_nr_ns(struct task_struct *tsk, struct pid_namespace *ns)
+{
+  return __task_pid_nr_ns(tsk, __PIDTYPE_TGID, ns);
+}
 
+static inline pid_t task_tgid_vnr(struct task_struct *tsk)
+{
+  return __task_pid_nr_ns(tsk, __PIDTYPE_TGID, NULL);
+}
+
+/* obsolete, do not use */
 /**
  * pid_alive - check that a task structure is not stale
  * @p: Task structure to be checked.

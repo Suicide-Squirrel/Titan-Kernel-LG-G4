@@ -753,23 +753,23 @@ has_zeroout:
 		int ret = check_block_validity(inode, map);
 		if (ret != 0)
 			return ret;
-		/*
-		 * Inodes with freshly allocated blocks where contents will be
-		 * visible after transaction commit must be on transaction's
-		 * ordered data list.
-		 */
-		if (map->m_flags & EXT4_MAP_NEW &&
-		    !(map->m_flags & EXT4_MAP_UNWRITTEN) &&
-		    !IS_NOQUOTA(inode) &&
-		    ext4_should_order_data(inode)) {
-			ret = ext4_jbd2_file_inode(handle, inode);
-			if (ret)
-				return ret;
-		}
-	}
-	return retval;
-}
 
+    /* 
+     * Inodes with freshly allocated blocks where contents will be 
+     * visible after transaction commit must be on transaction's 
+     * ordered data list. 
+     */ 
+	if (map->m_flags & EXT4_MAP_NEW &&
+		!(map->m_flags & EXT4_MAP_UNWRITTEN) &&
+		!IS_NOQUOTA(inode) &&
+		ext4_should_order_data(inode)) {
+		ret = ext4_jbd2_file_inode(handle, inode); 
+		if (ret)
+		return ret;
+	}
+}
+return retval;
+}
 /* Maximum number of blocks we map for direct IO at once. */
 #define DIO_MAX_BLOCKS 4096
 
@@ -1126,6 +1126,7 @@ static int ext4_write_end(struct file *file,
 	int i_size_changed = 0;
 
 	trace_ext4_write_end(inode, pos, len, copied);
+
 	if (ext4_has_inline_data(inode)) {
 		ret = ext4_write_inline_data_end(inode, pos, len,
 						 copied, page);
