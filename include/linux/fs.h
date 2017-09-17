@@ -122,10 +122,8 @@ typedef void (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
 /* File is opened with O_PATH; almost nothing can be done with it */
 #define FMODE_PATH		((__force fmode_t)0x4000)
 
-#ifdef CONFIG_SDCARD_FS_ANDROID_M
 /* File hasn't page cache and can't be mmaped, for stakable filesystem */
-#define FMODE_NOMAPPABLE	((__force fmode_t)0x8000)
-#endif
+#define FMODE_NONMAPPABLE       ((__force fmode_t)0x400000)
 
 /* File was opened by fanotify and shouldn't generate fanotify events */
 #define FMODE_NONOTIFY		((__force fmode_t)0x1000000)
@@ -1464,10 +1462,6 @@ extern int vfs_link(struct dentry *, struct inode *, struct dentry *);
 extern int vfs_rmdir(struct inode *, struct dentry *);
 extern int vfs_unlink(struct inode *, struct dentry *);
 extern int vfs_rename(struct inode *, struct dentry *, struct inode *, struct dentry *);
-#ifdef CONFIG_SDCARD_FS
-extern int do_renameat(int, const char __user *, int, const char __user *, unsigned int);
-extern long do_unlinkat(int, const char __user *, bool);
-#endif
 
 /*
  * VFS dentry helper functions.
@@ -1599,9 +1593,6 @@ struct inode_operations {
 	int (*atomic_open)(struct inode *, struct dentry *,
 			   struct file *, unsigned open_flag,
 			   umode_t create_mode, int *opened);
-#ifdef CONFIG_SDCARD_FS
-	struct inode * (*get_lower_inode)(struct inode *);
-#endif
 } ____cacheline_aligned;
 
 ssize_t rw_copy_check_uvector(int type, const struct iovec __user * uvector,
@@ -1643,10 +1634,6 @@ struct super_operations {
 	int (*bdev_try_to_free_page)(struct super_block*, struct page*, gfp_t);
 	int (*nr_cached_objects)(struct super_block *);
 	void (*free_cached_objects)(struct super_block *, int);
-#ifdef CONFIG_SDCARD_FS
-	long (*unlink_callback)(struct inode *, char *);
-	long (*rename_callback)(struct inode *, char *, char *);
-#endif
 };
 
 /*

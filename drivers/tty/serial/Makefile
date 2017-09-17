@@ -58,7 +58,7 @@ obj-$(CONFIG_SERIAL_ATMEL) += atmel_serial.o
 obj-$(CONFIG_SERIAL_UARTLITE) += uartlite.o
 obj-$(CONFIG_SERIAL_MSM) += msm_serial.o
 #[P1_BRINGUP_BT_S]
-ifndef CONFIG_MACH_LGE
+ifndef CONFIG_LGE_BLUETOOTH_PM
 obj-$(CONFIG_SERIAL_MSM_HS) += msm_serial_hs.o
 else
 obj-$(CONFIG_SERIAL_MSM_HS) += msm_serial_hs_lge.o
