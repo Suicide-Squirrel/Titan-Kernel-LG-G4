@@ -97,11 +97,6 @@ int main(int argc, char **argv)
 	    infd = 0;
 	else
 		infd = open(argv[optind], O_RDONLY);
-	if (infd == -1) {
-		fprintf(stderr, "Failed to open source file: %s",
-			strerror(errno));
-		return usage();
-	}
 	if (fstat(infd, &st)) {
 		perror("stat");
 		return 1;
@@ -116,11 +111,6 @@ int main(int argc, char **argv)
 	    outfd = 1;
 	else
 		outfd = open(argv[optind+1], O_TRUNC|O_CREAT|O_WRONLY, 0644);
-	if (outfd == -1) {
-		fprintf(stderr, "Failed to open destination file: %s",
-			strerror(errno));
-		return usage();
-	}
 	if (process_ihex(data, st.st_size))
 		return 1;
 
