@@ -25,7 +25,7 @@
 #define VIB_DRV_SEL_SHIFT	0x03
 #define VIB_DRV_EN_MANUAL_MASK	0xfc
 
-#define VIB_MAX_LEVEL_mV	(3000)
+#define VIB_MAX_LEVEL_mV	(2900)
 #define VIB_MIN_LEVEL_mV	(1000)
 #define VIB_MAX_LEVELS		(VIB_MAX_LEVEL_mV - VIB_MIN_LEVEL_mV)
 
@@ -171,7 +171,7 @@ static int pm8xxx_vib_play_effect(struct input_dev *dev, void *data,
 
 	vib->speed = effect->u.rumble.strong_magnitude >> 9;
 	if (!vib->speed)
-		vib->speed = effect->u.rumble.weak_magnitude >> 9;
+		vib->speed = effect->u.rumble.weak_magnitude >> 8;
 
 	schedule_work(&vib->work);
 
