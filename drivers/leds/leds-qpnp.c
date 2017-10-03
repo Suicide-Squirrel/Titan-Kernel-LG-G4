@@ -34,8 +34,8 @@
 
 /* wled control registers */
 #define WLED_OVP_INT_STATUS(base)		(base + 0x10)
-#define WLED_BRIGHTNESS_CNTL_LSB(base, n)	(base + 0x35 + 2*n)
-#define WLED_BRIGHTNESS_CNTL_MSB(base, n)	(base + 0x36 + 2*n)
+#define WLED_BRIGHTNESS_CNTL_LSB(base, n)	(base + 0x31 + 2*n)
+#define WLED_BRIGHTNESS_CNTL_MSB(base, n)	(base + 0x32 + 2*n)
 #define WLED_MOD_CTRL_REG(base)			(base + 0x46)
 #define WLED_SYNC_REG(base)			(base + 0x47)
 #define WLED_FDBCK_CTRL_REG(base)		(base + 0x48)
@@ -174,7 +174,7 @@
 #define RGB_LED_EN_CTL(base)		(base + 0x46)
 #define RGB_LED_ATC_CTL(base)		(base + 0x47)
 
-#define RGB_MAX_LEVEL			LED_FULL
+#define RGB_MAX_LEVEL			200
 #define RGB_LED_ENABLE_RED		0x80
 #define RGB_LED_ENABLE_GREEN		0x40
 #define RGB_LED_ENABLE_BLUE		0x20
@@ -182,12 +182,12 @@
 #define RGB_LED_ENABLE_MASK		0xE0
 #define RGB_LED_SRC_MASK		0x03
 #define QPNP_LED_PWM_FLAGS	(PM_PWM_LUT_LOOP | PM_PWM_LUT_RAMP_UP)
-#define QPNP_LUT_RAMP_STEP_DEFAULT	255
+#define QPNP_LUT_RAMP_STEP_DEFAULT	31
 #define	PWM_LUT_MAX_SIZE		63
 #define	PWM_GPLED_LUT_MAX_SIZE		31
 #define RGB_LED_DISABLE			0x00
 
-#define MPP_MAX_LEVEL			LED_FULL
+#define MPP_MAX_LEVEL			200
 #define LED_MPP_MODE_CTRL(base)		(base + 0x40)
 #define LED_MPP_VIN_CTRL(base)		(base + 0x41)
 #define LED_MPP_EN_CTRL(base)		(base + 0x46)
@@ -215,7 +215,7 @@
 
 #define MPP_SOURCE_DTEST1		0x08
 
-#define GPIO_MAX_LEVEL			LED_FULL
+#define GPIO_MAX_LEVEL			200
 #define LED_GPIO_MODE_CTRL(base)	(base + 0x40)
 #define LED_GPIO_VIN_CTRL(base)		(base + 0x41)
 #define LED_GPIO_EN_CTRL(base)		(base + 0x46)
@@ -235,7 +235,7 @@
 #define LED_GPIO_EN_ENABLE		0x80
 #define LED_GPIO_EN_DISABLE		0x00
 
-#define KPDBL_MAX_LEVEL			LED_FULL
+#define KPDBL_MAX_LEVEL			200
 #define KPDBL_ROW_SRC_SEL(base)		(base + 0x40)
 #define KPDBL_ENABLE(base)		(base + 0x46)
 #define KPDBL_ROW_SRC(base)		(base + 0xE5)
@@ -309,7 +309,7 @@ enum led_mode {
 
 static u8 wled_debug_regs[] = {
 	/* brightness registers */
-	0x35, 0x36, 0x37, 0x38, 0x39, 0x3a,
+	0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
 	/* common registers */
 	0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
 	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
