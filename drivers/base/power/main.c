@@ -683,6 +683,7 @@ static int device_resume_early(struct device *dev, pm_message_t state)
 static void dpm_resume_early(pm_message_t state)
 #define TPS(x)  tracepoint_string(x)
 #define trace_suspend_resume(TPS, x, y);
+#define pm_print_active_wakeup_sources(x);
 {
 	ktime_t starttime = ktime_get();
 
