@@ -681,6 +681,8 @@ static int device_resume_early(struct device *dev, pm_message_t state)
  * @state: PM transition of the system being carried out.
  */
 static void dpm_resume_early(pm_message_t state)
+#define TPS(x)  tracepoint_string(x)
+#define trace_suspend_resume(TPS, x, y);
 {
 	ktime_t starttime = ktime_get();
 
