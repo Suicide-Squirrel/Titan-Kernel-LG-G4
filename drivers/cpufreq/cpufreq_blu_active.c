@@ -105,7 +105,7 @@ struct cpufreq_blu_active_tunables {
 	 * Max additional time to wait in idle, beyond timer_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
+#define DEFAULT_TIMER_SLACK (1200 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
  	/*
