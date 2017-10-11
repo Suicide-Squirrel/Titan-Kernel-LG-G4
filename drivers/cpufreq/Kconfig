@@ -253,12 +253,11 @@ config GENERIC_CPUFREQ_CPU0
 	  systems which share clock and voltage across all CPUs.
 
 	  If in doubt, say N.
+
 config LGE_LBFC
 	tristate "Cpu Freq Helper Driver"
 	depends on CPU_FREQ_GOV_INTERACTIVE
 
-menu "x86 CPU frequency scaling drivers"
-depends on X86
 config CPU_FREQ_GOV_BLU_ACTIVE
 	tristate "'blu_active' cpufreq policy governor"
 	help
@@ -274,7 +273,8 @@ config CPU_FREQ_GOV_BLU_ACTIVE
 
 	  If in doubt, say N.
 
-if X86
+menu "x86 CPU frequency scaling drivers"
+depends on X86
 source "drivers/cpufreq/Kconfig.x86"
 endmenu
 
