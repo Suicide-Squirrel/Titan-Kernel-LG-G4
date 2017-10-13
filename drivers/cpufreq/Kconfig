@@ -135,6 +135,22 @@ config CPU_FREQ_DEFAULT_GOV_BLU_ACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_INTELLIACTIVE
+	bool "intelliactive"
+	select CPU_FREQ_GOV_INTELLIACTIVE
+	help
+	  Use the CPUFreq governor 'intelliactive' as default. This allows
+	  you to get a full dynamic cpu frequency capable system by simply
+	  loading your cpufreq low-level hardware driver, using the
+	  'intelliactive' governor for latency-sensitive workloads.
+
+config CPU_FREQ_DEFAULT_GOV_ELEMENTALX
+	bool "elementalx"
+	select CPU_FREQ_GOV_ELEMENTALX
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'elementalx' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -254,10 +270,6 @@ config GENERIC_CPUFREQ_CPU0
 
 	  If in doubt, say N.
 
-config LGE_LBFC
-	tristate "Cpu Freq Helper Driver"
-	depends on CPU_FREQ_GOV_INTERACTIVE
-
 config CPU_FREQ_GOV_BLU_ACTIVE
 	tristate "'blu_active' cpufreq policy governor"
 	help
@@ -272,6 +284,38 @@ config CPU_FREQ_GOV_BLU_ACTIVE
 	  module will be called cpufreq_blu_active.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_INTELLIACTIVE
+	tristate "'intelliactive' cpufreq policy governor"
+	help
+	  'intelliactive' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  interactive workloads.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_intelliactive.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_ELEMENTALX
+	tristate "'elementalx' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'elementalx' - This driver adds a dynamic cpufreq policy governor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_elementalx.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
+config LGE_LBFC
+	tristate "Cpu Freq Helper Driver"
+	depends on CPU_FREQ_GOV_INTERACTIVE
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
