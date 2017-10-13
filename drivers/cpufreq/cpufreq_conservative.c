@@ -16,8 +16,8 @@
 
 /* Conservative governor macros */
 #define DEF_FREQUENCY_UP_THRESHOLD		(40)
-#define DEF_FREQUENCY_DOWN_THRESHOLD		(30)
-#define DEF_FREQUENCY_STEP			(4)
+#define DEF_FREQUENCY_DOWN_THRESHOLD		(20)
+#define DEF_FREQUENCY_STEP			(3)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
 
