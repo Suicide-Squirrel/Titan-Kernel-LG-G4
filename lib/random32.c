@@ -186,7 +186,7 @@ static int __init prandom_reseed(void)
 		struct rnd_state *state = &per_cpu(net_rand_state,i);
 		u32 seeds[3];
 
-		get_random_bytes(&seeds, sizeof(seeds));
+		erandom_get_random_bytes((char *)&seeds, sizeof(seeds));
 		state->s1 = __seed(seeds[0], 2);
 		state->s2 = __seed(seeds[1], 8);
 		state->s3 = __seed(seeds[2], 16);
