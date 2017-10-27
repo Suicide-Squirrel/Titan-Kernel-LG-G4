@@ -68,8 +68,8 @@ static struct mutex gov_lock;
 #define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
-#define DEFAULT_TIMER_RATE (80 * USEC_PER_MSEC)
-#define DEFAULT_ABOVE_HISPEED_DELAY (40 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_RATE (50 * USEC_PER_MSEC)
+#define DEFAULT_ABOVE_HISPEED_DELAY (30 * USEC_PER_MSEC)
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY };
 
@@ -88,7 +88,7 @@ struct cpufreq_blu_active_tunables {
 	 * The minimum amount of time to spend at a frequency before we can ramp
 	 * down.
 	 */
-#define DEFAULT_MIN_SAMPLE_TIME (10 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (30 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
 	/*
 	 * The sample rate of the timer used to increase frequency
@@ -105,7 +105,7 @@ struct cpufreq_blu_active_tunables {
 	 * Max additional time to wait in idle, beyond timer_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (1200 * DEFAULT_TIMER_RATE)
+#define DEFAULT_TIMER_SLACK (2 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
  	/*
@@ -1124,6 +1124,7 @@ static struct cpufreq_blu_active_tunables *alloc_tunable(
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
 	tunables->go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
+	tunables->io_is_busy = 1;
 	tunables->target_loads = default_target_loads;
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
