@@ -105,7 +105,7 @@ struct cpufreq_blu_active_tunables {
 	 * Max additional time to wait in idle, beyond timer_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (1200 * DEFAULT_TIMER_RATE)
+#define DEFAULT_TIMER_SLACK (2 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
  	/*
@@ -1124,6 +1124,7 @@ static struct cpufreq_blu_active_tunables *alloc_tunable(
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
 	tunables->go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
+	tunables->io_is_busy = 1;
 	tunables->target_loads = default_target_loads;
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
@@ -1131,7 +1132,7 @@ static struct cpufreq_blu_active_tunables *alloc_tunable(
 	tunables->timer_slack_val = usecs_to_jiffies(DEFAULT_TIMER_SLACK);
 	tunables->fastlane = false;
 	tunables->fastlane_threshold = 50;
-
+	
 	spin_lock_init(&tunables->target_loads_lock);
 	spin_lock_init(&tunables->above_hispeed_delay_lock);
 
