@@ -4818,14 +4818,7 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 				now_seconds, chip->aicl_irq_count);
 #ifndef CONFIG_LGE_PM
 			pr_smb(PR_INTERRUPT, "Disable AICL rerun\n");
-			/*
-			 * Disable AICL rerun since many interrupts were
-			 * triggered in a short time
-			 */
 			chip->very_weak_charger = true;
-			rc = smbchg_hw_aicl_rerun_en(chip, false);
-			if (rc)
-				pr_err("could not enable aicl reruns: %d", rc);
 			bad_charger = true;
 #endif
 			chip->aicl_irq_count = 0;
