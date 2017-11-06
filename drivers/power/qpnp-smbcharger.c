@@ -5309,14 +5309,7 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 				elapsed_seconds, chip->first_aicl_seconds,
 				now_seconds, chip->aicl_irq_count);
 			pr_smb(PR_INTERRUPT, "Disable AICL rerun\n");
-			/*
-			 * Disable AICL rerun since many interrupts were
-			 * triggered in a short time
-			 */
 			chip->very_weak_charger = true;
-			rc = smbchg_hw_aicl_rerun_en(chip, false);
-			if (rc)
-				pr_err("could not enable aicl reruns: %d", rc);
 			bad_charger = true;
 			chip->aicl_irq_count = 0;
 		} else if ((get_prop_charge_type(chip) ==
