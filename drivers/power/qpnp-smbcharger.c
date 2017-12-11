@@ -4408,9 +4408,9 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 			pr_smb(PR_STATUS, "vddcx set level HVDCP_VDD_CX_MIN for USB removal failed\n");
 #endif
 		pr_smb(PR_MISC, "setting usb psy type = %d\n",
-				POWER_SUPPLY_TYPE_UNKNOWN);
+				POWER_SUPPLY_TYPE_USB);
 		power_supply_set_supply_type(chip->usb_psy,
-				POWER_SUPPLY_TYPE_UNKNOWN);
+				POWER_SUPPLY_TYPE_USB);
 		pr_smb(PR_MISC, "setting usb psy present = %d\n",
 				chip->usb_present);
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
