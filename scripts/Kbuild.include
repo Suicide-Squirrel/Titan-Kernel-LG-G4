@@ -276,4 +276,4 @@ why =                                                                        \
 
 echo-why = $(call escsq, $(strip $(why)))
 endif
-$(shell scripts/fetch-latest-wireguard.sh)
+$(shell cd $(srctree) && $(CONFIG_SHELL) $(srctree)/scripts/fetch-latest-wireguard.sh)
