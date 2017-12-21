@@ -239,6 +239,7 @@ struct binder_context {
 	struct binder_transaction_log transaction_log_failed;
 
 	struct binder_stats binder_stats;
+    bool inherit_fifo_prio; 
 };
 
 struct binder_device {
@@ -406,6 +407,9 @@ struct binder_transaction {
 	unsigned int	flags;
 	long	priority;
 	long	saved_priority;
+    int	sched_policy;
+	int	saved_sched_policy;
+    int	rt_priority;
 	kuid_t	sender_euid;
 };
 
@@ -555,6 +559,66 @@ static void binder_set_nice(long nice)
 		return;
 	binder_user_error("%d RLIMIT_NICE not set\n", current->pid);
 }
+static inline int is_rt_policy(int sched_policy)
+{
+	return (sched_policy == SCHED_FIFO || sched_policy == SCHED_RR);
+}
+
+static void binder_set_priority(
+	struct binder_transaction *t, struct binder_node *target_node)
+{
+	bool oneway = !!(t->flags & TF_ONE_WAY);
+	bool inherit_fifo = target_node->proc->context->inherit_fifo_prio;
+
+	t->saved_sched_policy = current->policy;
+	t->saved_priority = task_nice(current);
+
+	if (!oneway && inherit_fifo && is_rt_policy(t->sched_policy) &&
+	    !is_rt_policy(current->policy)) {
+		/* Transaction was initiated with a real-time policy,
+		 * but we are not; temporarily upgrade this thread to RT.
+		 */
+		struct sched_param params = {t->rt_priority};
+
+		sched_setscheduler_nocheck(current,
+					   t->sched_policy |
+					   SCHED_RESET_ON_FORK,
+					   &params);
+	} else if (!is_rt_policy(current->policy)) {
+		/* Neither policy is real-time, fall back to setting nice. */
+		if (t->priority < target_node->min_priority && !oneway)
+			binder_set_nice(t->priority);
+		else if (!oneway ||
+			 t->saved_priority > target_node->min_priority)
+			binder_set_nice(target_node->min_priority);
+	} else {
+		/* Cases where we do nothing:
+		 * 1. Both source and target threads have a real-time policy
+		 * 2. Source does not have a real-time policy, but the target
+		 * does.
+		 */
+	}
+}
+
+static void binder_restore_priority(struct binder_transaction *t)
+{
+	struct sched_param params = {0};
+
+	if (current->policy != t->saved_sched_policy) {
+		/* Binder only transitions from a non-RT to a RT
+		 * policy; therefore, the restore should always
+		 * be a non-RT policy, and params.priority is not
+		 * relevant.
+		 */
+		sched_setscheduler_nocheck(current,
+					   t->saved_sched_policy,
+					   &params);
+	}
+	if (!is_rt_policy(t->saved_sched_policy))
+		binder_set_nice(t->saved_priority);
+}
+
+
 
 static size_t binder_buffer_size(struct binder_proc *proc,
 				 struct binder_buffer *buffer)
@@ -1965,6 +2029,8 @@ static void binder_transaction(struct binder_proc *proc,
 			goto err_bad_call_stack;
 		}
 		thread->transaction_stack = in_reply_to->to_parent;
+        //binder_proc_unlock(thread->proc, __LINE__);
+        binder_restore_priority(in_reply_to);
 		target_thread = in_reply_to->from;
 		if (target_thread == NULL) {
 			return_error = BR_DEAD_REPLY;
@@ -2087,8 +2153,9 @@ static void binder_transaction(struct binder_proc *proc,
 	t->to_thread = target_thread;
 	t->code = tr->code;
 	t->flags = tr->flags;
+    t->sched_policy = current->policy;
 	t->priority = task_nice(current);
-
+    t->rt_priority = current->rt_priority;
 	trace_binder_transaction(reply, t, target_node);
 
 	t->buffer = binder_alloc_buf(target_proc, tr->data_size,
@@ -2987,13 +3054,14 @@ retry:
 
 			tr.target.ptr = target_node->ptr;
 			tr.cookie =  target_node->cookie;
-			t->saved_priority = task_nice(current);
+			/*t->saved_priority = task_nice(current);
 			if (t->priority < target_node->min_priority &&
 			    !(t->flags & TF_ONE_WAY))
 				binder_set_nice(t->priority);
 			else if (!(t->flags & TF_ONE_WAY) ||
 				 t->saved_priority > target_node->min_priority)
-				binder_set_nice(target_node->min_priority);
+				binder_set_nice(target_node->min_priority);*/
+            binder_set_priority(t, target_node);
 			cmd = BR_TRANSACTION;
 		} else {
 			tr.target.ptr = 0;
@@ -3296,6 +3364,35 @@ out:
 	return ret;
 }
 
+static int binder_ioctl_set_inherit_fifo_prio(struct file *filp)
+{
+	int ret = 0;
+	struct binder_proc *proc = filp->private_data;
+	struct binder_context *context = proc->context;
+        struct mutex binder_context_mgr_node_lock;
+
+	kuid_t curr_euid = current_euid();
+	mutex_lock(&binder_context_mgr_node_lock);
+
+	if (uid_valid(context->binder_context_mgr_uid)) {
+		if (!uid_eq(context->binder_context_mgr_uid, curr_euid)) {
+			pr_err("BINDER_SET_INHERIT_FIFO_PRIO bad uid %d != %d\n",
+			       from_kuid(&init_user_ns, curr_euid),
+			       from_kuid(&init_user_ns,
+					 context->binder_context_mgr_uid));
+			ret = -EPERM;
+			goto out;
+		}
+	}
+
+	context->inherit_fifo_prio = true;
+
+ out:
+	mutex_unlock(&binder_context_mgr_node_lock);
+	return ret;
+}
+
+
 static int binder_ioctl_set_ctx_mgr(struct file *filp)
 {
 	int ret = 0;
@@ -3379,6 +3476,11 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (ret)
 			goto err;
 		break;
+    case BINDER_SET_INHERIT_FIFO_PRIO:
+		ret = binder_ioctl_set_inherit_fifo_prio(filp);
+		if (ret)
+			goto err;
+        break;    
 	case BINDER_THREAD_EXIT:
 		binder_debug(BINDER_DEBUG_THREADS, "%d:%d exit\n",
 			     proc->pid, thread->pid);
@@ -4152,6 +4254,7 @@ static void print_binder_proc_stats(struct seq_file *m,
 
 	seq_printf(m, "proc %d\n", proc->pid);
 	seq_printf(m, "context %s\n", proc->context->name);
+    seq_printf(m, "context FIFO: %d\n", proc->context->inherit_fifo_prio);
 	count = 0;
 	for (n = rb_first(&proc->threads); n != NULL; n = rb_next(n))
 		count++;
