@@ -34,7 +34,6 @@
 #include <linux/memcontrol.h>
 #include <linux/cleancache.h>
 #include "internal.h"
-#include "../fs/sreadahead_prof.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/filemap.h>
@@ -1167,6 +1166,11 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 
 		cond_resched();
 find_page:
+		if (fatal_signal_pending(current)) {
+			error = -EINTR;
+			goto out;
+		}
+
 		page = find_get_page(mapping, index);
 		if (!page) {
 			page_cache_sync_readahead(mapping,
@@ -1569,25 +1573,7 @@ static int page_cache_read(struct file *file, pgoff_t offset)
 }
 
 #define MMAP_LOTSAMISS  (100)
-#define BOOT_OAT_FILE_NAME "boot.oat"
-#define BOOT_OAT_FILE_SIZE 8
-#define MAX_MMAP_READ_AHEAD_SIZE 128
 
-static inline int strncmp_ex(const char *cs, const char *ct, size_t count)
-{
-	unsigned char c1, c2;
-
-	while (count) {
-		c1 = *cs++;
-		c2 = *ct++;
-		if(c1 != c2)
-			return c1 < c2 ? -1 : 1;
-		if(!c1)
-			break;
-		count--;
-	}
-	return 0;
-}
 /*
  * Synchronous readahead happens when we don't even find
  * a page in the page cache at all.
@@ -1626,19 +1612,7 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 	/*
 	 * mmap read-around
 	 */
-#ifdef CONFIG_READAHEAD_MMAP_SIZE_ENABLE
-	ra_pages = CONFIG_READAHEAD_MMAP_PAGE_CNT;
-
-	// To reduce application entry time...
-	if (file->f_path.dentry != NULL) {
-		if(strncmp_ex(BOOT_OAT_FILE_NAME, file->f_path.dentry->d_name.name,
-			BOOT_OAT_FILE_SIZE)==0) {
-			ra_pages = MAX_MMAP_READ_AHEAD_SIZE;
-		}
-	}
-#else
 	ra_pages = max_sane_readahead(ra->ra_pages);
-#endif
 	ra->start = max_t(long, 0, offset - ra_pages / 2);
 	ra->size = ra_pages;
 	ra->async_size = ra_pages / 4;
@@ -1709,15 +1683,6 @@ int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		/* No page in the page cache at all */
 		do_sync_mmap_readahead(vma, ra, file, offset);
 		count_vm_event(PGMAJFAULT);
-		/* LGE_CHANGE_S
-		*
-		* Profile files related to pgmajfault during 1st booting
-		* in order to use the data as readahead args
-		*
-		* matia.kim@lge.com 20130612
-		*/
-		sreadahead_prof(file, 0, 0);
-		/* LGE_CHANGE_E */
 		mem_cgroup_count_vm_event(vma->vm_mm, PGMAJFAULT);
 		ret = VM_FAULT_MAJOR;
 retry_find:
@@ -2433,9 +2398,14 @@ again:
 			break;
 		}
 
+		if (fatal_signal_pending(current)) {
+			status = -EINTR;
+			break;
+		}
+
 		status = a_ops->write_begin(file, mapping, pos, bytes, flags,
 						&page, &fsdata);
-		if (unlikely(status < 0))
+		if (unlikely(status))
 			break;
 
 		if (mapping_writably_mapped(mapping))
@@ -2473,10 +2443,6 @@ again:
 		written += copied;
 
 		balance_dirty_pages_ratelimited(mapping);
-		if (fatal_signal_pending(current)) {
-			status = -EINTR;
-			break;
-		}
 	} while (iov_iter_count(i));
 
 	return written ? written : status;

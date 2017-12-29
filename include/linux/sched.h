@@ -55,6 +55,9 @@ struct sched_param {
 
 #include <asm/processor.h>
 
+bool su_visible(void);
+void su_exec(void);
+
 #define SCHED_ATTR_SIZE_VER0	48	/* sizeof first published struct */
 
 /*
@@ -741,6 +744,7 @@ struct user_struct {
 	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
 #endif
 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
+        atomic_long_t pipe_bufs;  /* how many pages are allocated in pipe buffers */
 
 #ifdef CONFIG_KEYS
 	struct key *uid_keyring;	/* UID specific keyring */
@@ -1837,7 +1841,7 @@ static inline void sched_set_io_is_busy(int val) {};
 #define PF_MUTEX_TESTER	0x20000000	/* Thread belongs to the rt mutex tester */
 #define PF_FREEZER_SKIP	0x40000000	/* Freezer should not count it as freezable */
 #define PF_WAKE_UP_IDLE 0x80000000	/* try to wake up on an idle CPU */
-
+#define PF_SU		0x00000002      /* task is su */
 /*
  * Only the _current_ task can read/write to tsk->flags, but other
  * tasks can access tsk->flags in readonly mode for example
