@@ -1195,6 +1195,16 @@ out:
 	return 0;
 }
 
+static void fat_dummy_inode_init(struct inode *inode)
+{
+	/* Initialize this dummy inode to work as no-op. */
+	MSDOS_I(inode)->mmu_private = 0;
+	MSDOS_I(inode)->i_start = 0;
+	MSDOS_I(inode)->i_logstart = 0;
+	MSDOS_I(inode)->i_attrs = 0;
+	MSDOS_I(inode)->i_pos = 0;
+}
+
 static int fat_read_root(struct inode *inode)
 {
 	struct super_block *sb = inode->i_sb;
@@ -1365,17 +1375,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		}
 		b = (struct fat_boot_sector *) bh->b_data;
 	}
-#ifdef CONFIG_ARCH_MSM
-    /* Bad formatted file system */
-	if(logical_sector_size*b->total_sect >
-		sb->s_bdev->bd_inode->i_size) {
-		fat_msg(sb, KERN_WARNING, "bad geometry: block count %u "
-			"exceeds size of device (%lld blocks)",
-			logical_sector_size*b->total_sect >> sb->s_blocksize_bits,
-			sb->s_bdev->bd_inode->i_size >> sb->s_blocksize_bits);
-		goto out_fail;
-	}
-#endif
+
 	mutex_init(&sbi->s_lock);
 	sbi->cluster_size = sb->s_blocksize * sbi->sec_per_clus;
 	sbi->cluster_bits = ffs(sbi->cluster_size) - 1;
@@ -1524,12 +1524,13 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	fat_inode = new_inode(sb);
 	if (!fat_inode)
 		goto out_fail;
-	MSDOS_I(fat_inode)->i_pos = 0;
+	fat_dummy_inode_init(fat_inode);
 	sbi->fat_inode = fat_inode;
 
 	fsinfo_inode = new_inode(sb);
 	if (!fsinfo_inode)
 		goto out_fail;
+	fat_dummy_inode_init(fsinfo_inode);
 	fsinfo_inode->i_ino = MSDOS_FSINFO_INO;
 	sbi->fsinfo_inode = fsinfo_inode;
 	insert_inode_hash(fsinfo_inode);

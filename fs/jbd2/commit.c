@@ -738,11 +738,7 @@ start_journal_io:
 				clear_buffer_dirty(bh);
 				set_buffer_uptodate(bh);
 				bh->b_end_io = journal_end_buffer_io_sync;
-#ifdef CONFIG_MACH_LGE
-				submit_bh(WRITE_SYNC | REQ_PREEMPT, bh);
-#else
 				submit_bh(WRITE_SYNC, bh);
-#endif
 			}
 			cond_resched();
 			stats.run.rs_blocks_logged += bufs;
@@ -788,7 +784,7 @@ start_journal_io:
 	commit_transaction->t_state = T_COMMIT_DFLUSH;
 	write_unlock(&journal->j_state_lock);
 
-	/*
+	/* 
 	 * If the journal is not located on the file system device,
 	 * then we must flush the file system device before we issue
 	 * the commit record
