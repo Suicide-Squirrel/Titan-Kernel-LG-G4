@@ -48,8 +48,64 @@
 
 #define USE_INT
 
-/* #define DEBUG_TIME_LOG */
-#ifdef DEBUG_TIME_LOG
+#define HTC_MODIFY
+#define HTC
+
+#ifdef HTC
+/* Release Version
+#define API_VERSION                      "1.1.19.1"
+        // 1. Upgrade to API 1.1.19
+        // 2. Implement USE_LONG_RANGING interface(disabled)
+        // 3. Improve enable time
+
+#define API_VERSION                      "1.1.19.2"
+        // 1. Mask out the delayed_work trigger in work_handler()
+        // 2. Change the delay_ms to 33ms
+        // 3. Change the time budget for Long Ranging mode to 26ms
+
+#define API_VERSION                      "1.1.20.1"
+        // 1. Improve S/W architecture regarding mode configuration
+        // 2. Config normal mode(high speed mode) as default
+        // 3. Remove unnecessary driver calls during start procedure
+        // 4. Remove the polling process while running interrupt mode
+        // 5. At request modify RANGE_MEASUREMENT_TIMES to 30
+        // 6. At request modify RANGE_MEASUREMENT_RETRY_TIMES to 39
+*/
+
+#define API_VERSION                      "1.1.20.2"
+        // 1. Error handling while enable process
+        // 2. Workaround to unclog the input sub-system issue caused
+        // by the chip not able to trigger a new interrupt due to
+        // i2c nack while performing API, clear_interrupt().
+
+#define OFFSET_CALI_TARGET_DISTANCE	     100 // Target: 100 mm
+#define RANGE_MEASUREMENT_TIMES		     30
+#define RANGE_MEASUREMENT_RETRY_TIMES    39
+#define RANGE_MEASUREMENT_OVERFLOW	     8100
+#define VL53L0_MAGIC 			         'A'
+#define VL53L0_IOCTL_GET_DATA		         _IOR(VL53L0_MAGIC, 0x01, \
+                                            VL53L0_RangingMeasurementData_t)
+#define VL53L0_IOCTL_OFFSET_CALI	         _IOR(VL53L0_MAGIC, 0x02, int)
+#define VL53L0_IOCTL_XTALK_CALI		         _IOR(VL53L0_MAGIC, 0x03, int)
+#define VL53L0_IOCTL_SET_XTALK_CALI_DISTANCE _IOR(VL53L0_MAGIC, 0x04, int)
+#define VL53L0_IOCTL_REF_SPAD_CALI           _IOR(VL53L0_MAGIC, 0x05, int)
+
+static VL53L0_RangingMeasurementData_t gs_rangeData = {
+    .RangeMilliMeter	= 0,
+    .RangeStatus		= 0,
+    .SignalRateRtnMegaCps	= 0,
+    .AmbientRateRtnMegaCps	= 0,
+    .MeasurementTimeUsec	= 0,
+    .RangeDMaxMilliMeter	= 0,
+};
+
+static uint32_t g_refSpadCount   = 0;
+static uint8_t g_isApertureSpads = 0;
+static int g_offsetMicroMeter = 0;
+static uint8_t g_VhvSettings = 0;
+static uint8_t g_PhaseCal = 0;
+static FixPoint1616_t g_XTalkCompensationRateMegaCps = 0;
+
 struct timeval start_tv, stop_tv;
 #define CALIB_MAX_SIZE 32
 #endif //HTC
@@ -3240,32 +3296,41 @@ int stmvl53l0_setup(struct stmvl53l0_data *data)
     mutex_init(&data->work_mutex);
 
 #ifdef USE_INT
-	/* init interrupt */
-	gpio_request(data->irq_gpio, "vl53l0_gpio_int");
-	gpio_direction_input(data->irq_gpio);
-	irq = gpio_to_irq(data->irq_gpio);
-	if (irq < 0) {
-		vl53l0_errmsg("filed to map GPIO: %d to interrupt:%d\n",
-			data->irq_gpio, irq);
-	} else {
-		vl53l0_dbgmsg("register_irq:%d\n", irq);
-		/* IRQF_TRIGGER_FALLING- poliarity:0 IRQF_TRIGGER_RISNG -
-		 * poliarty:1
-		 */
-		rc = request_threaded_irq(irq, NULL,
-				stmvl53l0_interrupt_handler,
-				IRQF_TRIGGER_FALLING|IRQF_ONESHOT,
-				"vl53l0_interrupt",
-				(void *)data);
-		if (rc) {
-			vl53l0_errmsg(
-"%d, Could not allocate STMVL53L0_INT ! result:%d\n",  __LINE__, rc);
-			free_irq(irq, data);
-			goto exit_free_irq;
-		}
-	}
-	data->irq = irq;
-	vl53l0_errmsg("interrupt is hooked\n");
+    /* init interrupt */
+    if (gpio_is_valid(data->laser_irq_gpio)) {
+        rc = gpio_request(data->laser_irq_gpio, "vl53l0_gpio_int");
+        if (rc) {
+            vl53l0_errmsg("request irq gpio fail\n");
+        }
+        gpio_direction_input(data->laser_irq_gpio);
+    } else {
+        E("irq_gpio is not valid\n");
+    }
+    data->irq = gpio_to_irq(data->laser_irq_gpio);
+    if (data->irq < 0) {
+        vl53l0_errmsg("filed to map GPIO: %d to interrupt: %d\n",
+                data->laser_irq_gpio, data->irq);
+    } else {
+        vl53l0_dbgmsg("register_irq: %d\n", data->irq);
+        /* IRQF_TRIGGER_FALLING	- poliarity:0
+         * IRQF_TRIGGER_RISNG	- poliarity:1 */
+        rc = request_threaded_irq(data->irq, NULL, stmvl53l0_interrupt_handler,
+                //IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+                IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+                "vl53l0_interrupt", (void *)data);
+        if (rc) {
+            vl53l0_errmsg("%d, Could not allocate STMVL53L0_INT"
+                    " ! result:%d\n", __LINE__, rc);
+            free_irq(data->irq, data);
+            goto exit_free_irq;
+        }
+    }
+    vl53l0_errmsg("interrupt is hooked\n");
+#ifdef HTC
+    /* The irq is default on after request_threaded_irq() is called,
+     * so it needs to be disabled right after the functioned called.*/
+    disable_irq(data->irq);
+#endif // HTC
 #else
 
     init_waitqueue_head(&data->poll_thread_wq);
@@ -3479,4 +3544,3 @@ MODULE_VERSION(DRIVER_VERSION);
 
 module_init(stmvl53l0_init);
 module_exit(stmvl53l0_exit);
-
