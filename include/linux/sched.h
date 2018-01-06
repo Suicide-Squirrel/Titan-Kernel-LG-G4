@@ -1596,6 +1596,12 @@ struct task_struct {
 	unsigned int	sequential_io;
 	unsigned int	sequential_io_avg;
 #endif
+#ifdef CONFIG_TASK_CPUFREQ_STATS
+	struct task_cpufreq_stats cpufreq_stats[NR_CPUS];
+#endif
+
+	/* CPU-bound kernel thread */
+	bool kthread_per_cpu;
 };
 
 /* Future-safe accessor for struct task_struct's cpus_allowed. */
