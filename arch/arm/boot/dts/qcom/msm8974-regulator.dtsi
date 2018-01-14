@@ -15,8 +15,8 @@
 
 &pm8941_lsid1 {
 	pm8941_boost: regulator@a000 {
-		regulator-min-microvolt = <4900000>;
-		regulator-max-microvolt = <5000000>;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5050000>;
 		qcom,enable-time = <500>;
 		status = "okay";
 	};
@@ -585,8 +585,8 @@
 };
 
 &pm8941_chg_boost {
-	regulator-min-microvolt = <4900000>;
-	regulator-max-microvolt = <5000000>;
+	regulator-min-microvolt = <5000000>;
+	regulator-max-microvolt = <5050000>;
 	regulator-name = "8941_smbb_boost";
 };
 
