@@ -624,7 +624,7 @@ static void mdss_fb_ad_set_backlight(struct msm_fb_data_type *mfd, int brightnes
 {
     int main_bl, sub_bl;
 
-    if(brightness <= 0)  // display off case
+    if(brightness <= 10)  // display off case
         return;
 
     if (mfd->panel_info->lge_pan_info.blmap)
