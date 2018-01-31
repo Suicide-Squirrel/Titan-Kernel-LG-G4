@@ -178,6 +178,7 @@ void send_uevent_lpwg(struct i2c_client *client, int type)
 			== UEVENT_IDLE) {
 		atomic_set(&ts->state.uevent, UEVENT_BUSY);
 		send_uevent(&client->dev, lpwg_uevent[type-1]);
+                atomic_set(&ts->state.uevent_state, UEVENT_IDLE);
 	}
 
 	if (type == LPWG_DOUBLE_TAP) {
@@ -4500,6 +4501,7 @@ static const struct dev_pm_ops touch_pm_ops = {
 
 static struct i2c_device_id lge_ts_id[] = {
 	{LGE_TOUCH_NAME, 0 },
+	{ }
 };
 
 static struct i2c_driver lge_touch_driver = {
