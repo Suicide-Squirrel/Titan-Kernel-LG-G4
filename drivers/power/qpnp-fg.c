@@ -1945,7 +1945,6 @@ out:
 		msecs_to_jiffies(TEMP_PERIOD_UPDATE_MS));
 #else
 	if (  temp == BATT_TEMP_ON_MISSING) {
-		pr_info("battery temp  missing\n");
 		schedule_delayed_work(
 			&chip->update_temp_work,
 			msecs_to_jiffies(TEMP_PERIOD_MISSING_UPDATE_MS));
