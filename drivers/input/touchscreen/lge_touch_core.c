@@ -1720,9 +1720,7 @@ int ghost_detect_solution(struct lge_touch_data *ts)
 
 	if (ts_ghost->pressure_high_chk
 			&& ts_ghost->pressure_high) {
-		TOUCH_D(DEBUG_BASE_INFO, "z value check more than 250 .\n");
 		ts_ghost->pressure_high = false;
-		goto out_need_soft_reset;
 	}
 
 	/* reduce coupling , OTG */
