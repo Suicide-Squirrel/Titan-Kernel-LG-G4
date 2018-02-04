@@ -1780,9 +1780,6 @@ out_need_to_rebase:
 out_need_to_debounce:
 	return NEED_TO_OUT;
 
-out_need_soft_reset:
-	return NEED_SOFT_RESET;
-
 error:
 	return ERROR_CASE;
 }
