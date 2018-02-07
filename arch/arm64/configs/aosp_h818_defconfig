@@ -401,7 +401,6 @@ CONFIG_SECCOMP=y
 #
 # Boot options
 #
-CONFIG_CMDLINE=""
 CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE=y
 CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES="msm8992-p1_global_com-rev-a msm8992-p1_global_com-rev-b msm8992-p1_global_com-rev-c msm8992-p1_global_com-rev-10"
 # CONFIG_EFI is not set
