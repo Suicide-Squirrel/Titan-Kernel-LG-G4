@@ -462,8 +462,8 @@ static void do_input_boost(struct work_struct *work)
 	do_stune_boost("top-app", dynamic_stune_boost);
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
-	queue_delayed_work(cpu_boost_wq, &input_boost_rem,
-					msecs_to_jiffies(input_boost_ms));
+	queue_delayed_work(system_power_efficient_wq,
+		&input_boost_rem, msecs_to_jiffies(input_boost_ms));
 }
 
 static void do_input_boost_multi(struct work_struct *work)
