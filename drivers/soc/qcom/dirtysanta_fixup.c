@@ -18,6 +18,7 @@
 #include <linux/err.h>
 #include <linux/device.h>
 #include <linux/sysfs.h>
+#include <linux/stat.h>
 #include <linux/ctype.h>
 #include <soc/qcom/smem.h>
 
