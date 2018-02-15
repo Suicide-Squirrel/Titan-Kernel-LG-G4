@@ -13,7 +13,7 @@ config FORCE_FAST_CHARGE
 	default y
 	help
 	  A simple sysfs interface to increase input current limit to
-	  900mA when charging via USB.
+	  1000mA when charging via USB.
 
 config POWER_SUPPLY_DEBUG
 	bool "Power supply debug"

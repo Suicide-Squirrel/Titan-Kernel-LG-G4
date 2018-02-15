@@ -2232,7 +2232,7 @@ static void smb135x_external_power_changed(struct power_supply *psy)
 		mutex_lock(&chip->current_change_lock);
 #ifdef CONFIG_FORCE_FAST_CHARGE
 		if (force_fast_charge)
-			chip->usb_psy_ma = 900;
+			chip->usb_psy_ma = 1000;
 		else
 #endif
 			chip->usb_psy_ma = current_limit;
