@@ -124,8 +124,8 @@ static int __init dirtysanta_fixup_msm_modem(void)
 	}
 
 	if(size<sizeof(struct lge_smem_vendor0)) {
-		pr_err("DirtySanta: Memory area returned by smem_get_entry() too small\n");
-		return -ENOMEM;
+		pr_err("DirtySanta: dirtysanta_fixup_msm_modem: Memory area returned by smem_get_entry() too small\n");
+		//return -ENOMEM;
 	}
 
 	if(!sim_num||!ds_dev_name[0]) {
@@ -139,6 +139,8 @@ static int __init dirtysanta_fixup_msm_modem(void)
 
 	strcpy(ptr->lg_model_name, ds_dev_name);
 	ptr->sim_num=sim_num;
+
+	pr_info("DirtySanta: written model to smem: %s, written sim count to smem: %d, dev_val: %s, sim_val: %d\n", ptr->lg_model_name, ptr->sim_num, ds_dev_name, sim_num);
 
 	return 0;
 }
@@ -180,8 +182,8 @@ static ssize_t dirtysanta_show(struct device *dev, attr_type *attr, char *buf)
 	}
 
 	if(size<sizeof(struct lge_smem_vendor0)) {
-		pr_err("DirtySanta: Memory area returned by smem_get_entry() too small\n");
-		return -ENOMEM;
+		pr_err("DirtySanta: dirtysanta_show: Memory area returned by smem_get_entry() too small\n");
+		//return -ENOMEM;
 	}
 
 	switch(attr-attrs) {
@@ -202,12 +204,12 @@ const char *buf, size_t len)
 
 	if(IS_ERR_OR_NULL(ptr=smem_get_entry(SMEM_ID_VENDOR0, &size, 0, SMEM_ANY_HOST_FLAG))) {
 		pr_info("DirtySanta: Qualcomm smem not initialized.\n");
-		return -EFAULT;
+		//return -EFAULT;
 	}
 
 	if(size<sizeof(struct lge_smem_vendor0)) {
-		pr_err("DirtySanta: Memory area returned by smem_get_entry() too small\n");
-		return -ENOMEM;
+		pr_err("DirtySanta: dirtysanta_store: Memory area returned by smem_get_entry() too small\n");
+		//return -ENOMEM;
 	}
 
 	switch(attr-attrs) {
