@@ -1135,7 +1135,10 @@ static int lpwg_control(struct synaptics_ts_data *ts, int mode)
 		if (is_product(ts, "PLG446", 6)
 				|| is_product(ts, "PLG468", 6)) {
 			if (lpwg_by_lcd_notifier)
-				tci_control(ts, PARTIAL_LPWG_ON, 2);
+				TOUCH_I(
+						"Partial LPWG doens't work after LPWG ON command\n");
+			else
+				tci_control(ts, PARTIAL_LPWG_ON, 1);
 		}
 		break;
 
@@ -1169,7 +1172,10 @@ static int lpwg_control(struct synaptics_ts_data *ts, int mode)
 		if (is_product(ts, "PLG446", 6)
 				|| is_product(ts, "PLG468", 6)) {
 			if (lpwg_by_lcd_notifier)
-				tci_control(ts, PARTIAL_LPWG_ON, 2);
+				TOUCH_I(
+						"Partial LPWG doens't work after LPWG ON command\n");
+			else
+				tci_control(ts, PARTIAL_LPWG_ON, 1);
 		}
 		break;
 
