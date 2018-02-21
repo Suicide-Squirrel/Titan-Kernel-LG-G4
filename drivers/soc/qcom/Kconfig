@@ -688,4 +688,29 @@ config DIRTYSANTA_FIXUP_SYSFS
 	help
 	  Include sysfs interface for DirtySanta modem fixup.
 
+config USU
+	bool "Special detection method for UsU unlocked devices"
+	default n
+	help
+	  This detects UsU devices and prepare the kernel cmdline and
+          whatever needed to bring up the REAL device model name after
+	  UsU has been flashed.
+
+config USU_PARTITION
+	string "UsU partition holding REAL device information"
+	depends on USU
+	default ""
+	help
+	  The UsU partition holds at a specific offset (defined in 
+	  USU_PARTITION_OFFSET) the real model name. 
+	  Define the full path (do not use bootdevice symlink) to the
+	  partition.
+
+config USU_PARTITION_OFFSET
+	int "UsU partition offset where the real model name is set"
+	depends on USU_PARTITION
+	default "0"
+	help
+	  The UsU partition offset holds the real device model name.
+
 endif # ARCH_MSM
