@@ -31,9 +31,9 @@ static size_t usu_offset __initdata=3145722;
 static char usu_model[200] __initdata="undef";
 struct file *f;
 
-int __init file_read(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
+int __init file_read(struct file *file, size_t offset, unsigned char *data, unsigned int size) 
 {
-    printk("UsU: (%s) reading offset %llu\n", __func__, offset);
+    printk("UsU: (%s) reading offset %lu\n", __func__, offset);
 /**
     mm_segment_t oldfs;
     int ret;
