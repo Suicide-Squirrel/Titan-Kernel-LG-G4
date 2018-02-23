@@ -11,8 +11,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
-
 #include <linux/fs.h>
 #include <asm/segment.h>
 #include <asm/uaccess.h>
@@ -27,41 +25,43 @@
 #include <linux/stat.h>
 #include <linux/ctype.h>
 
-
 static char usu_partition[200] __initdata=CONFIG_USU_PARTITION;
-//static long usu_offset __initdata=CONFIG_USU_PARTITION_OFFSET;
-static long usu_offset __initdata=12345;
+//static size_t usu_offset[200] __initdata=CONFIG_USU_PARTITION_OFFSET;
+static size_t usu_offset __initdata=3145722;
 static char usu_model[200] __initdata="undef";
-
 struct file *f;
 
 int __init file_read(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
 {
+    printk("UsU: (%s) reading offset %llu\n", __func__, offset);
+/**
     mm_segment_t oldfs;
     int ret;
 
     oldfs = get_fs();
     set_fs(get_ds());
 
-    printk("UsU: partition to read %s, offset %lu", usu_partition, usu_offset);
-    //printk("UsU: partition offset %lu", usu_offset);
     ret = vfs_read(file, data, size, &offset);
 
     set_fs(oldfs);
     return ret;
+**/
+    return 0;
 }  
 
 void __init file_close(struct file *file) 
 {
-    filp_close(file, NULL);
+    printk("UsU (%s): closing disk\n", __func__);
+    //filp_close(file, NULL);
 }
 
 static int __init get_usu_model(void)
 {
+    pr_info("UsU (%s): usu_partition: %s, usu_offset: %lu, usu_model: %s\n", __func__, usu_partition, usu_offset, usu_model);
     f = filp_open(usu_partition,O_RDONLY,0644);
     file_read(f, usu_offset, usu_model, 7);
     file_close(f);
-    printk("UsU: model: %s\n", usu_model);
+    printk("UsU (%s): model: %s\n", __func__, usu_model);
     return 0;
 }
 
