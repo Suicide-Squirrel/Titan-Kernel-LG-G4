@@ -57,11 +57,11 @@ CONFIG_DIRTYSANTA_FIXUP=y
 # CONFIG_DIRTYSANTA_FIXUP_SIMCOUNT is not set
 
 # Fix the model (UsU)
-#CONFIG_USU=y
+CONFIG_USU=y
 #CONFIG_USU_PARTITION="/dev/block/bootdevice/by-name/raw_resources"
-#CONFIG_USU_PARTITION="/dev/block/mmcblk0p45"
+CONFIG_USU_PARTITION="/dev/block/mmcblk0p45"
 #CONFIG_USU_PARTITION="/dev/block/platform/f9824900.sdhci/by-name/raw_resources"
-#CONFIG_USU_PARTITION_OFFSET=3145722
+CONFIG_USU_PARTITION_OFFSET=3145722
 
 #
 # General setup
