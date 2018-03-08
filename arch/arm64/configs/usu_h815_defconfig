@@ -51,7 +51,7 @@ CONFIG_CMDLINE_SAR_SEARCH2=" slub_debug=FZP"
 CONFIG_CMDLINE_SAR_REPLACE2=" "
 
 # Fix the modem memory (UsU)
-CONFIG_DIRTYSANTA_FIXUP=y
+# CONFIG_DIRTYSANTA_FIXUP=y
 # CONFIG_DIRTYSANTA_FIXUP_SYSFS is not set
 # CONFIG_DIRTYSANTA_FIXUP_DEVICENAME is not set
 # CONFIG_DIRTYSANTA_FIXUP_SIMCOUNT is not set
@@ -61,6 +61,8 @@ CONFIG_USU=y
 #CONFIG_USU_PARTITION="/dev/block/bootdevice/by-name/raw_resources"
 CONFIG_USU_PARTITION="/dev/block/mmcblk0p45"
 #CONFIG_USU_PARTITION="/dev/block/platform/f9824900.sdhci/by-name/raw_resources"
+#CONFIG_USU_PARTITION="/dev/block/platform/soc.0/f9824900.sdhci/mmcblk0p45"
+#CONFIG_USU_PARTITION="/dev/block/platform/soc.0/f9824900.sdhci/by-name/raw_resources"
 CONFIG_USU_PARTITION_OFFSET=3145722
 
 #
