@@ -41,7 +41,7 @@
 #define CRYPTO_CONFIG_RESET 0xE001F
 #define QCE_MAX_NUM_DSCR    0x500
 #define QCE_SECTOR_SIZE	    0x200
-#define CE_CLK_100MHZ	100000000
+#define CE_CLK_160MHZ	160000000
 #define CE_CLK_DIV	1000000
 
 static DEFINE_MUTEX(bam_register_lock);
@@ -5207,7 +5207,7 @@ static int __qce_get_device_tree_data(struct platform_device *pdev,
 				"qcom,ce-opp-freq",
 				&pce_dev->ce_opp_freq_hz)) {
 		pr_info("CE operating frequency is not defined, setting to default 100MHZ\n");
-		pce_dev->ce_opp_freq_hz = CE_CLK_100MHZ;
+		pce_dev->ce_opp_freq_hz = CE_CLK_160MHZ;
 	}
 	pce_dev->ce_sps.dest_pipe_index	= 2 * pce_dev->ce_sps.pipe_pair_index;
 	pce_dev->ce_sps.src_pipe_index	= pce_dev->ce_sps.dest_pipe_index + 1;
