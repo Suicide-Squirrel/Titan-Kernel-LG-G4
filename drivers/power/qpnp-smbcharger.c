@@ -5452,7 +5452,6 @@ static irqreturn_t power_ok_handler(int irq, void *_chip)
 #endif
 
 	smbchg_read(chip, &reg, chip->misc_base + RT_STS, 1);
-	pr_smb(PR_INTERRUPT, "triggered: 0x%02x\n", reg);
 
 #ifdef CONFIG_LGE_PM_EXTERNAL_BATTERY_FOR_VZW
 	if (reg == 1 && chip->check_vzw_external_battery == true) {
@@ -5584,8 +5583,6 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 	static bool check_flag = true;
 #endif
 
-	pr_smb(PR_STATUS, "chip->usb_present = %d usb_present = %d\n",
-			chip->usb_present, usb_present);
 #ifdef CONFIG_LGE_PM_UV_WAKELOCK
 	if ( (chip->uevent_wake_lock.ws.name) != NULL )
 		wake_lock_timeout(&chip->uevent_wake_lock, HZ*3);
