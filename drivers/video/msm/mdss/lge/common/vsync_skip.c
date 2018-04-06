@@ -71,7 +71,7 @@ ssize_t fps_ratio_show(struct device *dev,
 }
 
 static struct fb_info **fbi_list;
-int fps_cnt_before = 0;
+int fps_cnt_before_lge = 0;
 
 ssize_t fps_fcnt_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -99,8 +99,8 @@ ssize_t fps_fcnt_show(struct device *dev,
 	if (ctl == NULL)
 		goto ERROR;
 
-	r = snprintf(buf, PAGE_SIZE, "%d\n", ctl->play_cnt-fps_cnt_before);
-	fps_cnt_before = ctl->play_cnt;
+	r = snprintf(buf, PAGE_SIZE, "%d\n", ctl->play_cnt-fps_cnt_before_lge);
+	fps_cnt_before_lge = ctl->play_cnt;
 	return r;
 
 ERROR:
