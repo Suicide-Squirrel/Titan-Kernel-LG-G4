@@ -365,8 +365,13 @@ static int touch_init_input(struct touch_core_data *ts)
 	set_bit(INPUT_PROP_DIRECT, input->propbit);
 	input_set_abs_params(input, ABS_MT_POSITION_X, 0,
 			ts->caps.max_x, 0, 0);
+#ifdef CONFIG_MACH_MSM8992_PPLUS
+	input_set_abs_params(input, ABS_MT_POSITION_Y, 80,
+			2800, 0, 0);
+#else
 	input_set_abs_params(input, ABS_MT_POSITION_Y, 0,
 			ts->caps.max_y, 0, 0);
+#endif
 	input_set_abs_params(input, ABS_MT_PRESSURE, 0,
 			ts->caps.max_pressure, 0, 0);
 	input_set_abs_params(input, ABS_MT_WIDTH_MAJOR, 0,
