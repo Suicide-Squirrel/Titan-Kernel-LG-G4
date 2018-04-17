@@ -3884,7 +3884,9 @@ static int mdss_mdp_pp_ioctl(struct msm_fb_data_type *mfd,
 	struct msmfb_mdp_pp mdp_pp;
 	u32 copyback = 0;
 	u32 copy_from_kernel = 0;
+#ifdef CONFIG_LGE_PARTIAL_UPDATE
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
+#endif
 
 	ret = copy_from_user(&mdp_pp, argp, sizeof(mdp_pp));
 	if (ret)
