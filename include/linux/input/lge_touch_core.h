@@ -316,7 +316,6 @@ struct state_info {
 	atomic_t proximity;
 	atomic_t hallic;
 	atomic_t uevent;
-	atomic_t uevent_state;
 	atomic_t pm;
 	atomic_t rebase;
 	atomic_t incoming_call;
