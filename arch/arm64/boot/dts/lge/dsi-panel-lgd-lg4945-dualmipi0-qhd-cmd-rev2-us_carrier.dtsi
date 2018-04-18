@@ -1,0 +1,115 @@
+&dsi_dual_lgd_sic_cmd_0 {
+	qcom,mdss-dsi-h-front-porch-rev2 = <60>;
+	qcom,mdss-dsi-h-back-porch-rev2 = <88>;
+	qcom,mdss-dsi-v-back-porch-rev2 = <250>;
+	qcom,mdss-dsi-v-front-porch-rev2 = <56>;
+
+	qcom,mdss-dsi-on-command-rev2 = [ /*initset v0.9*/
+		/* Page Address Set */
+		39 01 00 00 00 00 05 2B 00 00 0A 9F
+		/* Manufacturer Command Protection */
+		15 01 00 00 00 00 02 B0 AC
+		/* Tearing Effect Line on */
+		15 01 00 00 00 00 02 35 00
+		/* Write Control Display */
+		15 01 00 00 00 00 02 53 24
+		/* Write Display Brightness */
+		15 01 00 00 00 00 02 51 FF
+		/* Write Content Adaptive Brightness Control */
+		15 01 00 00 00 00 02 55 81
+		/* Display Control 1 */
+		39 01 00 00 00 00 08 B3 0A 14 28 C8 1A 94 02
+		/* Display Control 2 */
+		39 01 00 00 00 00 0B B4 91 08 0A 0A 0A 0A 14 14 14 14
+		/* Display Control 3 */
+		39 01 00 00 00 00 0F B5 28 10 20 C8 22 09 09 01 01 00 68 E8 05 05
+		/* Display Control 4 */
+/**/		39 01 00 00 00 00 06 B6 16 8F 00 08 0A
+		/* Panel Setting */
+		39 01 00 00 00 00 06 B8 60 91 A7 90 01
+		/* Internal Oscillator Setting */
+		39 01 00 00 00 00 03 C0 91 00
+		/* Power Control 1 */
+		39 01 00 00 00 00 06 C1 01 00 F0 C2 CF
+		/* Power Control 2 */
+		15 01 00 00 00 00 02 C2 CC
+		/* Power Control 3 */
+/**/		39 01 00 00 00 00 06 C3 35 88 22 26 21
+		/* Power Control 5 */
+		39 01 00 00 00 00 08 C5 22 20 A0 25 14 34 02
+		/* Abrupt Power Off Control */
+		15 01 00 00 00 00 02 C9 9F
+		/* U2 Control */
+		39 01 00 00 00 00 0C CB 86 46 0F 77 06 01 16 0F 08 0A 36
+		/* Touch Control */
+		39 01 00 00 00 00 10 CD F0 4C 0D 3F 4F 22 22 01 0A 01 02 57 A8 64 64
+		/* Positive Gamma Curve for Red */
+		39 01 00 00 00 00 0E D0 00 12 1C 2B 36 3E 53 4B 41 36 2A 24 03
+		/* Negative Gamma Curve for Red */
+		39 01 00 00 00 00 0E D1 00 12 1C 2B 36 3E 53 4B 41 36 2A 24 03
+		/* Positive Gamma Curve for  Green */
+		39 01 00 00 00 00 0E D2 00 12 1E 2B 36 3E 51 48 3C 2C 15 00 03
+		/* Negative Gamma Curve for Green */
+		39 01 00 00 00 00 0E D3 00 12 1E 2B 36 3E 51 48 3C 2C 15 00 03
+		/* Positive Gamma Curve for Blue */
+		39 01 00 00 00 00 0E D4 00 12 1F 2C 37 3F 50 47 3A 2C 15 00 03
+		/* Negative Gamma Curve for Blue */
+		39 01 00 00 00 00 0E D5 00 12 1F 2C 37 3F 50 47 3A 2C 15 00 03
+		/* Left Side GIP Pad Setting */
+		39 01 00 00 00 00 16 D6 22 2D 4C 6E 22 22 61 65 67 69 6B 22 71 55 55 55 03 55 55 55 03
+		/* Right Side GIP Pad Setting */
+		39 01 00 00 00 00 16 D7 22 2D 4C 6E 22 22 60 64 66 68 6a 22 71 55 55 55 03 55 55 55 03
+		/* Left Side MUX Pad Setting */
+		39 01 00 00 00 00 07 D8 78 77 76 75 74 73
+		/* Right Side MUX Pad Setting */
+		39 01 00 00 00 00 07 D9 78 77 76 75 74 73
+		/* LFD Control */
+		39 01 00 00 00 00 08 CA BD BD CC 0C 00 93 00
+		/* OTP1 */
+		39 01 00 00 00 00 04 E8 00 00 00
+		/* Image Enhancement Control */
+		15 01 00 00 00 00 02 F0 62
+		/* Image Enhancement Control SH */
+		39 01 00 00 00 00 05 F2 01 00 04 00
+		/* Image Enhancement Control CSC */
+		39 01 00 00 00 00 18 F3 00 43 83 C0 FF 30 00 40 80 C0 FF 50 00 3C 7C BC FF 00 00 40 80 C0 FF
+		/* Backlight Control */
+		39 01 00 00 00 00 07 B9 13 00 00 78 7F 80
+		/* SRE Control */
+		39 01 00 00 00 00 19 FC 0F 60 75 87 A8 C0 E4 F0 00 40 70 90 A0 B0 C0 F0 00 20 40 60 80 A0 C0 E0
+		/* Switchable Power Domain Control */
+/**/		39 01 00 00 00 00 03 C6 04 55
+		/* Touch timing setting to prevent tearing */
+/**/		39 01 00 00 00 00 03 44 00 00
+		/* Display On */
+		05 01 00 00 00 00 01 29
+		/* Sleep Out + 100ms */
+		05 01 00 00 64 00 01 11
+	];
+
+	lge,mode-change-cmds-proximity-u3-to-u2-rev2 = [
+		/* Write Content Adaptive Brightness Control */
+		15 01 00 00 00 00 02 55 00
+		/* Tearing Effect Line Off */
+		05 01 00 00 00 00 01 34
+		/* Memory Option Setting */
+		39 01 00 00 00 00 06 E7 00 00 00 00 00
+		/* Switchable Power Domain Control */
+/**/		39 01 00 00 00 00 03 C6 04 55
+		/* Page Address Set */
+		39 01 00 00 00 00 05 2B 00 00 00 9F
+		/* Partial Area */
+		39 01 00 00 00 00 05 30 00 00 00 9F
+		/* Partial Mode On + 20ms */
+		05 01 00 00 14 00 01 12
+	];
+};
+
+&mdss_dsi0 {
+	qcom,panel-supply-entries {
+		qcom,panel-supply-entry@0 {
+			qcom,supply-min-voltage-rev2 = <3300000>;
+			qcom,supply-max-voltage-rev2 = <3300000>;
+		};
+	};
+};

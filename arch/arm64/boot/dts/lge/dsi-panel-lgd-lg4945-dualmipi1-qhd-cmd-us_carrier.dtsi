@@ -11,16 +11,11 @@
  */
 
 &mdss_mdp {
-	qcom,mdss-pref-prim-intf = "dsi";
-	qcom,mdss-has-source-split;
-	qcom,mdss-has-dst-split;
-	/*/delete-property/ qcom,mdss-ad-off;*/
-
-	dsi_dual_lgd_sic_cmd_0: qcom,mdss_dsi_lgd_lg4945_1440p_mipi0_cmd {
-		qcom,mdss-dsi-panel-name = "LGD SIC LG4945 INCELL 1440p Dual 0 cmd mode dsi panel";
-		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	dsi_dual_lgd_sic_cmd_1: qcom,mdss_dsi_lgd_lg4945_1440p_mipi1_cmd {
+		qcom,mdss-dsi-panel-name = "LGD SIC LG4945 INCELL 1440p Dual 1 cmd mode dsi panel";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi1>;
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
-		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-destination = "display_2";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
@@ -48,7 +43,7 @@
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;
 		qcom,cmd-sync-wait-broadcast;
-
+		qcom,cmd-sync-wait-trigger;
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -65,7 +60,6 @@
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
-		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,mdss-dsi-te-pin-select = <1>;
 		qcom,mdss-dsi-wr-mem-start = <0x2c>;
 		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
@@ -78,7 +72,6 @@
 		/* Partial update */
 		qcom,partial-update-enabled;
 		qcom,partial-update-roi-merge;
-		qcom,panel-roi-alignment = <8 8 4 4 32 32>;
 		qcom,mdss-dsi-on-command = [ /*initset v0.9*/
 			/* Page Address Set */
 			39 01 00 00 00 00 05 2B 00 00 0A 9F
@@ -113,7 +106,7 @@
 			/* Power Control 3 */
 			39 01 00 00 00 00 06 C3 35 88 22 26 21
 			/* Power Control 5 */
-			39 01 00 00 00 00 08 C5 24 20 A0 25 14 32 02
+			39 01 00 00 00 00 08 C5 24 20 A0 25 14 34 02
 			/* Abrupt Power Off Control */
 			15 01 00 00 00 00 02 C9 9F
 			/* U2 Control */
@@ -121,17 +114,17 @@
 			/* Touch Control */
 			39 01 00 00 00 00 10 CD F0 4C 0D 3F 4F 22 22 01 0A 01 02 57 A8 64 64
 			/* Positive Gamma Curve for Red */
-			39 01 00 00 00 00 0E D0 00 12 1C 2B 36 3E 53 4B 41 36 2C 2C 03
+			39 01 00 00 00 00 0E D0 00 12 1C 2B 36 3E 53 4B 41 36 2A 24 03
 			/* Negative Gamma Curve for Red */
-			39 01 00 00 00 00 0E D1 00 12 1C 2B 36 3E 53 4B 41 36 2C 2C 03
+			39 01 00 00 00 00 0E D1 00 12 1C 2B 36 3E 53 4B 41 36 2A 24 03
 			/* Positive Gamma Curve for  Green */
-			39 01 00 00 00 00 0E D2 00 12 1E 2B 36 3E 51 48 3C 2C 17 08 03
+			39 01 00 00 00 00 0E D2 00 12 1E 2B 36 3E 51 48 3C 2C 15 00 03
 			/* Negative Gamma Curve for Green */
-			39 01 00 00 00 00 0E D3 00 12 1E 2B 36 3E 51 48 3C 2C 17 08 03
+			39 01 00 00 00 00 0E D3 00 12 1E 2B 36 3E 51 48 3C 2C 15 00 03
 			/* Positive Gamma Curve for Blue */
-			39 01 00 00 00 00 0E D4 00 12 1F 2C 37 3F 50 47 3A 2C 17 08 03
+			39 01 00 00 00 00 0E D4 00 12 1F 2C 37 3F 50 47 3A 2C 15 00 03
 			/* Negative Gamma Curve for Blue */
-			39 01 00 00 00 00 0E D5 00 12 1F 2C 37 3F 50 47 3A 2C 17 08 03
+			39 01 00 00 00 00 0E D5 00 12 1F 2C 37 3F 50 47 3A 2C 15 00 03
 			/* Left Side GIP Pad Setting */
 			39 01 00 00 00 00 16 D6 22 2D 4C 6E 22 22 61 65 67 69 6B 22 71 55 55 55 03 55 55 55 03
 			/* Right Side GIP Pad Setting */
@@ -285,10 +278,10 @@
 
 		qcom,ad-control-dsi-state = "dsi_lp_mode";
 		lge,ad-cmds-off = [
-		       15 01 00 00 00 00 02 55 81
+		    15 01 00 00 00 00 02 55 81
 		];
 		lge,ad-cmds-on = [
-		       15 01 00 00 00 00 02 55 80
+		    15 01 00 00 00 00 02 55 80
 		];
 
 		qcom,img-tune-control-dsi-state = "dsi_lp_mode";
@@ -371,24 +364,8 @@
 	};
 };
 
-&pmx_mdss {
-	qcom,num-grp-pins = <3>;
-	qcom,pins = <&gp 78>, <&gp 89>, <&gp 110>;
-};
-
-&mdss_fb0 {
-	qcom,memory-reservation-size = <0x1C20000>;
-};
-
-&mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_dual_lgd_sic_cmd_0>;
-	pinctrl-names = "mdss_default", "mdss_sleep";
-
-	/* pinctrl-0 = <&mdss_dsi_active>; */
-	/* pinctrl-1 = <&mdss_dsi_suspend>; */
-	/* Add TE pin control status on the PINCTRL structure */
-	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
-	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+&mdss_dsi1 {
+	qcom,dsi-pref-prim-pan = <&dsi_dual_lgd_sic_cmd_1>;
 
 	qcom,platform-reset-gpio = <&msm_gpio 78 0>;
 	/* qcom,dsi-panel-bias-vreg; */
@@ -416,41 +393,7 @@
 	};
 };
 
-/* RPM controlled regulators: */
-
-&rpm_bus {
-	rpm-regulator-ldoa22 {
-		status = "okay";
-		pm8994_l22: regulator-l22 {
-			regulator-min-microvolt = <3000000>;
-			regulator-max-microvolt = <3300000>;
-			qcom,init-voltage = <3000000>;
-			status = "okay";
-		};
-	};
-};
-
-&spmi_bus {
-	qcom,pmi8994@3 {
-		qcom,leds@d800 {
-			qcom,fs-curr-ua = <20000>;
-			qcom,ibb-pwrup-dly = <1>;
-			qcom,led-strings-list = [00 01 02];
-			qcom,en-cabc;
-			qcom,switch-freq-khz = <600>;
-		};
-	};
-};
-
-&i2c_5 {
-    p1_dsv@3e {
-        status = "ok";
-        compatible = "sm_dw,p1_dsv";
-        reg = <0x3e>;
-    };
-};
-
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev0.dtsi"
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev1.dtsi"
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev2.dtsi"
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev3.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi1-qhd-cmd-rev0.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi1-qhd-cmd-rev1.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi1-qhd-cmd-rev2.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi1-qhd-cmd-rev3.dtsi"
