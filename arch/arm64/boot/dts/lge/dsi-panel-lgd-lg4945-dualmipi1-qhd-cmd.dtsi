@@ -283,7 +283,7 @@
 		lge,ad-cmds-on = [
 		    15 01 00 00 00 00 02 55 80
 		];
-		
+
 		qcom,img-tune-control-dsi-state = "dsi_lp_mode";
 		lge,sharpness-cmds-on = [
 			/* Manufacturer Command Protection */

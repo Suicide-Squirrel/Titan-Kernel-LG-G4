@@ -113,7 +113,7 @@
 			/* Power Control 3 */
 			39 01 00 00 00 00 06 C3 35 88 22 26 21
 			/* Power Control 5 */
-			39 01 00 00 00 00 08 C5 24 20 A0 25 14 32 02
+			39 01 00 00 00 00 08 C5 24 20 A0 25 14 34 02
 			/* Abrupt Power Off Control */
 			15 01 00 00 00 00 02 C9 9F
 			/* U2 Control */
@@ -121,17 +121,17 @@
 			/* Touch Control */
 			39 01 00 00 00 00 10 CD F0 4C 0D 3F 4F 22 22 01 0A 01 02 57 A8 64 64
 			/* Positive Gamma Curve for Red */
-			39 01 00 00 00 00 0E D0 00 12 1C 2B 36 3E 53 4B 41 36 2C 2C 03
+			39 01 00 00 00 00 0E D0 00 12 1C 2B 36 3E 53 4B 41 36 2A 24 03
 			/* Negative Gamma Curve for Red */
-			39 01 00 00 00 00 0E D1 00 12 1C 2B 36 3E 53 4B 41 36 2C 2C 03
+			39 01 00 00 00 00 0E D1 00 12 1C 2B 36 3E 53 4B 41 36 2A 24 03
 			/* Positive Gamma Curve for  Green */
-			39 01 00 00 00 00 0E D2 00 12 1E 2B 36 3E 51 48 3C 2C 17 08 03
+			39 01 00 00 00 00 0E D2 00 12 1E 2B 36 3E 51 48 3C 2C 15 00 03
 			/* Negative Gamma Curve for Green */
-			39 01 00 00 00 00 0E D3 00 12 1E 2B 36 3E 51 48 3C 2C 17 08 03
+			39 01 00 00 00 00 0E D3 00 12 1E 2B 36 3E 51 48 3C 2C 15 00 03
 			/* Positive Gamma Curve for Blue */
-			39 01 00 00 00 00 0E D4 00 12 1F 2C 37 3F 50 47 3A 2C 17 08 03
+			39 01 00 00 00 00 0E D4 00 12 1F 2C 37 3F 50 47 3A 2C 15 00 03
 			/* Negative Gamma Curve for Blue */
-			39 01 00 00 00 00 0E D5 00 12 1F 2C 37 3F 50 47 3A 2C 17 08 03
+			39 01 00 00 00 00 0E D5 00 12 1F 2C 37 3F 50 47 3A 2C 15 00 03
 			/* Left Side GIP Pad Setting */
 			39 01 00 00 00 00 16 D6 22 2D 4C 6E 22 22 61 65 67 69 6B 22 71 55 55 55 03 55 55 55 03
 			/* Right Side GIP Pad Setting */
@@ -450,7 +450,7 @@
     };
 };
 
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev0.dtsi"
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev1.dtsi"
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev2.dtsi"
-#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev3.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev0-us_carrier.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev1-us_carrier.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev2-us_carrier.dtsi"
+#include "dsi-panel-lgd-lg4945-dualmipi0-qhd-cmd-rev3-us_carrier.dtsi"
