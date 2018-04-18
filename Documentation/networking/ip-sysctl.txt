@@ -1388,6 +1388,13 @@ ratelimit - INTEGER
 	otherwise the minimal space between responses in milliseconds.
 	Default: 1000
 
+drop_unicast_in_l2_multicast - BOOLEAN
+	Drop any unicast IP packets that are received in link-layer
+	multicast (or broadcast) frames.
+	This behavior (for multicast) is actually a SHOULD in RFC
+	1122, but is disabled by default for compatibility reasons.
+	Default: off (0)
+
 
 IPv6 Update by:
 Pekka Savola <pekkas@netcore.fi>
