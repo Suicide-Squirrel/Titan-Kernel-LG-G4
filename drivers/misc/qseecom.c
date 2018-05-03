@@ -1388,11 +1388,15 @@ static int __qseecom_process_incomplete_cmd(struct qseecom_dev_handle *data,
 			return ret;
 		}
 		if ((resp->result != QSEOS_RESULT_SUCCESS) &&
-			(resp->result != QSEOS_RESULT_INCOMPLETE)) {
+			(resp->result != QSEOS_RESULT_INCOMPLETE) &&
+                        (resp->result != QSEOS_RESULT_FAIL_KEY_ID_DNE)) {
 			pr_err("fail:resp res= %d,app_id = %d,lstr = %d\n",
 				resp->result, data->client.app_id, lstnr);
 			ret = -EINVAL;
 		}
+                if (resp->result == QSEOS_RESULT_FAIL_KEY_ID_DNE) {
+                    pr_err("QSEOS_RESULT_FAIL_KEY_ID_DNE but ignored");
+                }
 		if (lstnr == RPMB_SERVICE)
 			__qseecom_disable_clk(CLK_QSEE);
 
