@@ -406,6 +406,7 @@ int afe_get_port_type(u16 port_id)
 	case SLIMBUS_2_RX:
 	case SLIMBUS_3_RX:
 	case SLIMBUS_4_RX:
+	case SLIMBUS_5_RX:
 	case SLIMBUS_6_RX:
 	case INT_BT_SCO_RX:
 	case INT_BT_A2DP_RX:
@@ -1940,6 +1941,7 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	case SLIMBUS_3_TX:
 	case SLIMBUS_4_RX:
 	case SLIMBUS_4_TX:
+	case SLIMBUS_5_RX:
 	case SLIMBUS_5_TX:
 	case SLIMBUS_6_RX:
 	case SLIMBUS_6_TX:
@@ -2042,6 +2044,7 @@ int afe_get_port_index(u16 port_id)
 	case RT_PROXY_PORT_001_TX: return IDX_RT_PROXY_PORT_001_TX;
 	case SLIMBUS_4_RX: return IDX_SLIMBUS_4_RX;
 	case SLIMBUS_4_TX: return IDX_SLIMBUS_4_TX;
+	case SLIMBUS_5_RX: return IDX_SLIMBUS_5_RX;
 	case SLIMBUS_5_TX: return IDX_SLIMBUS_5_TX;
 	case SLIMBUS_6_RX: return IDX_SLIMBUS_6_RX;
 	case SLIMBUS_6_TX: return IDX_SLIMBUS_6_TX;
@@ -2157,6 +2160,7 @@ int afe_open(u16 port_id,
 	case SLIMBUS_3_TX:
 	case SLIMBUS_4_RX:
 	case SLIMBUS_4_TX:
+	case SLIMBUS_5_RX:
 	case SLIMBUS_6_RX:
 	case SLIMBUS_6_TX:
 		cfg_type = AFE_PARAM_ID_SLIMBUS_CONFIG;
@@ -3548,6 +3552,7 @@ int afe_validate_port(u16 port_id)
 	case RT_PROXY_PORT_001_TX:
 	case SLIMBUS_4_RX:
 	case SLIMBUS_4_TX:
+	case SLIMBUS_5_RX:
 	case SLIMBUS_6_RX:
 	case SLIMBUS_6_TX:
 	case AFE_PORT_ID_PRIMARY_MI2S_RX:
