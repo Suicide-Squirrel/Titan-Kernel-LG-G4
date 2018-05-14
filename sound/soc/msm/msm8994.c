@@ -487,7 +487,7 @@ static int msm8994_liquid_dock_notify_handler(struct notifier_block *this,
 			pr_err("%s:failed request msm8994_liquid_plug_gpio err = %d\n",
 				__func__, ret);
 			ret = -EINVAL;
-			goto fail_dock_gpio;
+			goto fail_gpio_irq;
 		}
 
 		msm8994_liquid_dock_dev->plug_det =
