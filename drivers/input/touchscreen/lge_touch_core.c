@@ -81,7 +81,7 @@ int boot_mode = NORMAL_BOOT_MODE;
 int factory_boot = 0;
 static int lpwg_status = 0;
 
-#define SENSING_TEST_PATH "/data/logger/sensing_test.txt"
+#define SENSING_TEST_PATH "/mnt/sdcard/sensing_test.txt"
 
 /* Debug mask value
  * usage: echo [debug_mask] > /sys/module/lge_touch_core/parameters/debug_mask

@@ -46,7 +46,7 @@ MODULE_PARM_DESC(debug, "level of debug output");
 /* P2P0 enable */
 static int brcmf_p2p_enable;
 #ifdef CONFIG_BRCMDBG
-module_param_named(p2pon, brcmf_p2p_enable, int, 0);
+module_param_named(p2pon, brcmf_p2p_enable, int, 1);
 MODULE_PARM_DESC(p2pon, "enable p2p management functionality");
 #endif
 

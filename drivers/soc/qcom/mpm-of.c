@@ -134,7 +134,7 @@ enum {
 	MSM_MPM_DEBUG_NON_DETECTABLE_IRQ_IDLE = BIT(3),
 };
 
-static int msm_mpm_debug_mask = 1;
+static int msm_mpm_debug_mask = 0;
 module_param_named(
 	debug_mask, msm_mpm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
@@ -545,6 +545,8 @@ void msm_mpm_enter_sleep(uint32_t sclk_count, bool from_idle,
 		wakeup = (~0ULL);
 	}
 
+	msm_mpm_gpio_irqs_detectable(from_idle);
+	msm_mpm_irqs_detectable(from_idle);
 	msm_mpm_set(wakeup, !from_idle);
 	if (cpumask)
 		irq_set_affinity(msm_mpm_dev_data.mpm_ipc_irq, cpumask);
