@@ -1301,7 +1301,7 @@
 #define BMA_MAX_RETRY_I2C_XFER (100)
 
 #ifdef CONFIG_DOUBLE_TAP
-#define DEFAULT_TAP_JUDGE_PERIOD 500    /* default judge in 1 second. changed to half second */
+#define DEFAULT_TAP_JUDGE_PERIOD 1000    /* default judge in 1 second */
 #endif
 
 #define BMA2X2_SMD_DET_TIME_NS	(2200UL * 1000 * 1000)
