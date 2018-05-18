@@ -989,8 +989,9 @@ static int get_tci_data(struct synaptics_ts_data *ts, int count)
 
 	ts->pw_data.data_num = count;
 
-	if (!count)
-		return 0;
+	while (!count) {
+		ts->pw_data.data_num = count;
+	}
 
 	DO_SAFE(synaptics_ts_page_data_read(client,
 				LPWG_PAGE, ts->f51_reg.lpwg_data_reg, 4 * count,
@@ -1006,19 +1007,9 @@ static int get_tci_data(struct synaptics_ts_data *ts, int count)
 		ts->pw_data.data[i].y = TS_POSITION(buffer[i][3],
 				buffer[i][2]);
 
-		if (ts->pdata->role->use_security_mode) {
-			if (ts->lpwg_ctrl.password_enable) {
-				TOUCH_I("LPWG data xxxx, xxxx\n");
-			} else {
-				TOUCH_I("LPWG data %d, %d\n",
-						ts->pw_data.data[i].x,
-						ts->pw_data.data[i].y);
-			}
-		} else {
-			TOUCH_I("LPWG data %d, %d\n",
-					ts->pw_data.data[i].x,
-					ts->pw_data.data[i].y);
-		}
+		TOUCH_I("LPWG data %d, %d\n",
+				ts->pw_data.data[i].x,
+				ts->pw_data.data[i].y);
 	}
 
 	return 0;
@@ -1029,13 +1020,10 @@ error:
 }
 
 static void set_lpwg_mode(struct lpwg_control *ctrl, int mode)
+#define LPWG_DOUBLE_TAP 1
 {
-	ctrl->double_tap_enable =
-		((mode == LPWG_DOUBLE_TAP) | (mode == LPWG_PASSWORD)) ? 1 : 0;
-	ctrl->password_enable = (mode == LPWG_PASSWORD) ? 1 : 0;
-	ctrl->signature_enable = (mode == LPWG_SIGNATURE) ? 1 : 0;
-	ctrl->lpwg_is_enabled = ctrl->double_tap_enable
-		|| ctrl->password_enable || ctrl->signature_enable;
+	ctrl->double_tap_enable = (mode == LPWG_DOUBLE_TAP) ? 1 : 0;
+	ctrl->lpwg_is_enabled = ctrl->double_tap_enable;
 }
 
 static int sleep_control(struct synaptics_ts_data *ts, int mode, int recal)
@@ -1112,19 +1100,16 @@ static int lpwg_control(struct synaptics_ts_data *ts, int mode)
 	synaptics_toggle_swipe(ts->client);
 
 	switch (mode) {
-	case LPWG_SIGNATURE:
-		break;
-
 	case LPWG_DOUBLE_TAP:                         /* Only TCI-1 */
 		tci_control(ts, TCI_ENABLE_CTRL, 1);  /* Tci-1 enable */
 		tci_control(ts, TAP_COUNT_CTRL, 2);   /* tap count = 2 */
 		tci_control(ts, MIN_INTERTAP_CTRL, 0); /* min inter_tap
-							  = 60ms */
-		tci_control(ts, MAX_INTERTAP_CTRL, 70); /* max inter_tap
-							   = 700ms */
-		tci_control(ts, TOUCH_SLOP_CTRL, 100); /* touch_slop = 10mm */
-		tci_control(ts, TAP_DISTANCE_CTRL, 10); /* tap distance
-							   = 10mm */
+							  = 0ms */
+		tci_control(ts, MAX_INTERTAP_CTRL, 100); /* max inter_tap
+							   = 100ms */
+		tci_control(ts, TOUCH_SLOP_CTRL, 150); /* touch_slop = 150mm */
+		tci_control(ts, TAP_DISTANCE_CTRL, 50); /* tap distance
+							   = 50mm */
 		tci_control(ts, INTERRUPT_DELAY_CTRL, 0); /* interrupt delay
 							     = 0ms */
 		tci_control(ts, TCI_ENABLE_CTRL2, 0); /* Tci-2 disable */
@@ -1134,47 +1119,7 @@ static int lpwg_control(struct synaptics_ts_data *ts, int mode)
 		}
 		if (is_product(ts, "PLG446", 6)
 				|| is_product(ts, "PLG468", 6)) {
-			if (lpwg_by_lcd_notifier)
-				TOUCH_I(
-						"Partial LPWG doens't work after LPWG ON command\n");
-			else
-				tci_control(ts, PARTIAL_LPWG_ON, 1);
-		}
-		break;
-
-	case LPWG_PASSWORD:                           /* TCI-1 and TCI-2 */
-		tci_control(ts, TCI_ENABLE_CTRL, 1);  /* Tci-1 enable */
-		tci_control(ts, TAP_COUNT_CTRL, 2);   /* tap count = 2 */
-		tci_control(ts, MIN_INTERTAP_CTRL, 0); /* min inter_tap
-							  = 60ms */
-		tci_control(ts, MAX_INTERTAP_CTRL, 70); /* max inter_tap
-							   = 700ms */
-		tci_control(ts, TOUCH_SLOP_CTRL, 100); /* touch_slop = 10mm */
-		tci_control(ts, TAP_DISTANCE_CTRL, 7); /* tap distance = 7mm */
-		tci_control(ts, INTERRUPT_DELAY_CTRL,
-				(u8)ts->pw_data.double_tap_check);
-		tci_control(ts, TCI_ENABLE_CTRL2, 1); /* Tci-2 ensable */
-		tci_control(ts, TAP_COUNT_CTRL2,
-				(u8)ts->pw_data.tap_count); /* tap count
-							       = user_setting */
-		tci_control(ts, MIN_INTERTAP_CTRL2, 0); /* min inter_tap
-							   = 60ms */
-		tci_control(ts, MAX_INTERTAP_CTRL2, 70); /* max inter_tap
-							    = 700ms */
-		tci_control(ts, TOUCH_SLOP_CTRL2, 100); /* touch_slop = 10mm */
-		tci_control(ts, TAP_DISTANCE_CTRL2, 255); /* tap distance
-							     = MAX */
-		tci_control(ts, INTERRUPT_DELAY_CTRL2, 0); /* interrupt delay
-							      = 0ms */
-		/* wakeup_gesture_only */
-		if (is_product(ts, "PLG349", 6))
-			tci_control(ts, REPORT_MODE_CTRL, 1);
-		if (is_product(ts, "PLG446", 6)
-				|| is_product(ts, "PLG468", 6)) {
-			if (lpwg_by_lcd_notifier)
-				TOUCH_I(
-						"Partial LPWG doens't work after LPWG ON command\n");
-			else
+			if (!lpwg_by_lcd_notifier) // if not
 				tci_control(ts, PARTIAL_LPWG_ON, 1);
 		}
 		break;
@@ -1182,8 +1127,8 @@ static int lpwg_control(struct synaptics_ts_data *ts, int mode)
 	default:
 		if (is_product(ts, "PLG446", 6)
 			|| is_product(ts, "PLG468", 6))
-			tci_control(ts, PARTIAL_LPWG_ON, 0);
-		tci_control(ts, TCI_ENABLE_CTRL, 0); /* Tci-1 disable */
+			tci_control(ts, PARTIAL_LPWG_ON, 0); // default off
+		tci_control(ts, TCI_ENABLE_CTRL, 1); /* Tci-1 enable */
 		tci_control(ts, TCI_ENABLE_CTRL2, 0); /* tci-2 disable */
 		if (is_product(ts, "PLG349", 6))
 			tci_control(ts, REPORT_MODE_CTRL, 0); /* normal */
@@ -6774,7 +6719,7 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 		if (lpwg_by_lcd_notifier) {
 			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
 					"ts->is_init = 0,"
-					"lpwg_by_lcd_notifier = ture,"
+					"lpwg_by_lcd_notifier = true,"
 					"handling lpwg event\n");
 		} else {
 			TOUCH_E("%s, %d : ts->is_init == 0, IGNORE_EVENT!!, s:\n",
@@ -6831,15 +6776,6 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 			if (ts->lpwg_ctrl.double_tap_enable) {
 				get_tci_data(ts, 2);
 				send_uevent_lpwg(ts->client, LPWG_DOUBLE_TAP);
-			}
-		} else if ((status & 0x2)) { /* TCI-2 Multi-Tap */
-			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
-					"LPWG Multi-Tap mode\n");
-			if (ts->lpwg_ctrl.password_enable) {
-				get_tci_data(ts, ts->pw_data.tap_count);
-				wake_lock(&ts->timer_wake_lock);
-				queue_delayed_work(touch_wq, &ts->work_timer,
-						msecs_to_jiffies(0));
 			}
 		} else if ((ts->swipe.support_swipe)
 				&& (status & ts->swipe.gesture_mask)) {
@@ -7646,8 +7582,6 @@ enum error_type synaptics_ts_lpwg(struct i2c_client *client,
 		break;
 	case LPWG_DOUBLE_TAP_CHECK:
 		ts->pw_data.double_tap_check = value;
-		if (ts->lpwg_ctrl.password_enable)
-			tci_control(ts, INTERRUPT_DELAY_CTRL, value);
 		break;
 	case LPWG_REPLY:
 		if (ts->pdata->role->use_lpwg_all) {
