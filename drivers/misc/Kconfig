@@ -646,6 +646,14 @@ config LGE_APPSPORT
 	help
 	  This option enable device driver support for LGE Appsport.
 
+config VIB_TRIGGERS
+        boolean "Vibrator trigger interface support"
+        default y
+        help
+          This option enables trigger support for the vibrator function.
+          These triggers allow kernel events to drive the vibrator. If
+          unsure, say N.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
