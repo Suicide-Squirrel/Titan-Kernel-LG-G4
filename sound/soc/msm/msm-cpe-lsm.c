@@ -30,7 +30,7 @@
 
 #define LSM_VOICE_WAKEUP_APP_V2 2
 #define LISTEN_MIN_NUM_PERIODS     2
-#define LISTEN_MAX_NUM_PERIODS     8
+#define LISTEN_MAX_NUM_PERIODS     12
 #define LISTEN_MAX_PERIOD_SIZE     4096
 #define LISTEN_MIN_PERIOD_SIZE     320
 #define LISTEN_MAX_STATUS_PAYLOAD_SIZE 256
@@ -111,6 +111,8 @@ struct cpe_lsm_data {
 	u8 ev_det_status;
 	u8 ev_det_pld_size;
 	u8 *ev_det_payload;
+
+	bool cpe_prepared;
 };
 
 /*
@@ -319,8 +321,11 @@ static int msm_cpe_lab_thread(void *data)
 	struct wcd_cpe_core *core = (struct wcd_cpe_core *)lab->core_handle;
 	struct snd_pcm_substream *substream = lab->substream;
 	struct cpe_priv *cpe = cpe_get_private_data(substream);
+	struct cpe_lsm_data *lsm_d = NULL;
 	struct wcd_cpe_lsm_ops *lsm_ops;
+	struct wcd_cpe_afe_ops *afe_ops;
 	struct wcd_cpe_data_pcm_buf *cur_buf, *next_buf;
+	struct cpe_lsm_session *session = NULL;
 	int rc = 0;
 	u32 done_len = 0;
 	u32 buf_count = 1;
@@ -340,6 +345,9 @@ static int msm_cpe_lab_thread(void *data)
 
 	lsm_ops = &cpe->lsm_ops;
 	memset(lab->pcm_buf[0].mem, 0, lab->pcm_size);
+	afe_ops = &cpe->afe_ops;
+	lsm_d = cpe_get_lsm_data(substream);
+	session = lsm_d->lsm_session;
 
 	if (lsm_ops->lsm_lab_data_channel_read == NULL ||
 		lsm_ops->lsm_lab_data_channel_read_status == NULL) {
@@ -354,21 +362,35 @@ static int msm_cpe_lab_thread(void *data)
 		goto done;
 	}
 
-	if (!kthread_should_stop()) {
-		rc = lsm_ops->lsm_lab_data_channel_read(core, lab->lsm_s,
+	lsm_ops->lsm_lab_data_channel_open(cpe->core_handle, session);
+
+	rc = lsm_ops->lsm_lab_data_channel_read(core, lab->lsm_s,
 					lab->pcm_buf[0].phys,
 					lab->pcm_buf[0].mem,
 					hw_params->buf_sz);
-		if (rc) {
-			pr_err("%s:Slim read error %d\n", __func__, rc);
-			goto done;
-		}
+	if (rc) {
+		pr_err("%s:Slim read error %d\n", __func__, rc);
+		lab->thread_status = MSM_LSM_LAB_THREAD_ERROR;
+		goto done;
+	}
 
-		cur_buf = &lab->pcm_buf[0];
-		next_buf = &lab->pcm_buf[1];
-	} else {
-		pr_debug("%s: LAB stopped before starting read\n",
-			 __func__);
+	cur_buf = &lab->pcm_buf[0];
+	next_buf = &lab->pcm_buf[1];
+
+	/* Start lab on CPE after first buffer is queued */
+	rc = lsm_ops->lsm_cdc_start_lab(core);
+	if (rc) {
+		pr_err("%s: start lab failed\n", __func__);
+		lab->thread_status = MSM_LSM_LAB_THREAD_ERROR;
+		goto done;
+	}
+
+	rc = afe_ops->afe_port_start(cpe->core_handle,
+				     &session->afe_out_port_cfg);
+	if (rc) {
+		pr_err("%s: AFE out port start failed, err = %d\n",
+			__func__, rc);
+		lab->thread_status = MSM_LSM_LAB_THREAD_ERROR;
 		goto done;
 	}
 
@@ -508,6 +530,7 @@ static int msm_cpe_lsm_open(struct snd_pcm_substream *substream)
 	/* Explicitly Assign the LAB thread to STOP state */
 	lsm_d->lsm_session->lab.thread_status = MSM_LSM_LAB_THREAD_STOP;
 	lsm_d->lsm_session->started = false;
+	lsm_d->cpe_prepared = false;
 
 	dev_dbg(rtd->dev, "%s: allocated session with id = %d\n",
 		__func__, lsm_d->lsm_session->id);
@@ -597,6 +620,8 @@ static int msm_cpe_lsm_close(struct snd_pcm_substream *substream)
 				   cpe->core_handle,
 				   afe_ops, afe_cfg,
 				   AFE_CMD_PORT_STOP);
+
+	lsm_d->cpe_prepared = false;
 
 	rc = lsm_ops->lsm_close_tx(cpe->core_handle, session);
 	if (rc != 0) {
@@ -1122,8 +1147,6 @@ static int msm_cpe_lsm_lab_start(struct snd_pcm_substream *substream,
 		atomic_set(&lab_sess->abort_read, 0);
 		pr_debug("%s: KW detected,\n"
 		"scheduling LAB thread\n", __func__);
-		lsm_ops->lsm_lab_data_channel_open(
-			cpe->core_handle, session);
 
 		/*
 		 * Even though thread might be only scheduled and
@@ -1571,6 +1594,13 @@ static int msm_cpe_lsm_prepare(struct snd_pcm_substream *substream)
 	lab_s = &lsm_session->lab;
 	lab_s->pcm_size = snd_pcm_lib_buffer_bytes(substream);
 	pr_debug("%s: pcm_size 0x%x", __func__, lab_s->pcm_size);
+
+	if (lsm_d->cpe_prepared) {
+		dev_dbg(rtd->dev, "%s: CPE is alredy prepared\n",
+			__func__);
+		return 0;
+	}
+
 	afe_ops = &cpe->afe_ops;
 	afe_cfg = &(lsm_d->lsm_session->afe_port_cfg);
 
@@ -1592,6 +1622,12 @@ static int msm_cpe_lsm_prepare(struct snd_pcm_substream *substream)
 				   cpe->core_handle,
 				   afe_ops, afe_cfg,
 				   AFE_CMD_PORT_START);
+	if (rc)
+		dev_err(rtd->dev,
+			"%s: cpe_afe_port start failed, err = %d\n",
+			__func__, rc);
+	else
+		lsm_d->cpe_prepared = true;
 
 	return rc;
 }

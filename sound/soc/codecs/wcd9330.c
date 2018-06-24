@@ -51,8 +51,7 @@ enum {
 	ADC4_TXFE,
 	ADC5_TXFE,
 	ADC6_TXFE,
-	HPH_DELAY_L,
-	HPH_DELAY_R,
+	HPH_DELAY,
 };
 
 #define TOMTOM_MAD_SLIMBUS_TX_PORT 12
@@ -3888,8 +3887,6 @@ static int tomtom_codec_enable_dec(struct snd_soc_dapm_widget *w,
 							CF_MIN_3DB_150HZ << 4);
 			}
 
-			/* enable HPF */
-			snd_soc_update_bits(codec, tx_mux_ctl_reg , 0x08, 0x00);
 		} else
 			/* bypass HPF */
 			snd_soc_update_bits(codec, tx_mux_ctl_reg , 0x08, 0x08);
@@ -3898,8 +3895,8 @@ static int tomtom_codec_enable_dec(struct snd_soc_dapm_widget *w,
 
 	case SND_SOC_DAPM_POST_PMU:
 
-		/* Disable TX digital mute */
-		snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x01, 0x00);
+		/* enable HPF */
+		snd_soc_update_bits(codec, tx_mux_ctl_reg , 0x08, 0x00);
 
 		if ((tx_hpf_work[decimator - 1].tx_hpf_cut_of_freq !=
 				CF_MIN_3DB_150HZ) &&
@@ -4431,42 +4428,21 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		if (w->shift == 5)
-			set_bit(HPH_DELAY_L, &tomtom->status_mask);
-		else if (w->shift == 4)
-			set_bit(HPH_DELAY_R, &tomtom->status_mask);
-		else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				w->shift);
-			return -EINVAL;
-		}
+		set_bit(HPH_DELAY, &tomtom->status_mask);
 		/* Let MBHC module know PA is turning on */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_pre_on);
 		break;
 
 	case SND_SOC_DAPM_POST_PMU:
-		if (test_bit(HPH_DELAY_L, &tomtom->status_mask)) {
+		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
 			/*
-			 * Make sure to wait 10ms after enabling HPHL
+			 * Make sure to wait 10ms after enabling HPHR_HPHL
 			 * in register 0x1AB
 			*/
 			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_L, &tomtom->status_mask);
+			clear_bit(HPH_DELAY, &tomtom->status_mask);
 			pr_debug("%s: sleep %d us after %s PA enable\n",
 				__func__, pa_settle_time, w->name);
-		} else if (test_bit(HPH_DELAY_R, &tomtom->status_mask)) {
-			/*
-			 * Make sure to wait 10ms after enabling HPHR
-			 * in register 0x1AB
-			*/
-			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_R, &tomtom->status_mask);
-			pr_debug("%s: sleep %d us after %s PA enable\n",
-				__func__, pa_settle_time, w->name);
-		} else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				w->shift);
-			return -EINVAL;
 		}
 		if (!high_perf_mode && !tomtom->uhqa_mode) {
 			wcd9xxx_clsh_fsm(codec, &tomtom->clsh_d,
@@ -4477,43 +4453,22 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
-		if (w->shift == 5)
-			set_bit(HPH_DELAY_L, &tomtom->status_mask);
-		else if (w->shift == 4)
-			set_bit(HPH_DELAY_R, &tomtom->status_mask);
-		else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				 w->shift);
-			return -EINVAL;
-		}
+		set_bit(HPH_DELAY, &tomtom->status_mask);
 		break;
 
 	case SND_SOC_DAPM_POST_PMD:
 
 		/* Let MBHC module know PA turned off */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_off);
-		if (test_bit(HPH_DELAY_L, &tomtom->status_mask)) {
+		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
 			/*
-			 * Make sure to wait 10ms after disabling HPHL
+			 * Make sure to wait 10ms after disabling HPHR_HPHL
 			 * in register 0x1AB
 			*/
 			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_L, &tomtom->status_mask);
+			clear_bit(HPH_DELAY, &tomtom->status_mask);
 			pr_debug("%s: sleep %d us after %s PA disable\n",
 				__func__, pa_settle_time, w->name);
-		} else if (test_bit(HPH_DELAY_R, &tomtom->status_mask)) {
-			/*
-			 * Make sure to wait 10ms after disabling HPHR
-			 * in register 0x1AB
-			*/
-			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_R, &tomtom->status_mask);
-			pr_debug("%s: sleep %d us after %s PA disable\n",
-				__func__, pa_settle_time, w->name);
-		} else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				 w->shift);
-			return -EINVAL;
 		}
 
 		break;
@@ -6183,13 +6138,14 @@ static int tomtom_digital_mute(struct snd_soc_dai *dai, int mute)
 		return -EINVAL;
 	}
 
-	pr_err("%s: enter, mute = %d \n", __func__, mute);
+	dev_dbg(codec->dev, "%s: enter, mute = %d\n", __func__, mute);
 
 	mute = (mute) ? 1 : 0;
-	usleep_range(10000, 10000);
+	/* sleep for 10ms before unmuting the TX path as per HW requirement */
+	usleep_range(10000, 10100);
 	list_for_each_entry(ch, &tomtom->dai[dai->id].wcd9xxx_ch_list, list) {
 		tx_port = ch->port + 1;
-		dev_err(codec->dev, "%s: dai->id = %d, tx_port = %d",
+		dev_dbg(codec->dev, "%s: dai->id = %d, tx_port = %d",
 			__func__, dai->id, tx_port);
 		if ((tx_port < 1) || (tx_port > NUM_DECIMATORS)) {
 			dev_err(codec->dev, "%s: Invalid SLIM TX%u DAI ID is %d\n",
@@ -6213,10 +6169,11 @@ static int tomtom_digital_mute(struct snd_soc_dai *dai, int mute)
 		}
 
 		if (decimator && decimator <= NUM_DECIMATORS) {
-			dev_err(codec->dev, "%s: Decimator used %d\n",
+			dev_dbg(codec->dev, "%s: Decimator used %d\n",
 				__func__, decimator);
 			tx_vol_ctl_reg =
-				TOMTOM_A_CDC_TX1_VOL_CTL_CFG + 8 * (decimator - 1);
+				TOMTOM_A_CDC_TX1_VOL_CTL_CFG +
+				8 * (decimator - 1);
 			/* Set TX digital mute */
 			snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x01, mute);
 		} else {
@@ -6225,7 +6182,6 @@ static int tomtom_digital_mute(struct snd_soc_dai *dai, int mute)
 		}
 	}
 
-	pr_err("%s: leave\n", __func__);
 	return 0;
 }
 

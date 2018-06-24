@@ -61,6 +61,7 @@ size_t get_cal_info_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_info_audproc);
 		break;
 	case ADM_AUDVOL_CAL_TYPE:
+	case ADM_RTAC_AUDVOL_CAL_TYPE:
 		size = sizeof(struct audio_cal_info_audvol);
 		break;
 	case ASM_TOPOLOGY_CAL_TYPE:
@@ -173,6 +174,7 @@ size_t get_user_cal_type_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_type_audproc);
 		break;
 	case ADM_AUDVOL_CAL_TYPE:
+	case ADM_RTAC_AUDVOL_CAL_TYPE:
 		size = sizeof(struct audio_cal_type_audvol);
 		break;
 	case ASM_TOPOLOGY_CAL_TYPE:
@@ -576,9 +578,11 @@ static struct cal_block_data *create_cal_block(struct cal_type_data *cal_type,
 done:
 	return cal_block;
 err:
-    kfree(cal_block->cal_info);
-    kfree(cal_block->client_info);
-    kfree(cal_block);
+	kfree(cal_block->cal_info);
+	cal_block->cal_info = NULL;
+	kfree(cal_block->client_info);
+	cal_block->client_info = NULL;
+	kfree(cal_block);
 	cal_block = NULL;
 	return cal_block;
 }

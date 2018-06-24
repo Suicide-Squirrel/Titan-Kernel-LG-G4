@@ -1249,6 +1249,12 @@ static void wcd9xxx_clsh_state_hph_st(struct snd_soc_codec *codec,
 		u8 req_state, bool is_enable)
 {
 	pr_debug("%s: enter %s\n", __func__, is_enable ? "enable" : "disable");
+
+	if (is_enable) {
+		dev_dbg(codec->dev, "%s: stub fallback to hph_st\n", __func__);
+	} else {
+		dev_dbg(codec->dev, "%s: stub fallback to hph_st\n", __func__);
+	}
 }
 
 static void wcd9xxx_clsh_state_lo(struct snd_soc_codec *codec,
