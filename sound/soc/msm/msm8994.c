@@ -246,7 +246,7 @@ static char const *hdmi_rx_ch_text[] = {"Two", "Three", "Four", "Five",
 					"Six", "Seven", "Eight"};
 static char const *rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE"};
 static char const *slim5_rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE"};
-static char const *slim0_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
+static char const *slim0_rx_sample_rate_text[] = {"KHZ_8", "KHZ_16", "KHZ_48", "KHZ_96",
 					"KHZ_192"};
 static char const *slim5_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
 						  "KHZ_192"};
