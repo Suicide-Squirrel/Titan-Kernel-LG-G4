@@ -688,4 +688,11 @@ config DIRTYSANTA_FIXUP_SYSFS
 	help
 	  Include sysfs interface for DirtySanta modem fixup.
 
+config STATE_NOTIFIER
+        bool "State Notifier"
+        default n
+        help
+          A unified display state notifier for kernel drivers for easy porting
+          between different devices.
+
 endif # ARCH_MSM

@@ -90,3 +90,4 @@ obj-$(CONFIG_MSM_PACMAN)        += msm_pacman.o
 obj-$(CONFIG_MACH_LGE) += lge/
 
 obj-$(CONFIG_DIRTYSANTA_FIXUP) += dirtysanta_fixup.o
+obj-$(CONFIG_STATE_NOTIFIER)   += state_notifier.o
