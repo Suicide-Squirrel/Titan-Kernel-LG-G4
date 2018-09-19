@@ -141,6 +141,7 @@ config INPUT_JOYDEV
 
 config INPUT_EVDEV
 	tristate "Event interface"
+	default n
 	help
 	  Say Y here if you want your input device events be accessible
 	  under char device 13:64+ - /dev/input/eventX in a generic way.
