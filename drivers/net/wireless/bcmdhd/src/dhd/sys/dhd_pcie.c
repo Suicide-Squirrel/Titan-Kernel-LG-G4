@@ -820,7 +820,10 @@ bool dhd_bus_watchdog(dhd_pub_t *dhd)
 	dhd_bus_t *bus;
 	bus = dhd->bus;
 
+	dhd_os_sdlock(bus->dhd);
 
+	if (!dhd->up)
+		goto wd_end;
 
 	/* Poll for console output periodically */
 	if (dhd->busstate == DHD_BUS_DATA && dhd_console_ms != 0) {
@@ -832,6 +835,8 @@ bool dhd_bus_watchdog(dhd_pub_t *dhd)
 				dhd_console_ms = 0;	/* On error, stop trying */
 		}
 	}
+wd_end:
+	dhd_os_sdunlock(bus->dhd);
 #endif /* DHD_DEBUG */
 
 	return FALSE;
@@ -2676,7 +2681,10 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 		if (flag == TRUE) { /* Turn off WLAN */
 			/* Removing Power */
 			DHD_ERROR(("%s: == Power OFF ==\n", __FUNCTION__));
+			dhd_os_sdlock(dhdp);
 			bus->dhd->up = FALSE;
+			/* Prevent dhd_bus_watchdog from touching HW */
+			dhd_os_sdunlock(dhdp);
 			if (bus->dhd->busstate != DHD_BUS_DOWN) {
 				if (bus->intr) {
 					dhdpcie_bus_intr_disable(bus);
@@ -2802,8 +2810,9 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						__FUNCTION__, bcmerror));
 					goto done;
 				}
-
+				dhd_os_sdlock(dhdp);
 				bus->dhd->up = TRUE;
+				dhd_os_sdunlock(dhdp);
 				DHD_ERROR(("%s: WLAN Power On Done\n", __FUNCTION__));
 			} else {
 				DHD_ERROR(("%s: what should we do here\n", __FUNCTION__));
