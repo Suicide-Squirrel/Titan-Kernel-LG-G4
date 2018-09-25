@@ -53,7 +53,7 @@ static int vs_temp = 0;
 /* [LGE_UPDATE_E] */
 #else
 struct lge_monitor_thermal_data *vs_therm;
-static int64_t vs_temp;
+static int vs_temp = 0;
 #endif
 #endif
 
