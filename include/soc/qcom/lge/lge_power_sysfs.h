@@ -76,6 +76,7 @@ const char *default_pwr_sysfs_path[PWR_SYSFS_PATH_NUM][3] = {
 	{"adc", "batt_id", "/sys/class/power_supply/battery_id/batt_id"},
 	{"adc", "pa_therm0", "/sys/class/hwmon/hwmon2/device/pa_therm0"},
 	{"adc", "pa_therm1", "/sys/class/hwmon/hwmon2/device/pa_therm1"},
+	{"adc", "quiet_therm", "/sys/class/hwmon/hwmon2/device/quiet_therm"},
 	{"adc", "usb_in", "/sys/class/hwmon/hwmon3/device/usbin"},
 	{"adc", "vcoin", "/sys/class/hwmon/hwmon2/device/vcoin"},
 	{"adc", "vph_pwr", "/sys/class/hwmon/hwmon2/device/vph_pwr"},
