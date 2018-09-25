@@ -46,12 +46,15 @@ struct lge_monitor_thermal_data {
 	struct delayed_work monitor_work_struct;
 };
 
-#ifdef CONFIG_LGE_PM_THERM_VS
-#ifdef CONFIG_MACH_MSM8992_SJR // SJR uses G4 Virtual sensor
+#ifndef CONFIG_LGE_PM_THERM_VS
+#ifndef CONFIG_MACH_MSM8992_SJR // SJR uses G4 Virtual sensor
 /* [LGE_UPDATE_S] */
 static int vs_temp = 0;
+#endif
+#endif
 /* [LGE_UPDATE_E] */
-#else
+#ifdef CONFIG_LGE_PM_THERM_VS
+#ifdef CONFIG_MACH_MSM8992_SJR // SJR uses G4 Virtual sensor
 struct lge_monitor_thermal_data *vs_therm;
 static int64_t vs_temp;
 #endif
@@ -144,10 +147,13 @@ static void _poll_monitor(struct lge_monitor_thermal_data *monitor_dd)
 					board_therm.physical, board_therm.adc_code);
 		}
 #endif
+#ifndef CONFIG_LGE_PM_THERM_VS
+#ifndef CONFIG_MACH_MSM8992_SJR
+		pr_info("[VS_THERM] Result:%d\n",vs_temp); /* [LGE_UPDATE] */
+#endif
+#endif
 #ifdef CONFIG_LGE_PM_THERM_VS
 #ifdef CONFIG_MACH_MSM8992_SJR
-		pr_info("[VS_THERM] Result:%d\n",vs_temp); /* [LGE_UPDATE] */
-#else
 		pr_info("[VS_THERM] Result:%lld \n",vs_temp/100);
 #endif
 #endif
@@ -303,8 +309,8 @@ static const struct dev_pm_ops lge_monitor_thermal_dev_pm_ops = {
 	.resume_noirq = lge_monitor_thermal_resume,
 };
 
-#ifdef CONFIG_LGE_PM_THERM_VS
-#ifdef CONFIG_MACH_MSM8992_SJR
+#ifndef CONFIG_LGE_PM_THERM_VS
+#ifndef CONFIG_MACH_MSM8992_SJR
 /* [LGE_UPDATE_S] */
 extern int lge_get_batt_temp(void);
 extern int lge_get_pmic_therm(void);
@@ -326,9 +332,11 @@ static int get_lge_vs_temp(char *buffer, struct kernel_param *kp)
 }
 module_param_call(vs_temp, NULL,
 			get_lge_vs_temp,&vs_temp, 0644);
+#endif
+#endif
 /* [LGE_UPDATE_E] */
-
-#else
+#ifdef CONFIG_LGE_PM_THERM_VS
+#ifdef CONFIG_MACH_MSM8992_SJR
 #define VS_COEF 48		/* VS_TEMP_coefficient */
 
 static int get_lge_vs_temp(char *buffer, struct kernel_param *kp)
