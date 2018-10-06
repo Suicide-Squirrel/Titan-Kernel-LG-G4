@@ -56,7 +56,7 @@
                 pinctrl-6 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>, <&quat_mi2s_active>, <&quat_mi2s_mclk_active>, <&quat_mi2s_sd0_active>, <&quat_mi2s_sd1_active>, <&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
                 pinctrl-7 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>, <&quat_mi2s_active>, <&quat_mi2s_mclk_active>, <&quat_mi2s_sd0_active>, <&quat_mi2s_sd1_active>, <&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
 		qcom,cdc-micbias2-headset-only;
-/*		qcom,us-euro-gpios = <&pm8994_mpps 2 0>;   */
+		qcom,us-euro-gpios = <&pm8994_mpps 2 0>;
 /*		qcom,mbhc-audio-jack-type = "4-pole-jack"; */
 		qcom,hdmi-audio-rx;
 		asoc-codec = <&stub_codec>, <&hdmi_audio>;
