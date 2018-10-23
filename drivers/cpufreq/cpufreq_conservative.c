@@ -16,9 +16,9 @@
 
 /* Conservative governor macros */
 #define DEF_FREQUENCY_UP_THRESHOLD		(40)
-#define DEF_FREQUENCY_DOWN_THRESHOLD		(20)
-#define DEF_FREQUENCY_STEP			(3)
-#define DEF_SAMPLING_DOWN_FACTOR		(1)
+#define DEF_FREQUENCY_DOWN_THRESHOLD		(10)
+#define DEF_FREQUENCY_STEP			(5)
+#define DEF_SAMPLING_DOWN_FACTOR		(0)
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
 
 static DEFINE_PER_CPU(struct cs_cpu_dbs_info_s, cs_cpu_dbs_info);
