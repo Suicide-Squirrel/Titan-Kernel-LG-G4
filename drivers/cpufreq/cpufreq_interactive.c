@@ -89,7 +89,7 @@ static int migration_register_count;
 static struct mutex sched_lock;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 90
+#define DEFAULT_TARGET_LOAD 85
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
 #define DEFAULT_TIMER_RATE (100 * USEC_PER_MSEC)
@@ -99,7 +99,7 @@ static unsigned int default_above_hispeed_delay[] = {
 
 #define DEFAULT_IS_CANCUN				1
 #define DEFAULT_GPU_TARGET_LOAD			95
-#define DEFAULT_GPU_RANGE_START_FREQ	300000000
+#define DEFAULT_GPU_RANGE_START_FREQ	180000000
 #define DEFAULT_GPU_RANGE_END_FREQ		490000000
 #define DEFAULT_GPU_RANGE_ENTER_TIME	1000000
 #define DEFAULT_GPU_RANGE_OUT_TIME		500000
@@ -148,7 +148,7 @@ struct cpufreq_interactive_tunables {
 	 * Max additional time to wait in idle, beyond timer_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (999 * DEFAULT_TIMER_RATE)
+#define DEFAULT_TIMER_SLACK (2 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
 
