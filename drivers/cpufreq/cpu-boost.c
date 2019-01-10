@@ -28,6 +28,15 @@
 
 #include "../../kernel/sched/sched.h"
 
+#ifdef CONFIG_TOUCHBOOST_CONTROL
+#include <linux/export.h>
+unsigned int touchboost_status_1 = 1;
+unsigned int touchboost_freq_1 = 1286400;
+unsigned int touchboost_status_2 = 1;
+unsigned int touchboost_freq_2 = 1286400;
+unsigned int touchboost_ms = 40;
+#endif
+
 struct cpu_sync {
 	struct task_struct *thread;
 	wait_queue_head_t sync_wq;
@@ -115,6 +124,25 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 out:
 	return 0;
 }
+
+#ifdef CONFIG_TOUCHBOOST_CONTROL
+void set_touchboost_parameters(void)
+{
+	per_cpu(sync_info, 0).input_boost_freq = (touchboost_status_1 == 1) ? touchboost_freq_1 : 0;
+	per_cpu(sync_info, 2).input_boost_freq = (touchboost_status_2 == 1) ? touchboost_freq_2 : 0;
+	input_boost_ms = touchboost_ms;
+}
+EXPORT_SYMBOL(set_touchboost_parameters);
+
+void get_touchboost_parameters(void)
+{
+	touchboost_status_1 = (per_cpu(sync_info, 0).input_boost_freq == 0) ? 0 : 1;
+	touchboost_status_2 = (per_cpu(sync_info, 2).input_boost_freq == 0) ? 0 : 1;
+	touchboost_ms = input_boost_ms;
+}
+EXPORT_SYMBOL(get_touchboost_parameters);
+
+#endif
 
 static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
@@ -530,6 +558,12 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
+
+#ifdef CONFIG_TOUCHBOOST_CONTROL
+	// if touch boost (input boost) for both clusters is switched off, do nothing
+	if ((!touchboost_status_1) && (!touchboost_status_2))
+		return;
+#endif
 
 	if (!input_boost_enabled)
 		return;
