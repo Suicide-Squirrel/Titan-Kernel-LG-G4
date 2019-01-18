@@ -939,7 +939,7 @@ static void read_usb_type(struct smbchg_chip *chip, char **usb_type_name,
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't read status 5 rc = %d\n", rc);
 		*usb_type_name = "Other";
-		*usb_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
+		*usb_supply_type = POWER_SUPPLY_TYPE_USB_DCP;
 	}
 	type = get_type(reg);
 	*usb_type_name = get_usb_type_name(type);
