@@ -1166,7 +1166,7 @@ config MM_OWNER
 
 config DYNAMIC_STUNE_BOOST
 	bool "Dynamic SchedTune boosting support"
-	depends on SCHED_TUNE
+	depends on SCHED_TUNE && CGROUP_SCHEDTUNE
 	help
 	  This option extends the SchedTune framework and provides APIs to
 	  activate and reset SchedTune boosting from anywhere in the kernel.
