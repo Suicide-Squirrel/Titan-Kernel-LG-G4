@@ -39,8 +39,8 @@ extern unsigned int tdf_suspend_state;
 extern unsigned int tdf_powersave_active;
 #endif
 
-#define DEFAULT_GO_HISPEED_LOAD     85
-#define DEFAULT_DOWN_SAMPLE_TIME    (30 * USEC_PER_MSEC)
+#define DEFAULT_GO_HISPEED_LOAD     90
+#define DEFAULT_DOWN_SAMPLE_TIME    (10 * USEC_PER_MSEC)
 #define DEFAULT_UP_SAMPLE_TIME      (10 * USEC_PER_MSEC)
 #define DEFAULT_TIMER_RATE          (2 * HZ)
 
@@ -91,7 +91,7 @@ static
 struct cpufreq_governor cpufreq_gov_tripndroid = {
 	.name = "tripndroid",
 	.governor = cpufreq_governor_tripndroid,
-	.max_transition_latency = 10000000,
+	.max_transition_latency = 1000000,
 	.owner = THIS_MODULE,
 };
 
