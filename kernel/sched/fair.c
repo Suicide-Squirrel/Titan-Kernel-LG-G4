@@ -71,7 +71,7 @@ unsigned int normalized_sysctl_sched_min_granularity = 500000ULL;
 /*
  * is kept at sysctl_sched_latency / sysctl_sched_min_granularity
  */
-static unsigned int sched_nr_latency = 5;
+static unsigned int sched_nr_latency = 4;
 
 /*
  * After fork, child runs first. If set to 0 (default) then
@@ -118,7 +118,7 @@ unsigned int __read_mostly sysctl_sched_shares_window = 10000000UL;
  *
  * default: 5 msec, units: microseconds
   */
-unsigned int sysctl_sched_cfs_bandwidth_slice = 4000UL;
+unsigned int sysctl_sched_cfs_bandwidth_slice = 3000UL;
 #endif
 
 /*
