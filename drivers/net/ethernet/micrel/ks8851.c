@@ -797,6 +797,15 @@ static void ks8851_tx_work(struct work_struct *work)
 static int ks8851_net_open(struct net_device *dev)
 {
 	struct ks8851_net *ks = netdev_priv(dev);
+	int ret;
+
+	ret = request_threaded_irq(dev->irq, NULL, ks8851_irq,
+				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				   dev->name, ks);
+	if (ret < 0) {
+		netdev_err(dev, "failed to get irq\n");
+		return ret;
+	}
 
 	/* lock the card, even if we may not actually be doing anything
 	 * else at the moment */
@@ -910,6 +919,8 @@ static int ks8851_net_stop(struct net_device *dev)
 
 		dev_kfree_skb(txb);
 	}
+
+	free_irq(dev->irq, ks);
 
 	return 0;
 }
@@ -1558,14 +1569,6 @@ static int ks8851_probe(struct spi_device *spi)
 	ks8851_read_selftest(ks);
 	ks8851_init_mac(ks);
 
-	ret = request_threaded_irq(spi->irq, NULL, ks8851_irq,
-				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
-				   ndev->name, ks);
-	if (ret < 0) {
-		dev_err(&spi->dev, "failed to get irq\n");
-		goto err_irq;
-	}
-
 	ret = register_netdev(ndev);
 	if (ret) {
 		dev_err(&spi->dev, "failed to register network device\n");
@@ -1578,12 +1581,8 @@ static int ks8851_probe(struct spi_device *spi)
 
 	return 0;
 
-
 err_netdev:
-	free_irq(ndev->irq, ks);
-
 err_id:
-err_irq:
 	if (gpio_is_valid(ks->rst_gpio))
 		gpio_free(ks->rst_gpio);
 
@@ -1613,7 +1612,10 @@ static int ks8851_remove(struct spi_device *spi)
 	}
 
 	unregister_netdev(priv->netdev);
-	free_irq(spi->irq, priv);
+        if (gpio_is_valid(ks->rst_gpio))
+                gpio_free(ks->rst_gpio);
+	regulator_disable(priv->vdd_reg);
+	regulator_disable(priv->vdd_io);
 	free_netdev(priv->netdev);
 
 	return 0;
