@@ -4462,3 +4462,11 @@ CONFIG_OID_REGISTRY=y
 CONFIG_QMI_ENCDEC=y
 # CONFIG_QMI_ENCDEC_DEBUG is not set
 # CONFIG_STRICT_MEMORY_RWX is not set
+
+#####################
+#                   #
+#  Custom Features  #
+#                   #
+#####################
+
+CONFIG_ADRENO_IDLER=y
