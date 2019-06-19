@@ -27,14 +27,14 @@
 static DEFINE_SPINLOCK(tz_lock);
 
 /*
- * FLOOR is 5msec to capture up to 3 re-draws
+ * FLOOR is 6msec to capture up to 3 re-draws
  * per frame for 60fps content.
  */
-#define FLOOR		        5000
+#define FLOOR		        6000
 /*
- * MIN_BUSY is 1 msec for the sample to be sent
+ * MIN_BUSY is 2 msec for the sample to be sent
  */
-#define MIN_BUSY		1000
+#define MIN_BUSY		2000
 /*
  * Use BUSY_BIN to check for fully busy rendering
  * intervals that may need early intervention when
@@ -45,10 +45,10 @@ static DEFINE_SPINLOCK(tz_lock);
 #define MAX_TZ_VERSION		0
 
 /*
- * CEILING is 50msec, larger than any standard
+ * CEILING is 60msec, larger than any standard
  * frame length, but less than the idle timer.
  */
-#define CEILING			50000
+#define CEILING			60000
 #define TZ_RESET_ID		0x3
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
