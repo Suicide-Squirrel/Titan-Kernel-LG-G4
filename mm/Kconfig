@@ -412,7 +412,6 @@ choice
 
 	config TRANSPARENT_HUGEPAGE_MADVISE
 		bool "madvise"
-		default y
 		help
 		  Enabling Transparent Hugepage madvise, will only provide a
 		  performance improvement benefit to the applications using
