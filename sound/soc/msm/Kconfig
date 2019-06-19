@@ -400,7 +400,7 @@ config SND_LGE_HIDDEN_AUX
 
 
 config SND_SOC_HPH_WA
-        bool "CONFIG_SND_SOC_HPH_WA"
+        tristate "CONFIG_SND_SOC_HPH_WA"
         default n
         help
         To detecting mbhc ear-jack detecting by MB trigger
