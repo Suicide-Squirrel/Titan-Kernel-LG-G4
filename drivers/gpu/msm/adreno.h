@@ -41,6 +41,9 @@
 #define ADRENO_DEVICE(device) \
 		container_of(device, struct adreno_device, dev)
 
+/* KGSL_DEVICE - given an adreno_device, return the KGSL device struct */
+#define KGSL_DEVICE(_dev) (&((_dev)->dev))
+
 /* ADRENO_CONTEXT - Given a context return the adreno context struct */
 #define ADRENO_CONTEXT(context) \
 		container_of(context, struct adreno_context, base)
@@ -247,6 +250,8 @@ struct adreno_device {
 
 	struct kgsl_memdesc cmdbatch_profile_buffer;
 	unsigned int cmdbatch_profile_index;
+
+	unsigned int speed_bin;
 };
 
 /**
@@ -609,6 +614,7 @@ struct adreno_gpudev {
 	/* GPU specific function hooks */
 	void (*irq_trace)(struct adreno_device *, unsigned int status);
 	void (*snapshot)(struct adreno_device *, struct kgsl_snapshot *);
+	void (*platform_setup)(struct adreno_device *);
 	void (*gpudev_init)(struct adreno_device *);
 	int (*rb_init)(struct adreno_device *, struct adreno_ringbuffer *);
 	int (*perfcounter_init)(struct adreno_device *);
@@ -792,6 +798,11 @@ void adreno_fault_detect_stop(struct adreno_device *adreno_dev);
 
 void adreno_hang_int_callback(struct adreno_device *adreno_dev, int bit);
 void adreno_cp_callback(struct adreno_device *adreno_dev, int bit);
+
+int adreno_efuse_map(struct adreno_device *adreno_dev);
+int adreno_efuse_read_u32(struct adreno_device *adreno_dev, unsigned int offset,
+		unsigned int *val);
+void adreno_efuse_unmap(struct adreno_device *adreno_dev);
 
 static inline int adreno_is_a3xx(struct adreno_device *adreno_dev)
 {

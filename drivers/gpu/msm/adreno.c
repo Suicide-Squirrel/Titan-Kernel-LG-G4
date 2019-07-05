@@ -539,6 +539,58 @@ static inline int adreno_of_read_property(struct device_node *node,
 	return ret;
 }
 
+static void __iomem *efuse_base;
+static size_t efuse_len;
+
+int adreno_efuse_map(struct adreno_device *adreno_dev)
+{
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	struct resource *res;
+
+	if (efuse_base != NULL)
+		return 0;
+
+	res = platform_get_resource_byname(device->pdev, IORESOURCE_MEM,
+		"qfprom_memory");
+
+	if (res == NULL)
+		return -ENODEV;
+
+	efuse_base = ioremap(res->start, resource_size(res));
+	if (efuse_base == NULL)
+		return -ENODEV;
+
+	efuse_len = resource_size(res);
+	return 0;
+}
+
+void adreno_efuse_unmap(struct adreno_device *adreno_dev)
+{
+	if (efuse_base != NULL) {
+		iounmap(efuse_base);
+		efuse_base = NULL;
+		efuse_len = 0;
+	}
+}
+
+int adreno_efuse_read_u32(struct adreno_device *adreno_dev, unsigned int offset,
+		unsigned int *val)
+{
+	if (efuse_base == NULL)
+		return -ENODEV;
+
+	if (offset >= efuse_len)
+		return -ERANGE;
+
+	if (val != NULL) {
+		*val = readl_relaxed(efuse_base + offset);
+		/* Make sure memory is updated before returning */
+		rmb();
+	}
+
+	return 0;
+}
+
 static struct device_node *adreno_of_find_subnode(struct device_node *parent,
 	const char *name)
 {

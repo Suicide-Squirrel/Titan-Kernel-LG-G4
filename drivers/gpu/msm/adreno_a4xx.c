@@ -1596,6 +1596,43 @@ static const unsigned int _a4xx_pwron_fixup_fs_instructions[] = {
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 };
 
+static void a4xx_efuse_speed_bin(struct adreno_device *adreno_dev)
+{
+	unsigned int val;
+	unsigned int speed_bin[3];
+	struct kgsl_device *device = &adreno_dev->dev;
+
+	if (of_property_read_u32_array(device->pdev->dev.of_node,
+		"qcom,gpu-speed-bin", speed_bin, 3))
+		return;
+
+	adreno_efuse_read_u32(adreno_dev, speed_bin[0], &val);
+
+	adreno_dev->speed_bin = (val & speed_bin[1]) >> speed_bin[2];
+}
+
+static const struct {
+	int (*check)(struct adreno_device *adreno_dev);
+	void (*func)(struct adreno_device *adreno_dev);
+} a4xx_efuse_funcs[] = {
+	{ adreno_is_a418, a4xx_efuse_speed_bin },
+};
+
+static void a4xx_check_features(struct adreno_device *adreno_dev)
+{
+	unsigned int i;
+
+	if (adreno_efuse_map(adreno_dev))
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(a4xx_efuse_funcs); i++) {
+		if (a4xx_efuse_funcs[i].check(adreno_dev))
+			a4xx_efuse_funcs[i].func(adreno_dev);
+	}
+
+	adreno_efuse_unmap(adreno_dev);
+}
+
 /**
  * adreno_a4xx_pwron_fixup_init() - Initalize a special command buffer to run a
  * post-power collapse shader workaround
@@ -1716,6 +1753,20 @@ int adreno_a4xx_pwron_fixup_init(struct adreno_device *adreno_dev)
 	/* Mark the flag in ->priv to show that we have the fix */
 	set_bit(ADRENO_DEVICE_PWRON_FIXUP, &adreno_dev->priv);
 	return 0;
+}
+
+static void a4xx_platform_setup(struct adreno_device *adreno_dev)
+{
+	struct adreno_gpudev *gpudev;
+
+	if (adreno_is_a418(adreno_dev)) {
+		gpudev = ADRENO_GPU_DEVICE(adreno_dev);
+		gpudev->vbif_xin_halt_ctrl0_mask =
+				A40X_VBIF_XIN_HALT_CTRL0_MASK;
+	}
+
+	/* Check efuse bits for various capabilties */
+	a4xx_check_features(adreno_dev);
 }
 
 static ADRENO_CORESIGHT_ATTR(cfg_debbus_ctrlt, &a4xx_coresight_registers[0]);
@@ -1895,7 +1946,7 @@ struct adreno_gpudev adreno_a4xx_gpudev = {
 	.snapshot_data = &a4xx_snapshot_data,
 	.num_prio_levels = 1,
 	.vbif_xin_halt_ctrl0_mask = A4XX_VBIF_XIN_HALT_CTRL0_MASK,
-
+	.platform_setup = a4xx_platform_setup,
 	.perfcounter_init = a4xx_perfcounter_init,
 	.rb_init = a3xx_rb_init,
 	.busy_cycles = a3xx_busy_cycles,
