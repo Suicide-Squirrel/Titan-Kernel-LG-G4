@@ -1323,8 +1323,10 @@ static ssize_t qpnp_hap_vmax_mv_strong_store(struct device *dev,
 	if (ret)
 		return ret;
 
-	if ((val < QPNP_HAP_VMAX_MIN_MV) || (val > QPNP_HAP_VMAX_MAX_MV))
-		return -EINVAL;
+	if (val < QPNP_HAP_VMAX_MIN_MV)
+		val = QPNP_HAP_VMAX_MIN_MV;
+	else if (val > QPNP_HAP_VMAX_MAX_MV)
+		val = QPNP_HAP_VMAX_MAX_MV;
 
 	mutex_lock(&hap->wf_lock);
 	hap->vmax_mv_haptic = val;
