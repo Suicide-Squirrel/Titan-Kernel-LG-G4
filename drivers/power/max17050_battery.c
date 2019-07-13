@@ -804,7 +804,8 @@ static void max17050_dump_work(struct work_struct *work)
 
 	max17050_battery_dump_print();
 
-	schedule_delayed_work(&chip->max17050_monitor_work,
+	queue_delayed_work(system_power_efficient_wq,
+			&chip->max17050_monitor_work,
 			msecs_to_jiffies(DUMP_PRINT_TIME));
 
 }
@@ -843,7 +844,8 @@ static void max17050_monitor_work(struct work_struct *work)
 #ifdef CONFIG_LGE_PM_MAX17050_POLLING
 	if (compare_flag == 0) {
 		pr_max17050(PR_INFO, "%s : POLLING_FOR_COMPARE\n", __func__);
-		schedule_delayed_work(&chip->max17050_monitor_work,
+		queue_delayed_work(system_power_efficient_wq,
+				&chip->max17050_monitor_work,
 				msecs_to_jiffies(MAX17050_POLLING_PERIOD_10));
 		compare_flag = 1;
 	} else if((battery_voltage <= 3270 && battery_current > 0 && battery_temp >= 10)
@@ -854,11 +856,13 @@ static void max17050_monitor_work(struct work_struct *work)
 				__func__, cut_off_count);
 		if (cut_off_count <= 1) {
 			pr_max17050(PR_ERR, "%s : POLLING_PERIOD_5_FAKE_SOC_PRE\n", __func__);
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+			&chip->max17050_monitor_work,
 			msecs_to_jiffies(MAX17050_POLLING_PERIOD_5));
 		} else {
 			pr_max17050(PR_DEBUG, "%s : POLLING_PERIOD_5_FAKE_SOC\n", __func__);
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+			&chip->max17050_monitor_work,
 			msecs_to_jiffies(MAX17050_POLLING_PERIOD_5));
 				if (ref->soc_calc_cut_off_flag < 1) {
 					ref->fake_soc = max17050_get_capacity_percent();
@@ -913,7 +917,8 @@ static void max17050_monitor_work(struct work_struct *work)
 
 			power_supply_changed(chip->batt_psy);
 
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+			&chip->max17050_monitor_work,
 			msecs_to_jiffies(MAX17050_POLLING_PERIOD_5));
 
 		}
@@ -930,35 +935,41 @@ static void max17050_monitor_work(struct work_struct *work)
 		if (chip->last_soc <= 3) {
 			/* 0%~3% 5sec polling */
 			pr_max17050(PR_DEBUG, "%s : POLLING_PERIOD_5\n", __func__);
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+					&chip->max17050_monitor_work,
 					msecs_to_jiffies(MAX17050_POLLING_PERIOD_5));
 		} else if (4 <= chip->last_soc && chip->last_soc <= 7) {
 			/* 4%~7% 10sec polling */
 			pr_max17050(PR_DEBUG, "%s : POLLING_PERIOD_10\n", __func__);
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+					&chip->max17050_monitor_work,
 					msecs_to_jiffies(MAX17050_POLLING_PERIOD_10));
 		} else {
 			/* 8%~100% 20sec polling */
 			pr_max17050(PR_DEBUG, "%s : POLLING_PERIOD_20\n", __func__);
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+			&chip->max17050_monitor_work,
 					msecs_to_jiffies(MAX17050_POLLING_PERIOD_20));
 		}
 #endif
 		if (chip->last_soc <= 15) {
 			/* 0%~15% 5sec polling */
 			pr_max17050(PR_DEBUG, "%s : POLLING_PERIOD_5\n", __func__);
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+					&chip->max17050_monitor_work,
 					msecs_to_jiffies(MAX17050_POLLING_PERIOD_5));
 		} else {
 			/* 16~100% 10sec polling */
 			pr_max17050(PR_DEBUG, "%s : POLLING_PERIOD_20\n", __func__);
-			schedule_delayed_work(&chip->max17050_monitor_work,
+			queue_delayed_work(system_power_efficient_wq,
+					&chip->max17050_monitor_work,
 					msecs_to_jiffies(MAX17050_POLLING_PERIOD_20));
 		}
 	}
 #else
 		pr_max17050(PR_ERR, "%s : POLLING_PERIOD_5_EX\n", __func__);
-		schedule_delayed_work(&chip->max17050_monitor_work,
+		queue_delayed_work(system_power_efficient_wq,
+				&chip->max17050_monitor_work,
 				msecs_to_jiffies(MAX17050_POLLING_PERIOD_5));
 #endif
 	if(max17050_recharging() &&
@@ -2439,7 +2450,8 @@ static int max17050_probe(struct i2c_client *client,
 	ref = chip;
 
 	INIT_DELAYED_WORK(&chip->max17050_model_data_write_work, max17050_model_data_write_work);
-	schedule_delayed_work(&chip->max17050_model_data_write_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+	&chip->max17050_model_data_write_work, 0);
 
 	if (client->irq) {
 		ret = request_threaded_irq(client->irq, NULL,
@@ -2487,9 +2499,11 @@ static int max17050_probe(struct i2c_client *client,
 	ref = chip;
 
 	INIT_DELAYED_WORK(&chip->max17050_monitor_work, max17050_monitor_work);
-	schedule_delayed_work(&chip->max17050_monitor_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+	&chip->max17050_monitor_work, 0);
 	INIT_DELAYED_WORK(&chip->max17050_dump_work, max17050_dump_work);
-	schedule_delayed_work(&chip->max17050_dump_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+	&chip->max17050_dump_work, 0);
 #ifdef CONFIG_LGE_PM_MAX17050_RECHARGING
 	wake_lock_init(&chip->recharging_lock, WAKE_LOCK_SUSPEND, "max17050_recharging");
 #endif
@@ -2563,8 +2577,10 @@ static void max17050_pm_complete(struct device *dev)
 	}
 
 	/* Schedule update, if needed */
-	schedule_delayed_work(&ref->max17050_monitor_work, msecs_to_jiffies(HZ));
-	schedule_delayed_work(&ref->max17050_dump_work, msecs_to_jiffies(HZ));
+	queue_delayed_work(system_power_efficient_wq,
+	&ref->max17050_monitor_work, msecs_to_jiffies(HZ));
+	queue_delayed_work(system_power_efficient_wq,
+	&ref->max17050_dump_work, msecs_to_jiffies(HZ));
 }
 
 static const struct dev_pm_ops max17050_pm_ops = {
