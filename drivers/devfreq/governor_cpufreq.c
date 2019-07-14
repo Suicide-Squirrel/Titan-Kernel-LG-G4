@@ -110,7 +110,7 @@ static int update_node(struct devfreq_node *node)
 	if (df->previous_freq <= df->min_freq)
 		goto out;
 
-	schedule_delayed_work(&node->dwork,
+	queue_delayed_work(system_power_efficient_wq, &node->dwork,
 			      msecs_to_jiffies(node->timeout));
 out:
 	mutex_unlock(&df->lock);
