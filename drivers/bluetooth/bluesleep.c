@@ -108,10 +108,10 @@ static void bluesleep_sleep_work(struct work_struct *work);
 DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
 
 /* Macros for handling sleep work */
-#define bluesleep_rx_busy()     schedule_delayed_work(&sleep_workqueue, 0)
-#define bluesleep_tx_busy()     schedule_delayed_work(&sleep_workqueue, 0)
-#define bluesleep_rx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
-#define bluesleep_tx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
+#define bluesleep_rx_busy()     queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
+#define bluesleep_tx_busy()     queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
+#define bluesleep_rx_idle()     queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
+#define bluesleep_tx_idle()     queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
 
 /* 1 second timeout */
 #define RX_TIMER_INTERVAL  1

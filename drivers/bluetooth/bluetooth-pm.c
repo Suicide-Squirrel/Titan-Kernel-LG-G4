@@ -80,10 +80,10 @@ static void bluetooth_pm_sleep_work(struct work_struct *work);
 DECLARE_DELAYED_WORK(sleep_workqueue, bluetooth_pm_sleep_work);
 
 /* Macros for handling sleep work */
-#define bluetooth_pm_rx_busy()         schedule_delayed_work(&sleep_workqueue, 0)
-#define bluetooth_pm_tx_busy()         schedule_delayed_work(&sleep_workqueue, 0)
-#define bluetooth_pm_rx_idle()         schedule_delayed_work(&sleep_workqueue, 0)
-#define bluetooth_pm_tx_idle()         schedule_delayed_work(&sleep_workqueue, 0)
+#define bluetooth_pm_rx_busy()         queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
+#define bluetooth_pm_tx_busy()         queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
+#define bluetooth_pm_rx_idle()         queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
+#define bluetooth_pm_tx_idle()         queue_delayed_work(system_power_efficient_wq, &sleep_workqueue, 0)
 
 
 //BT_S : [CONBT-2112] LGC_BT_COMMON_IMP_KERNEL_V4L2_SLEEP_DRIVER
