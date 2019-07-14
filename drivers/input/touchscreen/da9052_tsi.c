@@ -48,7 +48,7 @@ static irqreturn_t da9052_ts_pendwn_irq(int irq, void *data)
 
 		da9052_ts_adc_toggle(tsi, true);
 
-		schedule_delayed_work(&tsi->ts_pen_work, HZ / 50);
+		queue_delayed_work(system_power_efficient_wq, &tsi->ts_pen_work, HZ / 50);
 	}
 
 	return IRQ_HANDLED;
@@ -113,7 +113,7 @@ static void da9052_ts_pen_work(struct work_struct *work)
 		int ret = da9052_reg_read(tsi->da9052, DA9052_TSI_LSB_REG);
 		if (ret < 0 || (ret & TSI_PEN_DOWN_STATUS)) {
 			/* Pen is still DOWN (or read error) */
-			schedule_delayed_work(&tsi->ts_pen_work, HZ / 50);
+			queue_delayed_work(system_power_efficient_wq, &tsi->ts_pen_work, HZ / 50);
 		} else {
 			struct input_dev *input = tsi->dev;
 

@@ -1545,7 +1545,7 @@ u8 gup_init_update_proc(struct goodix_ts_data *ts)
 	dev_dbg(&ts->client->dev, "Ready to run update work.");
 
 	INIT_DELAYED_WORK(&ts->goodix_update_work, gup_update_work);
-	schedule_delayed_work(&ts->goodix_update_work,
+	queue_delayed_work(system_power_efficient_wq, &ts->goodix_update_work,
 		msecs_to_jiffies(3000));
 
 	return 0;

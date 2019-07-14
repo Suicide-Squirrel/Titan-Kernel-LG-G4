@@ -132,7 +132,7 @@ static void ili210x_work(struct work_struct *work)
 	ili210x_report_events(priv->input, &touchdata);
 
 	if ((touchdata.status & 0xf3) || get_pendown_state(priv))
-		schedule_delayed_work(&priv->dwork,
+		queue_delayed_work(system_power_efficient_wq, &priv->dwork,
 				      msecs_to_jiffies(priv->poll_period));
 }
 
@@ -140,7 +140,7 @@ static irqreturn_t ili210x_irq(int irq, void *irq_data)
 {
 	struct ili210x *priv = irq_data;
 
-	schedule_delayed_work(&priv->dwork, 0);
+	queue_delayed_work(system_power_efficient_wq, &priv->dwork, 0);
 
 	return IRQ_HANDLED;
 }

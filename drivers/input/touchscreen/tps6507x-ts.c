@@ -217,7 +217,7 @@ done:
 	poll = 1;
 
 	if (poll) {
-		schd = schedule_delayed_work(&tsc->work,
+		schd = queue_delayed_work(system_power_efficient_wq, &tsc->work,
 					msecs_to_jiffies(tsc->poll_period));
 		if (schd)
 			tsc->polling = 1;
@@ -321,7 +321,7 @@ static int tps6507x_ts_probe(struct platform_device *pdev)
 	if (error)
 		goto err2;
 
-	schd = schedule_delayed_work(&tsc->work,
+	schd = queue_delayed_work(system_power_efficient_wq, &tsc->work,
 				     msecs_to_jiffies(tsc->poll_period));
 
 	if (schd)

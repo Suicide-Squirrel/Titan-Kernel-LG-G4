@@ -165,7 +165,7 @@ static irqreturn_t stmpe_ts_handler(int irq, void *data)
 			STMPE_TSC_CTRL_TSC_EN, STMPE_TSC_CTRL_TSC_EN);
 
 	/* start polling for touch_det to detect release */
-	schedule_delayed_work(&ts->work, HZ / 50);
+	queue_delayed_work(system_power_efficient_wq, &ts->work, HZ / 50);
 
 	return IRQ_HANDLED;
 }

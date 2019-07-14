@@ -259,7 +259,7 @@ static void tsc2007_work(struct work_struct *work)
 
  out:
 	if (ts->pendown || debounced)
-		schedule_delayed_work(&ts->work,
+		queue_delayed_work(system_power_efficient_wq, &ts->work,
 				      msecs_to_jiffies(ts->poll_period));
 	else
 		enable_irq(ts->irq);
@@ -271,7 +271,7 @@ static irqreturn_t tsc2007_irq(int irq, void *handle)
 
 	if (!ts->get_pendown_state || likely(ts->get_pendown_state())) {
 		disable_irq_nosync(ts->irq);
-		schedule_delayed_work(&ts->work,
+		queue_delayed_work(system_power_efficient_wq, &ts->work,
 				      msecs_to_jiffies(ts->poll_delay));
 	}
 
