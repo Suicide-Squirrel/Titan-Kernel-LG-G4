@@ -360,7 +360,7 @@ static inline void sb_queue_tail(struct netns_ipvs *ipvs,
 	if (ipvs->sync_state & IP_VS_STATE_MASTER &&
 	    ms->sync_queue_len < sysctl_sync_qlen_max(ipvs)) {
 		if (!ms->sync_queue_len)
-			schedule_delayed_work(&ms->master_wakeup_work,
+			queue_delayed_work(system_power_efficient_wq,&ms->master_wakeup_work,
 					      max(IPVS_SYNC_SEND_DELAY, 1));
 		ms->sync_queue_len++;
 		list_add_tail(&sb->list, &ms->sync_queue);

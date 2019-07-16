@@ -3297,7 +3297,7 @@ static int tabla_codec_enable_dec(struct snd_soc_dapm_widget *w,
 		if (tx_hpf_work[decimator - 1].tx_hpf_cut_of_freq !=
 				CF_MIN_3DB_150HZ) {
 
-			schedule_delayed_work(&tx_hpf_work[decimator - 1].dwork,
+			queue_delayed_work(system_power_efficient_wq,&tx_hpf_work[decimator - 1].dwork,
 					msecs_to_jiffies(300));
 		}
 		/* apply the digital gain after the decimator is enabled*/
@@ -6956,7 +6956,7 @@ static irqreturn_t tabla_dce_handler(int irq, void *data)
 		mask = tabla_get_button_mask(btn);
 		priv->buttons_pressed |= mask;
 		wcd9xxx_lock_sleep(core_res);
-		if (schedule_delayed_work(&priv->mbhc_btn_dwork,
+		if (queue_delayed_work(system_power_efficient_wq,&priv->mbhc_btn_dwork,
 					  msecs_to_jiffies(400)) == 0) {
 			WARN(1, "Button pressed twice without release"
 			     "event\n");
@@ -7814,7 +7814,7 @@ static void tabla_hs_insert_irq_nogpio(struct tabla_priv *priv, bool is_removal,
 		pr_debug("%s: Waiting for Headphone left trigger\n",
 			__func__);
 		wcd9xxx_lock_sleep(core_res);
-		if (schedule_delayed_work(&priv->mbhc_insert_dwork,
+		if (queue_delayed_work(system_power_efficient_wq,&priv->mbhc_insert_dwork,
 					  usecs_to_jiffies(1000000)) == 0) {
 			pr_err("%s: mbhc_insert_dwork is already scheduled\n",
 			       __func__);
@@ -8459,7 +8459,7 @@ int tabla_hs_detect(struct snd_soc_codec *codec,
 	if (!tabla->mbhc_cfg.read_fw_bin)
 		rc = tabla_mbhc_init_and_calibrate(tabla);
 	else
-		schedule_delayed_work(&tabla->mbhc_firmware_dwork,
+		queue_delayed_work(system_power_efficient_wq,&tabla->mbhc_firmware_dwork,
 				      usecs_to_jiffies(MBHC_FW_READ_TIMEOUT));
 
 	return rc;

@@ -148,7 +148,7 @@ static unsigned long rfkill_ratelimit(const unsigned long last)
 
 static void rfkill_schedule_ratelimited(void)
 {
-	if (schedule_delayed_work(&rfkill_op_work,
+	if (queue_delayed_work(system_power_efficient_wq,&rfkill_op_work,
 				  rfkill_ratelimit(rfkill_last_scheduled)))
 		rfkill_last_scheduled = jiffies;
 }

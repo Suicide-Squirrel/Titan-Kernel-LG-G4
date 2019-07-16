@@ -2057,7 +2057,7 @@ static void rehash_flow_table(struct work_struct *work)
 	}
 	rtnl_unlock();
 	ovs_unlock();
-	schedule_delayed_work(&rehash_flow_wq, REHASH_FLOW_INTERVAL);
+	queue_delayed_work(system_power_efficient_wq,&rehash_flow_wq, REHASH_FLOW_INTERVAL);
 }
 
 static int __net_init ovs_init_net(struct net *net)
@@ -2117,7 +2117,7 @@ static int __init dp_init(void)
 	if (err < 0)
 		goto error_unreg_notifier;
 
-	schedule_delayed_work(&rehash_flow_wq, REHASH_FLOW_INTERVAL);
+	queue_delayed_work(system_power_efficient_wq,&rehash_flow_wq, REHASH_FLOW_INTERVAL);
 
 	return 0;
 

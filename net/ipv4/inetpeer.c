@@ -154,7 +154,7 @@ static void inetpeer_gc_worker(struct work_struct *work)
 	list_splice(&list, &gc_list);
 	spin_unlock_bh(&gc_lock);
 
-	schedule_delayed_work(&gc_work, gc_delay);
+	queue_delayed_work(system_power_efficient_wq,&gc_work, gc_delay);
 }
 
 /* Called from ip_output.c:ip_init  */
@@ -565,7 +565,7 @@ static void inetpeer_inval_rcu(struct rcu_head *head)
 	list_add_tail(&p->gc_list, &gc_list);
 	spin_unlock_bh(&gc_lock);
 
-	schedule_delayed_work(&gc_work, gc_delay);
+	queue_delayed_work(system_power_efficient_wq,&gc_work, gc_delay);
 }
 
 void inetpeer_invalidate_tree(struct inet_peer_base *base)

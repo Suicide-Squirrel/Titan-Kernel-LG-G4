@@ -991,7 +991,7 @@ static int msm_audrx_init_tomtom(struct snd_soc_pcm_runtime *rtd)
 		 * will be ready to accept mclk request command.
 		 */
 		pdata->codec = codec;
-		schedule_delayed_work(&pdata->hs_detect_dwork,
+		queue_delayed_work(system_power_efficient_wq,&pdata->hs_detect_dwork,
 				  msecs_to_jiffies(HS_STARTWORK_TIMEOUT));
 
 	} else {
@@ -1127,7 +1127,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		 * will be ready to accept mclk request command.
 		 */
 		pdata->codec = codec;
-		schedule_delayed_work(&pdata->hs_detect_dwork,
+		queue_delayed_work(system_power_efficient_wq,&pdata->hs_detect_dwork,
 				  msecs_to_jiffies(HS_STARTWORK_TIMEOUT));
 	} else {
 		ret = -ENOMEM;

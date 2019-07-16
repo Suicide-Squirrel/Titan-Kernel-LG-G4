@@ -1140,7 +1140,7 @@ static void es9018_shutdown(struct snd_pcm_substream *substream,
 	mutex_lock(&g_es9018_priv->power_lock);
 	dev_info(codec->dev, "%s(): entry\n", __func__);
 	sabre_audio_idle();
-	schedule_delayed_work(&g_es9018_priv->sleep_work, msecs_to_jiffies(3000));
+	queue_delayed_work(system_power_efficient_wq,&g_es9018_priv->sleep_work, msecs_to_jiffies(3000));
 	es9018_is_amp_on = 0;
 	mutex_unlock(&g_es9018_priv->power_lock);
 }

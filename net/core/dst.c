@@ -135,7 +135,7 @@ loop:
 		 */
 		if (expires > 4*HZ)
 			expires = round_jiffies_relative(expires);
-		schedule_delayed_work(&dst_gc_work, expires);
+		queue_delayed_work(system_power_efficient_wq,&dst_gc_work, expires);
 	}
 
 	spin_unlock_bh(&dst_garbage.lock);

@@ -347,7 +347,7 @@ schedule:
 				  rmnet_map_flush_packet_queue);
 		work->config = config;
 		config->agg_state = RMNET_MAP_TXFER_SCHEDULED;
-		schedule_delayed_work((struct delayed_work *)work, 1);
+		queue_delayed_work(system_power_efficient_wq,(struct delayed_work *)work, 1);
 	}
 	spin_unlock_irqrestore(&config->agg_lock, flags);
 	return;

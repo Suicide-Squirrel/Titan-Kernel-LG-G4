@@ -355,7 +355,7 @@ static void lge_set_switch_device(struct wcd9xxx_mbhc *mbhc, int state)
 		if(retry_flag == 0){
 			retry_flag = 1;
 			pr_debug("[LGE MBHC] %s: vdce ( 4 < value < 11) retry!! \n", __func__);
-			schedule_delayed_work(&mbhc->mbhc_detect_for_boot,
+			queue_delayed_work(system_power_efficient_wq,&mbhc->mbhc_detect_for_boot,
 									 usecs_to_jiffies(1000000));
 		} else {
 			pr_debug("[LGE MBHC] %s: retry flag set \n", __func__);
@@ -2791,7 +2791,7 @@ static void wcd9xxx_mbhc_decide_swch_plug(struct wcd9xxx_mbhc *mbhc)
 			 __func__, plug_type);
 #ifdef CONFIG_MACH_LGE //miss_4pole_detected
 		mbhc->miss_4pole_detected = true;
-		schedule_delayed_work(&mbhc->miss_4pole_detected_dwork,
+		queue_delayed_work(system_power_efficient_wq,&mbhc->miss_4pole_detected_dwork,
 						 usecs_to_jiffies(400000));
 #endif //miss_4pole_detected
 		wcd9xxx_find_plug_and_report(mbhc, plug_type);
@@ -4285,7 +4285,7 @@ irqreturn_t wcd9xxx_dce_handler(int irq, void *data)
 
 		mbhc->buttons_pressed |= mask;
 		wcd9xxx_lock_sleep(core_res);
-		if (schedule_delayed_work(&mbhc->mbhc_btn_dwork,
+		if (queue_delayed_work(system_power_efficient_wq,&mbhc->mbhc_btn_dwork,
 					  msecs_to_jiffies(400)) == 0) {
 			WARN(1, "Button pressed twice without release event\n");
 			wcd9xxx_unlock_sleep(core_res);
@@ -5151,12 +5151,12 @@ int wcd9xxx_mbhc_start(struct wcd9xxx_mbhc *mbhc,
 	    (mbhc->mbhc_cfg->read_fw_bin && mbhc->mbhc_cal)) {
 		rc = wcd9xxx_init_and_calibrate(mbhc);
 #ifdef CONFIG_MACH_LGE
-		schedule_delayed_work(&mbhc->mbhc_detect_for_boot,
+		queue_delayed_work(system_power_efficient_wq,&mbhc->mbhc_detect_for_boot,
 			     usecs_to_jiffies(CORRECT_SWCH_CHECK_FOR_BOOT));
 #endif
 	} else {
 		if (!mbhc->mbhc_fw || !mbhc->mbhc_cal)
-			schedule_delayed_work(&mbhc->mbhc_firmware_dwork,
+			queue_delayed_work(system_power_efficient_wq,&mbhc->mbhc_firmware_dwork,
 					     usecs_to_jiffies(FW_READ_TIMEOUT));
 		else
 			pr_debug("%s: Skipping to read mbhc fw, 0x%p %p\n",

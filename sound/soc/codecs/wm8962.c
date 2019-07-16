@@ -3053,7 +3053,7 @@ static irqreturn_t wm8962_irq(int irq, void *data)
 
 		pm_wakeup_event(dev, 300);
 
-		schedule_delayed_work(&wm8962->mic_work,
+		queue_delayed_work(system_power_efficient_wq,&wm8962->mic_work,
 				      msecs_to_jiffies(250));
 	}
 

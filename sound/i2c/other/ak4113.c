@@ -144,7 +144,7 @@ void snd_ak4113_reinit(struct ak4113 *chip)
 	ak4113_init_regs(chip);
 	/* bring up statistics / event queing */
 	if (atomic_dec_and_test(&chip->wq_processing))
-		schedule_delayed_work(&chip->work, HZ / 10);
+		queue_delayed_work(system_power_efficient_wq,&chip->work, HZ / 10);
 }
 EXPORT_SYMBOL_GPL(snd_ak4113_reinit);
 
@@ -518,7 +518,7 @@ int snd_ak4113_build(struct ak4113 *ak4113,
 	}
 	snd_ak4113_proc_init(ak4113);
 	/* trigger workq */
-	schedule_delayed_work(&ak4113->work, HZ / 10);
+	queue_delayed_work(system_power_efficient_wq,&ak4113->work, HZ / 10);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(snd_ak4113_build);
@@ -634,5 +634,5 @@ static void ak4113_stats(struct work_struct *work)
 		snd_ak4113_check_rate_and_errors(chip, chip->check_flags);
 
 	if (atomic_dec_and_test(&chip->wq_processing))
-		schedule_delayed_work(&chip->work, HZ / 10);
+		queue_delayed_work(system_power_efficient_wq,&chip->work, HZ / 10);
 }
