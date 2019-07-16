@@ -2261,7 +2261,6 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 #endif
 
 	return 0;
-exit_free_ts_info:
 	debugfs_remove(temp);
 exit_remove_attrs:
 	for (attr_count--; attr_count >= 0; attr_count--) {
