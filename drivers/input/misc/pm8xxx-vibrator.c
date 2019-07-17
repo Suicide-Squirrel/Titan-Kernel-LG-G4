@@ -25,8 +25,8 @@
 #define VIB_DRV_SEL_SHIFT	0x03
 #define VIB_DRV_EN_MANUAL_MASK	0xfc
 
-#define VIB_MAX_LEVEL_mV	(3000)
-#define VIB_MIN_LEVEL_mV	(1000)
+#define VIB_MAX_LEVEL_mV	(2500)
+#define VIB_MIN_LEVEL_mV	(500)
 #define VIB_MAX_LEVELS		(VIB_MAX_LEVEL_mV - VIB_MIN_LEVEL_mV)
 
 #define MAX_FF_SPEED		0xff
@@ -99,7 +99,7 @@ static int pm8xxx_vib_set(struct pm8xxx_vib *vib, bool on)
 
 	if (on)
 		val |= ((vib->level << VIB_DRV_SEL_SHIFT) & VIB_DRV_SEL_MASK);
-	else
+	else if (!on)
 		val &= ~VIB_DRV_SEL_MASK;
 
 	rc = pm8xxx_vib_write_u8(vib, val, VIB_DRV);
