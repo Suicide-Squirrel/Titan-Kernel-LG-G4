@@ -254,7 +254,7 @@ struct qpnp_pwm_info {
  *  @ auto_res_mode - auto resonace mode
  *  @ lra_high_z - high z option line
  *  @ timeout_ms - max timeout in ms
- *  @ vmax_mv - max voltage in mv
+ *  @ vmax_mv_strong - max voltage in mv
  *  @ ilim_ma - limiting current in ma
  *  @ sc_deb_cycles - short circuit debounce cycles
  *  @ int_pwm_freq_khz - internal pwm frequency in khz
@@ -307,6 +307,7 @@ struct qpnp_hap {
 	enum qpnp_hap_high_z lra_high_z;
 	u32 timeout_ms;
 	u32 vmax_mv;
+	u32 vmax_mv_strong;
 	u32 vmax_mv_haptic;
 	u32 vmax_mv_ind;
 	u32 ilim_ma;
@@ -704,16 +705,16 @@ static int qpnp_hap_vmax_config(struct qpnp_hap *hap)
 	u8 reg = 0;
 	int rc, temp;
 
-	if (hap->vmax_mv < QPNP_HAP_VMAX_MIN_MV)
-		hap->vmax_mv = QPNP_HAP_VMAX_MIN_MV;
-	else if (hap->vmax_mv > QPNP_HAP_VMAX_MAX_MV)
-		hap->vmax_mv = QPNP_HAP_VMAX_MAX_MV;
+	if (hap->vmax_mv_strong < QPNP_HAP_VMAX_MIN_MV)
+		hap->vmax_mv_strong = QPNP_HAP_VMAX_MIN_MV;
+	else if (hap->vmax_mv_strong > QPNP_HAP_VMAX_MAX_MV)
+		hap->vmax_mv_strong = QPNP_HAP_VMAX_MAX_MV;
 
 	rc = qpnp_hap_read_reg(hap, &reg, QPNP_HAP_VMAX_REG(hap->base));
 	if (rc < 0)
 		return rc;
 	reg &= QPNP_HAP_VMAX_MASK;
-	temp = hap->vmax_mv / QPNP_HAP_VMAX_MIN_MV;
+	temp = hap->vmax_mv_strong / QPNP_HAP_VMAX_MIN_MV;
 	reg |= (temp << QPNP_HAP_VMAX_SHIFT);
 	rc = qpnp_hap_write_reg(hap, &reg, QPNP_HAP_VMAX_REG(hap->base));
 	if (rc)
@@ -2181,7 +2182,7 @@ static int qpnp_hap_parse_dt(struct qpnp_hap *hap)
 		return rc;
 	}
 
-	hap->vmax_mv = QPNP_HAP_VMAX_MAX_MV;
+	hap->vmax_mv_strong = QPNP_HAP_VMAX_MAX_MV;
 	rc = of_property_read_u32(spmi->dev.of_node,
 			"qcom,vmax-mv", &temp);
 	if (!rc) {
