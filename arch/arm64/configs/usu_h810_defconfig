@@ -1595,11 +1595,13 @@ CONFIG_BROADCOM_WIFI_RESERVED_MEM=y
 # CONFIG_WL_TI is not set
 # CONFIG_MWIFIEX is not set
 # CONFIG_CNSS is not set
-# CONFIG_CNSS_PCI is not set
+CONFIG_CNSS_PCI=y
+CONFIG_CNSS_MAC_BUG=y
+CONFIG_CLD_LL_CORE=y
+CONFIG_BUS_AUTO_SUSPEND=y
 # CONFIG_CNSS_SDIO is not set
 # CONFIG_CLD_DEBUG is not set
 # CONFIG_CLD_HL_SDIO_CORE is not set
-CONFIG_CLD_LL_CORE=y
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers

@@ -114,7 +114,7 @@ static struct cnss_fw_files FW_FILES_DEFAULT = {
 #define WLAN_SWREG_NAME		"wlan-soc-swreg"
 #define WLAN_EN_GPIO_NAME	"wlan-en-gpio"
 #define WLAN_BOOTSTRAP_GPIO_NAME "wlan-bootstrap-gpio"
-#define NUM_OF_BOOTSTRAP 3
+#define NUM_OF_BOOTSTRAP 4
 #define PM_OPTIONS		0
 #define PM_OPTIONS_SUSPEND_LINK_DOWN \
 	(MSM_PCIE_CONFIG_NO_CFG_RESTORE | MSM_PCIE_CONFIG_LINKDOWN)
@@ -1432,7 +1432,7 @@ static int cnss_wlan_runtime_suspend(struct device *dev)
 	if (wdrv && wdrv->runtime_ops && wdrv->runtime_ops->runtime_suspend)
 		ret = wdrv->runtime_ops->runtime_suspend(to_pci_dev(dev));
 
-	pr_info("cnss: runtime suspend status: %d\n", ret);
+	pr_debug("cnss: runtime suspend status: %d\n", ret);
 
 	return ret;
 
@@ -1458,7 +1458,7 @@ static int cnss_wlan_runtime_resume(struct device *dev)
 	if (wdrv && wdrv->runtime_ops && wdrv->runtime_ops->runtime_resume)
 		ret = wdrv->runtime_ops->runtime_resume(to_pci_dev(dev));
 
-	pr_info("cnss: runtime resume status: %d\n", ret);
+	pr_debug("cnss: runtime resume status: %d\n", ret);
 
 	return ret;
 }
@@ -1578,6 +1578,13 @@ void cnss_schedule_recovery_work(void)
 }
 EXPORT_SYMBOL(cnss_schedule_recovery_work);
 
+static inline void __cnss_disable_irq(void *data)
+{
+	struct pci_dev *pdev = data;
+
+	disable_irq(pdev->irq);
+}
+
 void cnss_pci_events_cb(struct msm_pcie_notify *notify)
 {
 	unsigned long flags;
@@ -1598,6 +1605,7 @@ void cnss_pci_events_cb(struct msm_pcie_notify *notify)
 		spin_unlock_irqrestore(&pci_link_down_lock, flags);
 
 		pr_err("PCI link down, schedule recovery\n");
+		__cnss_disable_irq(notify->user);
 		schedule_work(&recovery_work);
 		break;
 
