@@ -1722,11 +1722,6 @@ static void lpwg_timer_func(struct work_struct *work_timer)
 {
 	struct synaptics_ts_data *ts = container_of(to_delayed_work(work_timer),
 			struct synaptics_ts_data, work_timer);
-
-	send_uevent_lpwg(ts->client, LPWG_PASSWORD);
-	wake_unlock(&ts->timer_wake_lock);
-
-	TOUCH_D(DEBUG_LPWG, "u-event timer occur!\n");
 	return;
 }
 
@@ -6828,10 +6823,6 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 		if ((status & 0x1)) {   /* TCI-1 Double-Tap */
 			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
 					"LPWG Double-Tap mode\n");
-			if (ts->lpwg_ctrl.double_tap_enable) {
-				get_tci_data(ts, 2);
-				send_uevent_lpwg(ts->client, LPWG_DOUBLE_TAP);
-			}
 		} else if ((status & 0x2)) { /* TCI-2 Multi-Tap */
 			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
 					"LPWG Multi-Tap mode\n");
@@ -6854,7 +6845,6 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 			}
 			ts->pdata->swipe_stat[1] = DO_SWIPE;
 			ts->pdata->swipe_pwr_ctr = SKIP_PWR_CON;
-			send_uevent_lpwg(client, swipe_uevent);
 			swipe_disable(ts);
 		} else {
 			if (ts->lpwg_ctrl.has_lpwg_overtap_module) {

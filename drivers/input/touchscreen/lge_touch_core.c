@@ -153,36 +153,6 @@ void send_uevent(struct device *dev, char *string[2])
 	TOUCH_D(DEBUG_BASE_INFO, "uevent[%s]\n", string[0]);
 }
 
-/* send_uevent_lpwg
- *
- * It uses wake-lock in order to prevent entering the sleep-state,
- * during recognition or verification.
- */
-#define VALID_LPWG_UEVENT_SIZE 5
-static char *lpwg_uevent[VALID_LPWG_UEVENT_SIZE][2] = {
-	{"TOUCH_GESTURE_WAKEUP=WAKEUP", NULL},
-	{"TOUCH_GESTURE_WAKEUP=PASSWORD", NULL},
-	{"TOUCH_GESTURE_WAKEUP=SIGNATURE", NULL},
-	{"TOUCH_GESTURE_WAKEUP=SWIPE_DOWN", NULL},
-	{"TOUCH_GESTURE_WAKEUP=SWIPE_UP", NULL}
-};
-
-void send_uevent_lpwg(struct i2c_client *client, int type)
-{
-	struct lge_touch_data *ts = i2c_get_clientdata(client);
-
-	wake_lock_timeout(&ts->lpwg_wake_lock, msecs_to_jiffies(3000));
-
-	if (type > 0 && type <= VALID_LPWG_UEVENT_SIZE
-			&& atomic_read(&ts->state.uevent)
-			== UEVENT_IDLE) {
-		atomic_set(&ts->state.uevent, UEVENT_BUSY);
-		send_uevent(&client->dev, lpwg_uevent[type-1]);
-	}
-
-	return;
-}
-
 /* touch_i2c_read / touch_i2c_write
  *
  * Developer can use these fuctions

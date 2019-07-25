@@ -3687,7 +3687,6 @@ int check_tci_debug_result(struct sic_ts_data *ts, u8 wake_up_type)
 			ts->pw_data.data_num = 1;
 			ts->pw_data.data[0].x = 0;
 			ts->pw_data.data[0].y = 0;
-			send_uevent_lpwg(ts->client, LPWG_PASSWORD);
 			break;
 		}
 	}
@@ -4031,19 +4030,15 @@ enum error_type sic_ts_get_data(struct i2c_client *client,
 		if (wake_up_type == TCI_1) {
 			if (ts->lpwg_ctrl.double_tap_enable) {
 				get_tci_data(ts, 2);
-				send_uevent_lpwg(ts->client, LPWG_DOUBLE_TAP);
 			}
 		} else if (wake_up_type == TCI_2) {
 			if (ts->lpwg_ctrl.password_enable) {
 				get_tci_data(ts, ts->pw_data.tap_count);
-				send_uevent_lpwg(ts->client, LPWG_PASSWORD);
 			}
 		} else if (wake_up_type == SWIPE_DOWN) {
 			if (get_swipe_data(client) == 0) {
 				ts->pdata->swipe_pwr_ctr = SKIP_PWR_CON;
 				if (ts->pdata->lockscreen_stat == 1) {
-					send_uevent_lpwg(client,
-						LPWG_SWIPE_DOWN);
 					swipe_disable(ts);
 				} else {
 					ts->pdata->swipe_pwr_ctr =
@@ -4055,7 +4050,6 @@ enum error_type sic_ts_get_data(struct i2c_client *client,
 		} else if (wake_up_type == SWIPE_UP) {
 			if (get_swipe_data(client) == 0) {
 				ts->pdata->swipe_pwr_ctr = SKIP_PWR_CON;
-				send_uevent_lpwg(client, LPWG_SWIPE_UP);
 				swipe_disable(ts);
 			}
 		} else if (wake_up_type == TCI_FAIL_DEBUG) {
@@ -4479,19 +4473,15 @@ enum error_type sic_ts_get_data_debug_mode(struct i2c_client *client,
 		if (wake_up_type == TCI_1) {
 			if (ts->lpwg_ctrl.double_tap_enable) {
 				get_tci_data(ts, 2);
-				send_uevent_lpwg(ts->client, LPWG_DOUBLE_TAP);
 			}
 		} else if (wake_up_type == TCI_2) {
 			if (ts->lpwg_ctrl.password_enable) {
 				get_tci_data(ts, ts->pw_data.tap_count);
-				send_uevent_lpwg(ts->client, LPWG_PASSWORD);
 			}
 		} else if (wake_up_type == SWIPE_DOWN) {
 			if (get_swipe_data(client) == 0) {
 				ts->pdata->swipe_pwr_ctr = SKIP_PWR_CON;
 				if (ts->pdata->lockscreen_stat == 1) {
-					send_uevent_lpwg(client,
-						LPWG_SWIPE_DOWN);
 					swipe_disable(ts);
 				} else {
 					ts->pdata->swipe_pwr_ctr =
@@ -4503,7 +4493,6 @@ enum error_type sic_ts_get_data_debug_mode(struct i2c_client *client,
 		} else if (wake_up_type == SWIPE_UP) {
 			if (get_swipe_data(client) == 0) {
 				ts->pdata->swipe_pwr_ctr = SKIP_PWR_CON;
-				send_uevent_lpwg(client, LPWG_SWIPE_UP);
 				swipe_disable(ts);
 			}
 		} else if (wake_up_type == TCI_FAIL_DEBUG) {
