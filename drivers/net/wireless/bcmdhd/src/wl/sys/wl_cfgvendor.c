@@ -813,77 +813,6 @@ static int wl_cfgvendor_set_batch_scan_cfg(struct wiphy *wiphy,
 	return err;
 }
 
-static int wl_cfgvendor_significant_change_cfg(struct wiphy *wiphy,
-	struct wireless_dev *wdev, const void  *data, int len)
-{
-	int err = 0;
-	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
-	gscan_swc_params_t *significant_params;
-	int tmp, tmp1, tmp2, type, j = 0;
-	const struct nlattr *outer, *inner, *iter;
-	uint8 flush = 0;
-	wl_pfn_significant_bssid_t *pbssid;
-
-	significant_params = (gscan_swc_params_t *) kzalloc(len, GFP_KERNEL);
-	if (!significant_params) {
-		WL_ERR(("Cannot Malloc mem to parse config commands size - %d bytes \n", len));
-		return -1;
-	}
-
-
-	nla_for_each_attr(iter, data, len, tmp2) {
-		type = nla_type(iter);
-
-		switch (type) {
-			case GSCAN_ATTRIBUTE_SIGNIFICANT_CHANGE_FLUSH:
-			flush = nla_get_u8(iter);
-			break;
-			case GSCAN_ATTRIBUTE_RSSI_SAMPLE_SIZE:
-				significant_params->rssi_window = nla_get_u16(iter);
-				break;
-			case GSCAN_ATTRIBUTE_LOST_AP_SAMPLE_SIZE:
-				significant_params->lost_ap_window = nla_get_u16(iter);
-				break;
-			case GSCAN_ATTRIBUTE_MIN_BREACHING:
-				significant_params->swc_threshold = nla_get_u16(iter);
-				break;
-			case GSCAN_ATTRIBUTE_SIGNIFICANT_CHANGE_BSSIDS:
-				pbssid = significant_params->bssid_elem_list;
-				nla_for_each_nested(outer, iter, tmp) {
-					nla_for_each_nested(inner, outer, tmp1) {
-							switch (nla_type(inner)) {
-								case GSCAN_ATTRIBUTE_BSSID:
-								memcpy(&(pbssid[j].macaddr),
-								     nla_data(inner),
-								     ETHER_ADDR_LEN);
-								break;
-								case GSCAN_ATTRIBUTE_RSSI_HIGH:
-								pbssid[j].rssi_high_threshold =
-								       (int8) nla_get_u8(inner);
-								break;
-								case GSCAN_ATTRIBUTE_RSSI_LOW:
-								pbssid[j].rssi_low_threshold =
-								      (int8) nla_get_u8(inner);
-								break;
-							}
-						}
-					j++;
-				}
-				break;
-		}
-	}
-	significant_params->nbssid = j;
-
-	if (dhd_dev_pno_set_cfg_gscan(bcmcfg_to_prmry_ndev(cfg),
-	    DHD_PNO_SIGNIFICANT_SCAN_CFG_ID, significant_params, flush) < 0) {
-		WL_ERR(("Could not set GSCAN significant cfg\n"));
-		err = -EINVAL;
-		goto exit;
-	}
-exit:
-	kfree(significant_params);
-	return err;
-}
 #endif /* GSCAN_SUPPORT */
 
 #ifdef RTT_SUPPORT
@@ -1387,14 +1316,6 @@ static const struct wiphy_vendor_command wl_vendor_cmds [] = {
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wl_cfgvendor_hotlist_cfg
-	},
-	{
-		{
-			.vendor_id = OUI_GOOGLE,
-			.subcmd = GSCAN_SUBCMD_SET_SIGNIFICANT_CHANGE_CONFIG
-		},
-		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
-		.doit = wl_cfgvendor_significant_change_cfg
 	},
 	{
 		{
