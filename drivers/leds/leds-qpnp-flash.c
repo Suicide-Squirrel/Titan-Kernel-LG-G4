@@ -1290,6 +1290,8 @@ static void qpnp_flash_led_brightness_set(struct led_classdev *led_cdev,
 	flash_node = container_of(led_cdev, struct flash_node_data, cdev);
 	led = dev_get_drvdata(&flash_node->spmi_dev->dev);
 
+	const char *cdevname = flash_node->cdev.name;
+
 	if (value < LED_OFF) {
 		pr_err("Invalid brightness value\n");
 		return;
@@ -1344,6 +1346,12 @@ static void qpnp_flash_led_brightness_set(struct led_classdev *led_cdev,
 			}
 		}
 	} else {
+		if (strncmp(cdevname, "led:torch", 9) == 0) {
+		    pr_err("%s: %d: %s\n",
+			    __func__, __LINE__, "TORCH disabled. see https://github.com/Suicide-Squirrel/issues_pie/issues/8");
+		    mutex_unlock(&led->flash_led_lock);
+		    return;
+		}
 		if (value < FLASH_LED_MIN_CURRENT_MA && value != 0)
 			value = FLASH_LED_MIN_CURRENT_MA;
 		flash_node->prgm_current = value;
