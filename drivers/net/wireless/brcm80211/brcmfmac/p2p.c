@@ -1910,7 +1910,7 @@ s32 brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if *ifp,
  *
  * @cfg: driver private data for cfg80211 interface.
  */
-s32 brcmf_p2p_attach(struct brcmf_cfg80211_info *cfg)
+s32 brcmf_p2p_attach(struct brcmf_cfg80211_info *cfg, bool p2pdev_forced)
 {
 	struct brcmf_if *pri_ifp;
 	struct brcmf_if *p2p_ifp;
@@ -1925,11 +1925,15 @@ s32 brcmf_p2p_attach(struct brcmf_cfg80211_info *cfg)
 
 	drvr = cfg->pub;
 
-	pri_ifp = drvr->iflist[0];
-	p2p_ifp = drvr->iflist[1];
-
+	pri_ifp = brcmf_get_ifp(drvr, 0);
 	p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif = pri_ifp->vif;
 
+	if (p2pdev_forced) {
+		p2p_ifp = drvr->iflist[1];
+	} else {
+		p2p_ifp = NULL;
+		p2p->p2pdev_dynamically = true;
+	}
 	if (p2p_ifp) {
 		p2p_vif = brcmf_alloc_vif(cfg, NL80211_IFTYPE_P2P_DEVICE,
 					  false);
