@@ -4846,7 +4846,8 @@ static void init_vif_event(struct brcmf_cfg80211_vif_event *event)
 }
 
 struct brcmf_cfg80211_info *brcmf_cfg80211_attach(struct brcmf_pub *drvr,
-						  struct device *busdev)
+						  struct device *busdev,
+						  bool p2pdev_forced)
 {
 	struct net_device *ndev = drvr->iflist[0]->ndev;
 	struct brcmf_cfg80211_info *cfg;
@@ -4890,7 +4891,7 @@ struct brcmf_cfg80211_info *brcmf_cfg80211_attach(struct brcmf_pub *drvr,
 	}
 	ifp->vif = vif;
 
-	err = brcmf_p2p_attach(cfg);
+	err = brcmf_p2p_attach(cfg, p2pdev_forced);
 	if (err) {
 		brcmf_err("P2P initilisation failed (%d)\n", err);
 		goto cfg80211_p2p_attach_out;
