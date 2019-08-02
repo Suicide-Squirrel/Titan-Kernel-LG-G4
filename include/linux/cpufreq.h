@@ -507,6 +507,16 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
  *********************************************************************/
 
 void acct_update_power(struct task_struct *p, cputime_t cputime);
+void cpufreq_task_stats_init(struct task_struct *p);
+void cpufreq_task_stats_exit(struct task_struct *p);
+
+/* Define pid_namespace here to fix compilation error: conflicting types for 'proc_time_in_state_show'
+caused by warning: 'struct pid_namespace' declared inside parameter list followed by commit
+ANDROID: cpufreq_stat: add per task/uid/freq stats */
+struct pid_namespace;
+
+int  proc_time_in_state_show(struct seq_file *m, struct pid_namespace *ns,
+			     struct pid *pid, struct task_struct *p);
 
 #ifdef CONFIG_TASK_CPUFREQ_STATS
 void update_time_in_state(struct task_struct *p, int cpu);
