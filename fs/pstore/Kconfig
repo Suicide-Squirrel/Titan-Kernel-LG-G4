@@ -1,6 +1,6 @@
 config PSTORE
 	bool "Persistent store support"
-	default n
+	default y
 	help
 	   This option enables generic access to platform level
 	   persistent storage via "pstore" filesystem that can
