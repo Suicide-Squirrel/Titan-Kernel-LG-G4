@@ -1068,7 +1068,7 @@ static void fastrpc_read_handler(int cid)
 		if (err)
 			goto bail;
 
-		VERIFY(err, ((me->ctxtable[index]->ctxid == (rsp.ctx & ~1)) &&
+		VERIFY(err, ((me->ctxtable[index]->ctxid == (rsp.ctx)) &&
 			me->ctxtable[index]->magic == FASTRPC_CTX_MAGIC));
 		if (err)
 			goto bail;
