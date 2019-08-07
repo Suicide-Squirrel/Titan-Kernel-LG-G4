@@ -2257,12 +2257,6 @@ void msm_hs_set_clock(int port_index, int on)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	int rc = atomic_read(&msm_uport->clk_count);
 
-	// Check if there is a registered wakeup source
-	if (!msm_uport->ws.name) {
-		pr_debug("%s there is no registered WS source:\n", __func__);
-		return;
-	}
-
 	MSM_HS_INFO("%s /dev/ttyHS%d clock: %s\n", __func__, port_index, on ? "ON" : "OFF");
 
 	if (on) {
