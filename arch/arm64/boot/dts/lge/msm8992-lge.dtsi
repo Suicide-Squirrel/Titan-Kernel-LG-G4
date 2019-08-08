@@ -34,6 +34,7 @@
             android,ramoops-ftrace-size = <0x10000>;
             android,ramoops-pmsg-size = <0x80000>;
             android,ramoops-dump-oops = <0x1>;
+            android,ramoops-ecc-size = <16>;
             linux,contiguous-region = <&ramoops_mem>;
             android,ramoops-hole {
                 compatible = "qcom,msm-contig-mem";
