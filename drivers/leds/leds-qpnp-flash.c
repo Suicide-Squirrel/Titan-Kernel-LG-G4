@@ -24,9 +24,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/power_supply.h>
-#include <linux/leds-qpnp-flash.h>
-#include <linux/debugfs.h>
-#include <linux/uaccess.h>
 #include "leds.h"
 
 #define FLASH_LED_PERIPHERAL_SUBTYPE(base)			(base + 0x05)
@@ -68,7 +65,6 @@
 #define FLASH_VPH_PWR_DROOP_MASK				0xF3
 #define FLASH_LED_HDRM_SNS_ENABLE_MASK				0x81
 #define	FLASH_MASK_MODULE_CONTRL_MASK				0xE0
-#define FLASH_PREPARE_OPTIONS_MASK				0x07
 
 #define FLASH_LED_TRIGGER_DEFAULT				"none"
 #define FLASH_LED_HEADROOM_DEFAULT_MV				500
@@ -175,7 +171,6 @@ struct flash_node_data {
 	u8				trigger;
 	u8				enable;
 	u8				num_regulators;
-	bool				regulators_on;
 	bool				flash_on;
 };
 
@@ -394,16 +389,15 @@ static ssize_t qpnp_flash_led_max_current_show(struct device *dev,
 	flash_node = container_of(led_cdev, struct flash_node_data, cdev);
 	led = dev_get_drvdata(&flash_node->spmi_dev->dev);
 
-	if (!led->pdata->power_detect_en)
-		return -EINVAL;
+	if (led->pdata->power_detect_en) {
+		max_curr_avail_ma =
+			qpnp_flash_led_get_max_avail_current(flash_node, led);
 
-        max_curr_avail_ma =
-		qpnp_flash_led_get_max_avail_current(flash_node, led);
-
-	if (max_curr_avail_ma < 0)
-		return -EINVAL;
-	else
-		max_curr_avail_ma = (int)flash_node->max_current;
+		if (max_curr_avail_ma < 0)
+			return -EINVAL;
+		else
+			max_curr_avail_ma = (int)flash_node->max_current;
+	}
 
 	return snprintf(buf, PAGE_SIZE, "%u\n", max_curr_avail_ma);
 }
@@ -732,9 +726,6 @@ static int flash_regulator_enable(struct qpnp_flash_led *led,
 {
 	int i, rc = 0;
 
-	if (flash_node->regulators_on == on)
-		return 0;
-
 	if (on == false) {
 		i = flash_node->num_regulators;
 		goto error_regulator_enable;
@@ -749,71 +740,12 @@ static int flash_regulator_enable(struct qpnp_flash_led *led,
 		}
 	}
 
-	flash_node->regulators_on = true;
 	return rc;
 
 error_regulator_enable:
 	while (i--)
 		regulator_disable(flash_node->reg_data[i].regs);
 
-	flash_node->regulators_on = false;
-	return rc;
-}
-
-int qpnp_flash_led_prepare(struct led_trigger *trig, int options,
-					int *max_current)
-{
-	struct led_classdev *led_cdev = trigger_to_lcdev(trig);
-	struct flash_node_data *flash_node;
-	struct qpnp_flash_led *led;
-	int rc;
-
-	if (!led_cdev) {
-		pr_err("Invalid led_trigger provided\n");
-		return -EINVAL;
-	}
-
-	flash_node = container_of(led_cdev, struct flash_node_data, cdev);
-	led = dev_get_drvdata(&flash_node->spmi_dev->dev);
-
-	if (!(options & FLASH_PREPARE_OPTIONS_MASK)) {
-		dev_err(&led->spmi_dev->dev, "Invalid options %d\n", options);
-		return -EINVAL;
-	}
-
-	mutex_lock(&led->flash_led_lock);
-
-	if (options & ENABLE_REGULATOR) {
-		rc = flash_regulator_enable(led, flash_node, true);
-		if (rc < 0) {
-			dev_err(&led->spmi_dev->dev,
-				"enable regulator failed, rc=%d\n", rc);
-			goto out;
-		}
-	}
-
-	if (options & DISABLE_REGULATOR) {
-		rc = flash_regulator_enable(led, flash_node, false);
-		if (rc < 0) {
-			dev_err(&led->spmi_dev->dev,
-				"disable regulator failed, rc=%d\n", rc);
-			goto out;
-		}
-	}
-
-	if (options & QUERY_MAX_CURRENT) {
-		rc = qpnp_flash_led_get_max_avail_current(flash_node, led);
-		if (rc < 0) {
-			dev_err(&led->spmi_dev->dev,
-				"query max current failed, rc=%d\n", rc);
-			goto out;
-		}
-		*max_current = rc;
-		rc = 0;
-	}
-
-out:
-	mutex_unlock(&led->flash_led_lock);
 	return rc;
 }
 
@@ -1290,17 +1222,6 @@ static void qpnp_flash_led_brightness_set(struct led_classdev *led_cdev,
 	flash_node = container_of(led_cdev, struct flash_node_data, cdev);
 	led = dev_get_drvdata(&flash_node->spmi_dev->dev);
 
-	/**
-	    torch_0 causes a crash in camera daemon due to mutex locking
-	**/
-	const char *cdevname = flash_node->cdev.name;
-	if (strcmp(cdevname, "led:torch_0") == 0) {
-            pr_err("%s: %d: %s (value: %d, cdev: %s)\n",
-                 __func__, __LINE__, "torch_0 handling disabled. see https://github.com/Suicide-Squirrel/issues_pie/issues/8", value, cdevname);
-	    mutex_unlock(&led->flash_led_lock);
-	    return;
-	}
-
 	if (value < LED_OFF) {
 		pr_err("Invalid brightness value\n");
 		return;
@@ -1310,11 +1231,6 @@ static void qpnp_flash_led_brightness_set(struct led_classdev *led_cdev,
 		value = flash_node->cdev.max_brightness;
 
 	flash_node->cdev.brightness = value;
-
-	/*LGE_CHANGE, adds debugging log */
-	pr_err("%s: %d: name = %s, val = %d\n",
-		__func__, __LINE__, flash_node->cdev.name, value);
-
 	if (led->flash_node[led->num_leds - 1].id ==
 						FLASH_LED_SWITCH) {
 		if (flash_node->type == TORCH)
@@ -1360,9 +1276,7 @@ static void qpnp_flash_led_brightness_set(struct led_classdev *led_cdev,
 		flash_node->prgm_current = value;
 	}
 
-	mutex_lock(&led->flash_led_lock);
 	queue_work(led->ordered_workq, &flash_node->work);
-	mutex_unlock(&led->flash_led_lock);
 
 	return;
 }
@@ -1766,12 +1680,9 @@ static int qpnp_flash_led_parse_common_dt(
 
 	led->pdata->hdrm_sns_ch1_en = of_property_read_bool(node,
 						"qcom,headroom-sense-ch1-enabled");
-/* LGE: flash dimming issue */
-/* QMC original */
-/*	led->pdata->power_detect_en = of_property_read_bool(node,
+
+	led->pdata->power_detect_en = of_property_read_bool(node,
 						"qcom,power-detect-enabled");
-*/
-	led->pdata->power_detect_en = false;
 
 	led->pinctrl = devm_pinctrl_get(&led->spmi_dev->dev);
 	if (IS_ERR_OR_NULL(led->pinctrl)) {
