@@ -4042,10 +4042,17 @@ CONFIG_SDCARD_FS_SUPPORT_SYMLINK=y
 # CONFIG_QNX4FS_FS is not set
 # CONFIG_QNX6FS_FS is not set
 # CONFIG_ROMFS_FS is not set
+
+# Allow accessing PSTORE data in TWRP to debug >ROM< panics/oops
+# Only enable console, pmsg, ftrace if you want to debug >TWRP< otherwise 
+# TWRP will overwrite your pstore saved data written by your ROM.
+# Usually you want to get your ROM's panics/oops so leave that as it is here:
 CONFIG_PSTORE=y
-CONFIG_PSTORE_CONSOLE=y
-CONFIG_PSTORE_PMSG=y
 CONFIG_PSTORE_RAM=y
+# CONFIG_PSTORE_CONSOLE is not set - enable this and you will debug TWRP - it will overwrite your ROM PSTORE!
+# CONFIG_PSTORE_PMSG is not set - enable this and you will debug TWRP - it will overwrite your ROM PSTORE!
+# CONFIG_PSTORE_FTRACE is not set - enable this and you will debug TWRP - it will overwrite your ROM PSTORE!
+
 # CONFIG_SYSV_FS is not set
 # CONFIG_UFS_FS is not set
 CONFIG_F2FS_FS=y
