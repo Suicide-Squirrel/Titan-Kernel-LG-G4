@@ -7,10 +7,8 @@ all: hugepage-mmap hugepage-shm  map_hugetlb thuge-gen
 %: %.c
 	$(CC) $(CFLAGS) -o $@ $^
 
-TEST_PROGS := run_vmtests
-TEST_FILES := $(BINARIES)
-
-include ../lib.mk
+run_tests: all
+	@/bin/sh ./run_vmtests || echo "vmtests: [FAIL]"
 
 clean:
 	$(RM) hugepage-mmap hugepage-shm  map_hugetlb

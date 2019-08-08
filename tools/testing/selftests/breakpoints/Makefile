@@ -16,9 +16,8 @@ else
 	echo "Not an x86 target, can't build breakpoints selftests"
 endif
 
-TEST_PROGS := breakpoint_test
-
-include ../lib.mk
+run_tests:
+	@./breakpoint_test || echo "breakpoints selftests: [FAIL]"
 
 clean:
 	rm -fr breakpoint_test

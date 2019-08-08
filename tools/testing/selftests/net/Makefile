@@ -11,10 +11,9 @@ all: $(NET_PROGS)
 %: %.c
 	$(CC) $(CFLAGS) -o $@ $^
 
-TEST_PROGS := run_netsocktests run_afpackettests test_bpf.sh
-TEST_FILES := $(NET_PROGS)
-
-include ../lib.mk
+run_tests: all
+	@/bin/sh ./run_netsocktests || echo "sockettests: [FAIL]"
+	@/bin/sh ./run_afpackettests || echo "afpackettests: [FAIL]"
 
 clean:
 	$(RM) $(NET_PROGS)
