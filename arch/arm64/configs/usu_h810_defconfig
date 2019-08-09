@@ -3773,7 +3773,7 @@ CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder"
 # CONFIG_ANDROID_LOGGER is not set
 # CONFIG_CORESIGHT is not set
 # CONFIG_BIF is not set
-# CONFIG_SENSORS is not set
+CONFIG_SENSORS=y
 CONFIG_SENSORS_SSC=y
 
 #
