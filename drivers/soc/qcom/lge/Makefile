@@ -6,7 +6,6 @@ obj-$(CONFIG_LGE_BOOTLOADER_LOG)		+= lge_bootloader_log.o
 obj-$(CONFIG_LGE_BOOTLOADER_TIME_CHECKER)	+= lge_bootloader_time_checker.o
 obj-$(CONFIG_WIFI_CONTROL_FUNC)			+= wifi_bcm_lge.o
 obj-$(CONFIG_LGE_PM)				+= lge_gpio_debug.o
-obj-$(CONFIG_LGE_PM)				+= lge_monitor_thermal.o
 obj-$(CONFIG_PRE_SELF_DIAGNOSIS) += lge_pre_selfd.o
 obj-$(CONFIG_CHECK_CPU) += lge_fac_check_cpu.o
 obj-$(CONFIG_CHECK_EMMC) += lge_fac_check_emmc.o
