@@ -1718,13 +1718,6 @@ static char *productcode_parse(unsigned char *product)
 
 	return str;
 }
-static void lpwg_timer_func(struct work_struct *work_timer)
-{
-	struct synaptics_ts_data *ts = container_of(to_delayed_work(work_timer),
-			struct synaptics_ts_data, work_timer);
-	return;
-}
-
 static void all_palm_released_func(struct work_struct *work_palm)
 {
 	struct synaptics_ts_data *ts = container_of(to_delayed_work(work_palm),
@@ -5788,7 +5781,6 @@ enum error_type synaptics_ts_probe(struct i2c_client *client,
 	ts->lpwg_ctrl.sensor = 1;
 
 	atomic_set(&ts->lpwg_ctrl.is_suspend, 0);
-	INIT_DELAYED_WORK(&ts->work_timer, lpwg_timer_func);
 	INIT_DELAYED_WORK(&ts->work_palm, all_palm_released_func);
 	INIT_DELAYED_WORK(&ts->work_sleep, sleepmode_func);
 	wake_lock_init(&ts->timer_wake_lock, WAKE_LOCK_SUSPEND, "touch_timer");
