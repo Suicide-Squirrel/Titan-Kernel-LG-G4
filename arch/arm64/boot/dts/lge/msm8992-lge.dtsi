@@ -15,10 +15,28 @@
             ramoops_mem: ramoops_region@0 {
                     linux,reserve-contiguous-region;
                     linux,reserve-region;
-                    reg = <0 0x1fe00000 0 0x00200000>;
+                    reg = <0 0x0ff00000 0 0x100000>;
                     linux,remove-completely;
                     label = "ramoops_mem";
             };
+
+	    dfps_data_mem: dfps_data_mem@0 {
+		status = "disabled";
+	    };
+
+	    cont_splash_mem: cont_splash_mem@0 {
+		linux,reserve-contiguous-region;
+		linux,reserve-region;
+		reg = <0 0x03400000 0 0xc00000>;
+		label = "cont_splash_mem";
+	    };
+
+	    crash_fb_mem: crash_fb_mem@4000000 {
+		linux,reserve-contiguous-region;
+		linux,reserve-region;
+		reg = <0 0x04000000 0 0xc00000>;
+		label = "crash_fb_mem";
+	    };
         };
 	firmware: firmware {
 		android {
@@ -43,8 +61,6 @@
             compatible = "ramoops";
             status = "ok";
 
-            android,ramoops-buffer-start = <0x1fe00000>;
-            android,ramoops-buffer-size = <0x200000>;
             android,ramoops-console-size = <0x100000>;
             android,ramoops-record-size = <0x10000>;
             android,ramoops-ftrace-size = <0x10000>;
@@ -52,9 +68,11 @@
             android,ramoops-dump-oops = <0x1>;
             android,ramoops-ecc-size = <16>;
             linux,contiguous-region = <&ramoops_mem>;
+            android,ramoops-buffer-start = <0x0ff00000>; // should be the same as in ramoops_mem
+            android,ramoops-buffer-size  = <1048576>; // use all reserved mem, 1048576 bytes (must fit into ramoops_mem)
             android,ramoops-hole {
                 compatible = "qcom,msm-contig-mem";
-                    qcom,memblock-reserve = <0x1fe00000 0x00200000>;
+                qcom,memblock-reserve = <0x0ff00000 0x100000>;
             };  
         };
 
