@@ -18,7 +18,7 @@
 #ifdef CONFIG_LGE_PM_DEBUG
 int msm_show_resume_irq_mask = 1;
 #else
-int msm_show_resume_irq_mask = 1;
+int msm_show_resume_irq_mask;
 #endif
 
 module_param_named(
