@@ -6757,18 +6757,7 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 
 	TOUCH_TRACE();
 
-	if (!ts->is_init) {
-		if (lpwg_by_lcd_notifier) {
-			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
-					"ts->is_init = 0,"
-					"lpwg_by_lcd_notifier = ture,"
-					"handling lpwg event\n");
-		} else {
-			TOUCH_E("%s, %d : ts->is_init == 0, IGNORE_EVENT!!, s:\n",
-					__func__, __LINE__);
-			return IGNORE_EVENT;
-		}
-	}
+	if (!ts->is_init) return IGNORE_EVENT;
 
 	curr_data->total_num = 0;
 	curr_data->id_mask = 0;
