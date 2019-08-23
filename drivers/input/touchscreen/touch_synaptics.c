@@ -475,60 +475,6 @@ error:
 	return -EPERM;
 }
 
-#define SWIPE_F_STR_SIZE 8
-static const char *swipe_f_str[SWIPE_F_STR_SIZE] = {
-	"SUCCESS",
-	"FINGER_RELEASED",
-	"MULTIPLE_FINGERS",
-	"TOO_FAST",
-	"TOO_SLOW",
-	"OUT_OF_AREA",
-	"RATIO_EXECESS",
-	"UNKNOWN"
-};
-
-static int print_swipe_fail_reason(struct synaptics_ts_data *ts)
-{
-	struct swipe_data *swp = &ts->swipe;
-	u8 buf = 0;
-	u8 direction = 0;
-	u8 fail_reason = 0;
-
-	if (mfts_mode && !ts->pdata->role->mfts_lpwg) {
-		TOUCH_E("do not print swipe fail reason - mfts\n");
-		return -EPERM;
-	} else {
-		TOUCH_E("%s, %d : swipe fail reason\n", __func__, __LINE__);
-	}
-
-	if (swp->support_swipe == NO_SUPPORT_SWIPE) {
-		TOUCH_E("support_swipe:0x%02X\n", swp->support_swipe);
-		return -EPERM;
-	}
-
-	synaptics_ts_page_data_read(ts->client, LPWG_PAGE,
-			swp->fail_reason_reg, 1, &buf);
-
-	if (swp->support_swipe & SUPPORT_SWIPE_DOWN) {
-		direction = SWIPE_DIRECTION_DOWN;
-		fail_reason = buf;
-	}
-
-	if (swp->support_swipe & SUPPORT_SWIPE_UP) {
-		direction = buf & 0x03;
-		fail_reason = (buf & 0xfc) >> 2;
-	}
-
-	if (fail_reason >= SWIPE_F_STR_SIZE)
-		fail_reason = SWIPE_F_STR_SIZE - 1;
-
-	TOUCH_I("last swipe_%s fail reason:%d(%s)\n",
-			direction ? "up" : "down",
-			fail_reason, swipe_f_str[fail_reason]);
-
-	return 0;
-}
-
 /**
  * Knock on
  *
@@ -6757,18 +6703,7 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 
 	TOUCH_TRACE();
 
-	if (!ts->is_init) {
-		if (lpwg_by_lcd_notifier) {
-			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
-					"ts->is_init = 0,"
-					"lpwg_by_lcd_notifier = ture,"
-					"handling lpwg event\n");
-		} else {
-			TOUCH_E("%s, %d : ts->is_init == 0, IGNORE_EVENT!!, s:\n",
-					__func__, __LINE__);
-			return IGNORE_EVENT;
-		}
-	}
+	if (!ts->is_init) return IGNORE_EVENT;
 
 	curr_data->total_num = 0;
 	curr_data->id_mask = 0;
@@ -7068,11 +7003,6 @@ enum error_type synaptics_ts_power(struct i2c_client *client, int power_ctrl)
 
 	switch (power_ctrl) {
 	case POWER_OFF:
-		if (ts->swipe.support_swipe)
-			print_swipe_fail_reason(ts);
-
-		ts->is_init = 0;
-
 		if (ts->pdata->reset_pin > 0)
 			gpio_direction_output(ts->pdata->reset_pin, 0);
 
