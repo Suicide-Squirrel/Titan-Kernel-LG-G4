@@ -62,17 +62,18 @@
             status = "ok";
 
             android,ramoops-buffer-start = <0x0ff00000>; // should be the same as in ramoops_mem
-            android,ramoops-buffer-size  = <1048576>; // use all reserved mem, 1048576 bytes (must fit into ramoops_mem)
-            android,ramoops-console-size = <131072>; // reserve 128 KB (beware: increasing might drop pmsg)
-            android,ramoops-pmsg-size    = <131072>; // reserve 128 KB (beware: increasing might drop console & pmsg)
+            android,ramoops-buffer-size  = <0x1048576>; // use all reserved mem, 1048576 bytes (must fit into ramoops_mem)
+            android,ramoops-console-size = <0x131072>; // reserve 128 KB (beware: increasing might drop pmsg)
+            android,ramoops-pmsg-size    = <0x131072>; // reserve 128 KB (beware: increasing might drop console & pmsg)
+            android,ramoops-ftrace-size  = <0x131072>; // reserve 128 KB (beware: increasing might drop console & pmsg)
             /* split in (almost) 1 MB chunks (1048570 bytes)
              *  changing this might drop console & pmsg!
              *  must be smaller then buffer-size and should be even)
             */
-            android,ramoops-record-size  = <1048570>;
+            android,ramoops-record-size  = <0x1048570>;
 
-            android,ramoops-dump-oops    = <1>; // dump oops as well on panic
-            android,ramoops-ecc-size     = <16>; // size for ecc memory recovery
+            android,ramoops-dump-oops    = <0x1>; // dump oops as well on panic
+            android,ramoops-ecc-size     = <0x16>; // size for ecc memory recovery
             linux,contiguous-region      = <&ramoops_mem>;
             android,ramoops-hole {
                 compatible = "qcom,msm-contig-mem";
