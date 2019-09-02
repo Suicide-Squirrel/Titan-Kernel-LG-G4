@@ -535,7 +535,6 @@
 			qcom,switch-freq-khz = <800>;
 			qcom,ovp-mv = <29500>;
 			qcom,ilim-ma = <980>;
-			qcom,boost-duty-ns = <26>;
 			qcom,mod-freq-khz = <9600>;
 			qcom,dim-mode = "hybrid";
 			qcom,hyb-thres = <625>;
