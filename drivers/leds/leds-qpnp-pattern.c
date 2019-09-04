@@ -6,10 +6,6 @@
 #define PWM_PERIOD_US                   1000
 #define LPG_NEED_TO_SET                 -1
 
-/* Features used internally
- */
-#define PATTERN_FOR_HIDDEN_MENU         true;
-
 /* Factors for brightness tuning
  */
 #define BRIGHTNESS_BASE_RGB             255
@@ -123,45 +119,6 @@ static int qpnp_pattern_scenario_index(enum qpnp_pattern_scenario scenario)
 	case PATTERN_SCENARIO_MISSED_NOTI_SECRETMODE_REPEAT_CYAN : return 26;
 	case PATTERN_SCENARIO_MISSED_NOTI_SECRETMODE_ONESHOT_CYAN : return 27;
 
-#ifdef PATTERN_FOR_HIDDEN_MENU
-/* If PATTERN_FOR_HIDDEN_MENU is enabled,
- * the pattern numbers 0~15 of seek-bar are mapped to ...
- *       0 -> PATTERN_SCENARIO_DEFAULT_OFF
- *       1 -> PATTERN_SCENARIO_POWER_ON
- *       2 -> PATTERN_SCENARIO_LCD_ON
- *       3 -> PATTERN_SCENARIO_CHARGING
- *       4 -> PATTERN_SCENARIO_CHARGING_FULL
- *       5 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_URGENT
- *       6 -> PATTERN_SCENARIO_POWER_OFF
- *       7 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_GREEN
- *       8 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_BLUE
- *       9 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_PINK
- *      10 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_YELLOW
- *      11 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_ORANGE
- *      12 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_TURQUOISE
- *      13 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_PURPLE
- *      14 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_RED
- *      15 -> PATTERN_SCENARIO_MISSED_NOTI_REPEAT_LIME
- */
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_5           :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_URGENT);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_8           :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_BLUE);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_9           :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_PINK);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_10          :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_YELLOW);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_11          :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_ORANGE);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_12          :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_TURQUOISE);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_13          :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_PURPLE);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_14          :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_RED);
-	case PATTERN_SCENARIO_HIDDEN_MENU_BLANK_15          :
-		return qpnp_pattern_scenario_index(PATTERN_SCENARIO_MISSED_NOTI_REPEAT_LIME);
-#endif
 	default :
 		break;
 	}
