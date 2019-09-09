@@ -10,6 +10,8 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/clock/msm-clocks-8992.h>
+
 &soc {
         msm_bus: qcom,kgsl-busmon{
                 label = "kgsl-busmon";
