@@ -799,8 +799,8 @@ static int kgsl_attach_pagetable_iommu_domain(struct kgsl_mmu *mmu)
 					iommu_unit->clks[0] = drvdata->pclk;
 					iommu_unit->clks[1] = drvdata->clk;
 					iommu_unit->clks[2] = drvdata->aclk;
-					iommu_unit->clks[3] =
-							iommu->gtcu_iface_clk;
+					iommu_unit->clks[3] = iommu->iface_clk;
+					iommu_unit->clks[4] = iommu->gtbu_clk;
 				}
 			}
 		}
@@ -1329,11 +1329,6 @@ static int kgsl_iommu_init(struct kgsl_mmu *mmu)
 
 	if (mmu->secured)
 		secured_pool_sz = KGSL_IOMMU_SECURE_MEM_SIZE;
-
-	if (KGSL_MMU_USE_PER_PROCESS_PT &&
-		of_property_match_string(pdev->dev.of_node, "clock-names",
-						"gtcu_iface_clk") >= 0)
-		iommu->gtcu_iface_clk = clk_get(&pdev->dev, "gtcu_iface_clk");
 
 	mmu->pt_base = KGSL_MMU_MAPPED_MEM_BASE;
 	mmu->pt_size = (KGSL_MMU_MAPPED_MEM_SIZE - secured_pool_sz);
