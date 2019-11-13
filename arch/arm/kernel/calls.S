@@ -11,7 +11,7 @@
  */
 /* 0 */		CALL(sys_restart_syscall)
 		CALL(sys_exit)
-		CALL(sys_fork)
+		CALL(sys_fork_wrapper)
 		CALL(sys_read)
 		CALL(sys_write)
 /* 5 */		CALL(sys_open)
@@ -20,7 +20,7 @@
 		CALL(sys_creat)
 		CALL(sys_link)
 /* 10 */	CALL(sys_unlink)
-		CALL(sys_execve)
+		CALL(sys_execve_wrapper)
 		CALL(sys_chdir)
 		CALL(OBSOLETE(sys_time))	/* used by libc4 */
 		CALL(sys_mknod)
@@ -129,7 +129,7 @@
 		CALL(OBSOLETE(ABI(sys_ipc, sys_oabi_ipc)))
 		CALL(sys_fsync)
 		CALL(sys_sigreturn_wrapper)
-/* 120 */	CALL(sys_clone)
+/* 120 */	CALL(sys_clone_wrapper)
 		CALL(sys_setdomainname)
 		CALL(sys_newuname)
 		CALL(sys_ni_syscall)		/* modify_ldt */
@@ -195,11 +195,11 @@
 		CALL(sys_getcwd)
 		CALL(sys_capget)
 /* 185 */	CALL(sys_capset)
-		CALL(sys_sigaltstack)
+		CALL(sys_sigaltstack_wrapper)
 		CALL(sys_sendfile)
 		CALL(sys_ni_syscall)		/* getpmsg */
 		CALL(sys_ni_syscall)		/* putpmsg */
-/* 190 */	CALL(sys_vfork)
+/* 190 */	CALL(sys_vfork_wrapper)
 		CALL(sys_getrlimit)
 		CALL(sys_mmap2)
 		CALL(ABI(sys_truncate64, sys_oabi_truncate64))
@@ -387,13 +387,16 @@
 /* 375 */	CALL(sys_setns)
 		CALL(sys_process_vm_readv)
 		CALL(sys_process_vm_writev)
-		CALL(sys_kcmp)
-		CALL(sys_finit_module)
-/* 380 */	CALL(sys_sched_setattr)
-		CALL(sys_sched_getattr)
-		CALL(sys_ni_syscall)		/* reserved sys_renameat2     */
+/* FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION [S] */
+		CALL(sys_set_media_property)
+/* 379 */	CALL(sys_set_media_ext)
+/* FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION [E] */
+		CALL(sys_ni_syscall)
+		CALL(sys_ni_syscall)
+/* 380 */	CALL(sys_ni_syscall)
+		CALL(sys_ni_syscall)
+		CALL(sys_ni_syscall)
 		CALL(sys_seccomp)
-
 #ifndef syscalls_counted
 .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
 #define syscalls_counted
