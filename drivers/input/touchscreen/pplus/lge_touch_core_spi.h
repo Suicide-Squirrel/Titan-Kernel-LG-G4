@@ -897,5 +897,6 @@ void touch_swipe_status(struct spi_device *spi, int mode);
 void set_touch_handle(struct spi_device *spi, void *h_touch);
 void *get_touch_handle(struct spi_device *spi);
 void send_uevent(struct device *dev, char *string[2]);
+void send_uevent_lpwg(struct spi_device *spi, int type);
 
 #endif

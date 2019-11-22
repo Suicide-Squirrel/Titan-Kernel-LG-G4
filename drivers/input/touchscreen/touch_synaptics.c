@@ -1718,6 +1718,18 @@ static char *productcode_parse(unsigned char *product)
 
 	return str;
 }
+static void lpwg_timer_func(struct work_struct *work_timer)
+{
+	struct synaptics_ts_data *ts = container_of(to_delayed_work(work_timer),
+			struct synaptics_ts_data, work_timer);
+
+	send_uevent_lpwg(ts->client, LPWG_PASSWORD);
+	wake_unlock(&ts->timer_wake_lock);
+
+	TOUCH_D(DEBUG_LPWG, "u-event timer occur!\n");
+	return;
+}
+
 static void all_palm_released_func(struct work_struct *work_palm)
 {
 	struct synaptics_ts_data *ts = container_of(to_delayed_work(work_palm),
@@ -5781,6 +5793,7 @@ enum error_type synaptics_ts_probe(struct i2c_client *client,
 	ts->lpwg_ctrl.sensor = 1;
 
 	atomic_set(&ts->lpwg_ctrl.is_suspend, 0);
+	INIT_DELAYED_WORK(&ts->work_timer, lpwg_timer_func);
 	INIT_DELAYED_WORK(&ts->work_palm, all_palm_released_func);
 	INIT_DELAYED_WORK(&ts->work_sleep, sleepmode_func);
 	wake_lock_init(&ts->timer_wake_lock, WAKE_LOCK_SUSPEND, "touch_timer");
@@ -6757,7 +6770,18 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 
 	TOUCH_TRACE();
 
-	if (!ts->is_init) return IGNORE_EVENT;
+	if (!ts->is_init) {
+		if (lpwg_by_lcd_notifier) {
+			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
+					"ts->is_init = 0,"
+					"lpwg_by_lcd_notifier = ture,"
+					"handling lpwg event\n");
+		} else {
+			TOUCH_E("%s, %d : ts->is_init == 0, IGNORE_EVENT!!, s:\n",
+					__func__, __LINE__);
+			return IGNORE_EVENT;
+		}
+	}
 
 	curr_data->total_num = 0;
 	curr_data->id_mask = 0;
@@ -6804,6 +6828,10 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 		if ((status & 0x1)) {   /* TCI-1 Double-Tap */
 			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
 					"LPWG Double-Tap mode\n");
+			if (ts->lpwg_ctrl.double_tap_enable) {
+				get_tci_data(ts, 2);
+				send_uevent_lpwg(ts->client, LPWG_DOUBLE_TAP);
+			}
 		} else if ((status & 0x2)) { /* TCI-2 Multi-Tap */
 			TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
 					"LPWG Multi-Tap mode\n");
@@ -6826,6 +6854,7 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 			}
 			ts->pdata->swipe_stat[1] = DO_SWIPE;
 			ts->pdata->swipe_pwr_ctr = SKIP_PWR_CON;
+			send_uevent_lpwg(client, swipe_uevent);
 			swipe_disable(ts);
 		} else {
 			if (ts->lpwg_ctrl.has_lpwg_overtap_module) {
