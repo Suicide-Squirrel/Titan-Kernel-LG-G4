@@ -490,4 +490,9 @@ extern void	ip_local_error(struct sock *sk, int err, __be32 daddr, __be16 dport,
 extern int ip_misc_proc_init(void);
 #endif
 
+static inline bool inetdev_valid_mtu(unsigned int mtu)
+{
+	return likely(mtu >= IPV4_MIN_MTU);
+}
+
 #endif	/* _IP_H */
