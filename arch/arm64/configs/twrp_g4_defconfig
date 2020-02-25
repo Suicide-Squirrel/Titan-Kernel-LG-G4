@@ -4482,4 +4482,5 @@ CONFIG_QMI_ENCDEC=y
 #                   #
 #####################
 
+CONFIG_STATE_NOTIFIER=y
 # CONFIG_ADRENO_IDLER is not set
