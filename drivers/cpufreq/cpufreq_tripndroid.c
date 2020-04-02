@@ -91,7 +91,7 @@ static
 struct cpufreq_governor cpufreq_gov_tripndroid = {
 	.name = "tripndroid",
 	.governor = cpufreq_governor_tripndroid,
-	.max_transition_latency = 1000000,
+	.max_transition_latency = 8000000,
 	.owner = THIS_MODULE,
 };
 
