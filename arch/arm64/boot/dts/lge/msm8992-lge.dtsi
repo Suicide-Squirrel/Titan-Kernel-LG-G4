@@ -123,11 +123,11 @@
 	qcom,msm-thermal {
 		compatible = "qcom,msm-thermal";
 		qcom,core-control-mask = <0x36>;
-		qcom,hotplug-temp = <105>;
+		qcom,hotplug-temp = <90>;
 		qcom,hotplug-temp-hysteresis = <40>;
-		qcom,big-hotplug-temp = <105>;
+		qcom,big-hotplug-temp = <90>;
 		qcom,big-hotplug-temp-hysteresis = <40>;
-		qcom,freq-mitigation-value = <960000>;
+		qcom,freq-mitigation-value = <1248000>;
 	};
 
 	qcom,bcl {
