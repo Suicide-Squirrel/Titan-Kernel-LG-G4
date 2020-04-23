@@ -120,14 +120,40 @@
 		status = "disabled";
 	};
 
+	// see Documentation/devicetree/bindings/arm/msm/msm_thermal.txt
 	qcom,msm-thermal {
 		compatible = "qcom,msm-thermal";
-		qcom,core-control-mask = <0x36>;
-		qcom,hotplug-temp = <90>;
-		qcom,hotplug-temp-hysteresis = <40>;
-		qcom,big-hotplug-temp = <90>;
-		qcom,big-hotplug-temp-hysteresis = <40>;
-		qcom,freq-mitigation-value = <1248000>;
+		qcom,poll-ms = <500>;
+		/*
+		 If the temperature exceeds the specified level in limit-temp,
+		 the maximum allowed CPU frequency will be REDUCED.
+		 If the temperature drops below the sum of the limit-temp plus the
+		 temp-hysteresis, then the maximum allowed CPU frequency will be INCREASED.
+		 stage: during early boot (no thermal_sys avail)
+		*/
+		qcom,limit-temp = <90>;
+		qcom,temp-hysteresis = <5>; // 85 C
+
+		/*
+		 disable frequency handling by the kernel by using an impossible value!
+		 this can cause a lot of "funny" ping-pong games with thermal-engine!
+		 check thermal-engine.conf for frequency handling
+		*/
+		qcom,freq-mitigation-temp = <200>;
+		//qcom,freq-mitigation-temp-hysteresis = <5>;
+		//qcom,freq-mitigation-value = <864000>;
+
+		/* defines the limit at which the CPU hotplug is invoked to take CPUs offline */
+		qcom,core-limit-temp = <100>; // little cluster, by thermal_sys
+		qcom,core-temp-hysteresis = <10>; // 90 C
+
+		qcom,hotplug-temp = <98>; // by thermal_sys
+		qcom,hotplug-temp-hysteresis = <28>; // 70 C
+
+		qcom,freq-mitigation-control-mask = <0x3e>; // 111110 (binary, right2left, cpu0-5)
+
+		qcom,big-hotplug-temp = <98>;
+		qcom,big-hotplug-temp-hysteresis = <28>; // 70 C
 	};
 
 	qcom,bcl {
