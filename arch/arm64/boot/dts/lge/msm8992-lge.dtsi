@@ -134,6 +134,7 @@
 		qcom,limit-temp = <90>;
 		qcom,temp-hysteresis = <5>; // 85 C
 
+		qcom,freq-step = <1>; // This is how much the frequency is allowed to change in one go (in perc of max possible).
 		/*
 		 disable frequency handling by the kernel by using an impossible value!
 		 this can cause a lot of "funny" ping-pong games with thermal-engine!
@@ -144,16 +145,16 @@
 		//qcom,freq-mitigation-value = <864000>;
 
 		/* defines the limit at which the CPU hotplug is invoked to take CPUs offline */
-		qcom,core-limit-temp = <100>; // little cluster, by thermal_sys
+		qcom,core-limit-temp = <98>; // little cluster, during early-boot
 		qcom,core-temp-hysteresis = <10>; // 90 C
 
-		qcom,hotplug-temp = <98>; // by thermal_sys
-		qcom,hotplug-temp-hysteresis = <28>; // 70 C
+		qcom,hotplug-temp = <95>; // by thermal_sys
+		qcom,hotplug-temp-hysteresis = <10>; // 85 C
 
 		qcom,freq-mitigation-control-mask = <0x3e>; // 111110 (binary, right2left, cpu0-5)
 
 		qcom,big-hotplug-temp = <98>;
-		qcom,big-hotplug-temp-hysteresis = <28>; // 70 C
+		qcom,big-hotplug-temp-hysteresis = <18>; // 80 C
 	};
 
 	qcom,bcl {
