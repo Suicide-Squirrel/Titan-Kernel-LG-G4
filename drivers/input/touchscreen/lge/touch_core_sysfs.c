@@ -412,8 +412,8 @@ static ssize_t store_mfts_lpwg(struct device *dev,
 static TOUCH_ATTR(platform_data, show_platform_data, NULL);
 static TOUCH_ATTR(fw_upgrade, show_upgrade, store_upgrade);
 static TOUCH_ATTR(lpwg_data, show_lpwg_data, store_lpwg_data);
-static TOUCH_ATTR(lpwg_notify, NULL, store_lpwg_notify);
-static TOUCH_ATTR(tap2wake, NULL, store_tap2wake);
+static TOUCH_ATTR(lpwg_notify, show_lpwg_notify, store_lpwg_notify);
+static TOUCH_ATTR(tap2wake, show_tap2wake, store_tap2wake);
 static TOUCH_ATTR(keyguard,
 	show_lockscreen_state, store_lockscreen_state);
 static TOUCH_ATTR(ime_status, show_ime_state, store_ime_state);
