@@ -286,7 +286,7 @@ static int ref_chk_enable;
 static int raw_cap_file_exist;
 static bool touch_wake_test;
 unsigned int  touch_wake_count;
-#define TOUCH_WAKE_COUNTER_LOG_PATH		"/mnt/sdcard/wake_cnt.txt"
+#define TOUCH_WAKE_COUNTER_LOG_PATH		"/cache/wake_cnt.txt"
 static enum error_type synaptics_ts_ic_ctrl(struct i2c_client *client,
 		u8 code, u32 value, u32 *ret);
 static int set_doze_param(struct synaptics_ts_data *ts, int value);
@@ -987,40 +987,40 @@ static int get_tci_data(struct synaptics_ts_data *ts, int count)
 	u8 i = 0;
 	u8 buffer[12][4] = {{0} };
 
-	ts->pw_data.data_num = count;
+	if (ts > 0) {
+		ts->pw_data.data_num = count;
 
-	if (!count)
-		return 0;
+		DO_SAFE(synaptics_ts_page_data_read(client,
+					LPWG_PAGE, ts->f51_reg.lpwg_data_reg, 4 * count,
+					&buffer[0][0]), error);
 
-	DO_SAFE(synaptics_ts_page_data_read(client,
-				LPWG_PAGE, ts->f51_reg.lpwg_data_reg, 4 * count,
-				&buffer[0][0]), error);
+		TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
+				"%s : knock code coordinates, count = %d\n",
+				__func__, count);
 
-	TOUCH_D(DEBUG_BASE_INFO || DEBUG_LPWG,
-			"%s : knock code coordinates, count = %d\n",
-			__func__, count);
+		for (i = 0; i < count; i++) {
+			ts->pw_data.data[i].x = TS_POSITION(buffer[i][1],
+					buffer[i][0]);
+			ts->pw_data.data[i].y = TS_POSITION(buffer[i][3],
+					buffer[i][2]);
 
-	for (i = 0; i < count; i++) {
-		ts->pw_data.data[i].x = TS_POSITION(buffer[i][1],
-				buffer[i][0]);
-		ts->pw_data.data[i].y = TS_POSITION(buffer[i][3],
-				buffer[i][2]);
-
-		if (ts->pdata->role->use_security_mode) {
-			if (ts->lpwg_ctrl.password_enable) {
-				TOUCH_I("LPWG data xxxx, xxxx\n");
+			if (ts->pdata->role->use_security_mode) {
+				if (ts->lpwg_ctrl.password_enable) {
+					TOUCH_I("LPWG data xxxx, xxxx\n");
+				} else {
+					TOUCH_I("LPWG data %d, %d\n",
+							ts->pw_data.data[i].x,
+							ts->pw_data.data[i].y);
+				}
+				break;
 			} else {
 				TOUCH_I("LPWG data %d, %d\n",
 						ts->pw_data.data[i].x,
 						ts->pw_data.data[i].y);
+				break;
 			}
-		} else {
-			TOUCH_I("LPWG data %d, %d\n",
-					ts->pw_data.data[i].x,
-					ts->pw_data.data[i].y);
 		}
 	}
-
 	return 0;
 error:
 	TOUCH_E("%s, %d : get tci_control failed, count : %d\n",
@@ -1132,14 +1132,6 @@ static int lpwg_control(struct synaptics_ts_data *ts, int mode)
 			/* wakeup_gesture_only */
 			tci_control(ts, REPORT_MODE_CTRL, 1);
 		}
-		if (is_product(ts, "PLG446", 6)
-				|| is_product(ts, "PLG468", 6)) {
-			if (lpwg_by_lcd_notifier)
-				TOUCH_I(
-						"Partial LPWG doens't work after LPWG ON command\n");
-			else
-				tci_control(ts, PARTIAL_LPWG_ON, 1);
-		}
 		break;
 
 	case LPWG_PASSWORD:                           /* TCI-1 and TCI-2 */
@@ -1169,14 +1161,6 @@ static int lpwg_control(struct synaptics_ts_data *ts, int mode)
 		/* wakeup_gesture_only */
 		if (is_product(ts, "PLG349", 6))
 			tci_control(ts, REPORT_MODE_CTRL, 1);
-		if (is_product(ts, "PLG446", 6)
-				|| is_product(ts, "PLG468", 6)) {
-			if (lpwg_by_lcd_notifier)
-				TOUCH_I(
-						"Partial LPWG doens't work after LPWG ON command\n");
-			else
-				tci_control(ts, PARTIAL_LPWG_ON, 1);
-		}
 		break;
 
 	default:
