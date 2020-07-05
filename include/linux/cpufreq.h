@@ -518,6 +518,7 @@ caused by warning: 'struct pid_namespace' declared inside parameter list followe
 ANDROID: cpufreq_stat: add per task/uid/freq stats */
 struct pid_namespace;
 
+struct seq_file;
 int  proc_time_in_state_show(struct seq_file *m, struct pid_namespace *ns,
 			     struct pid *pid, struct task_struct *p);
 
