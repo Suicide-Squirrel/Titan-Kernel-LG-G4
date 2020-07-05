@@ -76,8 +76,8 @@ static void __exit dm_zero_exit(void)
 	dm_unregister_target(&zero_target);
 }
 
-module_init(dm_zero_init)
-module_exit(dm_zero_exit)
+module_init(dm_zero_init);
+module_exit(dm_zero_exit);
 
 MODULE_AUTHOR("Christophe Saout <christophe@saout.de>");
 MODULE_DESCRIPTION(DM_NAME " dummy target returning zeros");

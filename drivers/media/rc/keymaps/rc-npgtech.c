@@ -74,8 +74,8 @@ static void __exit exit_rc_map_npgtech(void)
 	rc_map_unregister(&npgtech_map);
 }
 
-module_init(init_rc_map_npgtech)
-module_exit(exit_rc_map_npgtech)
+module_init(init_rc_map_npgtech);
+module_exit(exit_rc_map_npgtech);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Mauro Carvalho Chehab <mchehab@redhat.com>");

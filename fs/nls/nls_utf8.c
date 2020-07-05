@@ -63,6 +63,6 @@ static void __exit exit_nls_utf8(void)
         unregister_nls(&table);
 }
 
-module_init(init_nls_utf8)
-module_exit(exit_nls_utf8)
+module_init(init_nls_utf8);
+module_exit(exit_nls_utf8);
 MODULE_LICENSE("Dual BSD/GPL");

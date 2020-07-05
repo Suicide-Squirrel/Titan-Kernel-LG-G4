@@ -81,8 +81,8 @@ static void __exit exit_rc_map_twinhan_vp1027(void)
 	rc_map_unregister(&twinhan_vp1027_map);
 }
 
-module_init(init_rc_map_twinhan_vp1027)
-module_exit(exit_rc_map_twinhan_vp1027)
+module_init(init_rc_map_twinhan_vp1027);
+module_exit(exit_rc_map_twinhan_vp1027);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sergey Ivanov <123kash@gmail.com>");
