@@ -530,9 +530,10 @@ static int msm8994_liquid_dock_notify_handler(struct notifier_block *this,
 
 fail_gpio_irq:
 	gpio_free(msm8994_liquid_dock_dev->plug_gpio);
-
+/*
 fail_dock_gpio:
 	return NOTIFY_DONE;
+*/
 }
 
 
