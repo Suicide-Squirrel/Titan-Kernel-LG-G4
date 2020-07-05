@@ -81,7 +81,7 @@ bool touch_irq_mask = 1;
 int boot_mode = NORMAL_BOOT_MODE;
 
 
-#define SENSING_TEST_PATH "/mnt/sdcard/sensing_test.txt"
+#define SENSING_TEST_PATH "/cache/sensing_test.txt"
 
 /* Debug mask value
  * usage: echo [debug_mask] > /sys/module/lge_touch_core/parameters/debug_mask

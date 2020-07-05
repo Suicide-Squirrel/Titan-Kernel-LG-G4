@@ -58,7 +58,7 @@ static void log_file_size_check(struct device *dev)
 			if(ts->factory_boot)
 				fname = "/data/touch/touch_self_test.txt";
 			else
-				fname = "/mnt/sdcard/touch_self_test.txt";
+				fname = "/cache/touch_self_test.txt";
 			break;
 		case 1:
 			fname = "/data/touch/touch_self_mfts.txt";
@@ -160,7 +160,7 @@ static void write_file(struct device *dev, char *data, int write_time)
 			if(ts->factory_boot)
 				fname = "/data/touch/touch_self_test.txt";
 			else
-				fname = "/mnt/sdcard/touch_self_test.txt";
+				fname = "/cache/touch_self_test.txt";
 			break;
 		case 1:
 			fname = "/data/touch/touch_self_mfts.txt";

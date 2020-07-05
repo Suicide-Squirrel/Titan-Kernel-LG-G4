@@ -1633,16 +1633,16 @@ static void write_file(char *filename, char *data, int time, int append)
 	if (filename == NULL) {
 		switch (sic_mfts_mode) {
 		case 0:
-			fname = "/mnt/sdcard/touch_self_test.txt";
+			fname = "/cache/touch_self_test.txt";
 			break;
 		case 1:
-			fname = "/mnt/sdcard/touch_self_test_mfts_folder.txt";
+			fname = "/cache/touch_self_test_mfts_folder.txt";
 			break;
 		case 2:
-			fname = "/mnt/sdcard/touch_self_test_mfts_flat.txt";
+			fname = "/cache/touch_self_test_mfts_flat.txt";
 			break;
 		case 3:
-			fname = "/mnt/sdcard/touch_self_test_mfts_curved.txt";
+			fname = "/cache/touch_self_test_mfts_curved.txt";
 			break;
 		default:
 			TOUCH_I("%s : not support mfts_mode\n", __func__);
@@ -2197,10 +2197,10 @@ static int sdcard_spec_file_read(void)
 {
 	int ret = 0;
 	int fd;
-	char *path[4] = { "/mnt/sdcard/p1_limit.txt",
-			"/mnt/sdcard/p1_limit_mfts_folder.txt",
-			"/mnt/sdcard/p1_limit_mfts_flat.txt",
-			"/mnt/sdcard/p1_limit_mfts_curved.txt" };
+	char *path[4] = { "/cache/p1_limit.txt",
+			"/cache/p1_limit_mfts_folder.txt",
+			"/cache/p1_limit_mfts_flat.txt",
+			"/cache/p1_limit_mfts_curved.txt" };
 	mm_segment_t old_fs = get_fs();
 
 	set_fs(KERNEL_DS);
