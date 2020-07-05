@@ -59,13 +59,13 @@ const char *group_names[PWR_SYSFS_GROUPS_NUM] = {
 };
 
 /* Set sysfs node for non-using DT */
-#define PWR_SYSFS_PATH_NUM 51
+#define PWR_SYSFS_PATH_NUM 52
 
 #if IS_ENABLED(CONFIG_LGE_DISPLAY_DUAL_BACKLIGHT)
 #ifdef	PWR_SYSFS_PATH_NUM
 #undef	PWR_SYSFS_PATH_NUM
 #endif
-#define PWR_SYSFS_PATH_NUM 53
+#define PWR_SYSFS_PATH_NUM 54
 #endif
 
 const char *default_pwr_sysfs_path[PWR_SYSFS_PATH_NUM][3] = {
