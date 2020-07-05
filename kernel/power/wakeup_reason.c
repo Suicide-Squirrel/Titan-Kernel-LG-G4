@@ -530,6 +530,8 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
 		clear_wakeup_reasons();
+		get_xtime_and_monotonic_and_sleep_offset(&last_xtime, &xtom,
+			&last_stime);
 		break;
 	case PM_POST_SUSPEND:
 		/* log_wakeups should have been cleared by now. */
@@ -537,6 +539,8 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 			stop_logging_wakeup_reasons();
 			print_wakeup_sources();
 		}
+		get_xtime_and_monotonic_and_sleep_offset(&curr_xtime, &xtom,
+			&curr_stime);
 		break;
 	default:
 		break;
