@@ -137,6 +137,11 @@ static int32_t msm_sensor_driver_create_v4l_subdev
 	s_ctrl->msm_sd.sd.entity.group_id = MSM_CAMERA_SUBDEV_SENSOR;
 	s_ctrl->msm_sd.sd.entity.name = s_ctrl->msm_sd.sd.name;
 	s_ctrl->msm_sd.close_seq = MSM_SD_CLOSE_2ND_CATEGORY | 0x3;
+	rc = msm_sd_register(&s_ctrl->msm_sd);
+	if (rc < 0) {
+		pr_err("failed: msm_sd_register rc %d", rc);
+		return rc;
+	}
 	msm_sensor_v4l2_subdev_fops = v4l2_subdev_fops;
 	rc = msm_sd_register(&s_ctrl->msm_sd);
 	if (rc < 0) {
@@ -1093,7 +1098,6 @@ int32_t msm_sensor_driver_probe(void *setting,
 	}
 
 	pr_err("%s probe succeeded", slave_info->sensor_name);
-
 
 	/*
 	 * Update the subdevice id of flash-src based on availability in kernel.
