@@ -550,8 +550,6 @@ static int camera_v4l2_open(struct file *filep)
 	unsigned int opn_idx, idx;
 	BUG_ON(!pvdev);
 
-	mutex_lock(&v4l2_sync_lock);/*LGE_CHANGE, add the mutex to fix the poison overwritten, 2015-03-31, freeso.kim@lge.com*/
-	
 	rc = camera_v4l2_fh_open(filep);
 	if (rc < 0) {
 		pr_err("%s : camera_v4l2_fh_open failed Line %d rc %d\n",
