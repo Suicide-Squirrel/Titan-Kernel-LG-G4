@@ -1688,7 +1688,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 	switch (usb_supply_type) {
 	case POWER_SUPPLY_TYPE_USB:
 		if (current_ma < CURRENT_150_MA) {
-			/* force 100mA */
+			/* force 150mA */
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_2);
@@ -1704,7 +1704,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				pr_err("Couldn't set CMD_IL rc = %d\n", rc);
 				goto out;
 			}
-			chip->usb_max_current_ma = 100;
+			chip->usb_max_current_ma = 150;
 		}
 		/* specific current values */
 		if (current_ma == CURRENT_150_MA) {
@@ -4501,7 +4501,7 @@ static bool is_src_detect_high(struct smbchg_chip *chip)
 #endif
 
 #define DEFAULT_WALL_CHG_MA	1800
-#define DEFAULT_SDP_MA		100
+#define DEFAULT_SDP_MA		150
 #define DEFAULT_CDP_MA		1500
 static void handle_usb_insertion(struct smbchg_chip *chip)
 {
