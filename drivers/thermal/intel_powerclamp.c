@@ -50,7 +50,6 @@
 #include <linux/tick.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
-#include <linux/sched/rt.h>
 
 #include <asm/nmi.h>
 #include <asm/msr.h>
@@ -494,27 +493,10 @@ static void poll_pkg_cstate(struct work_struct *dummy)
 		schedule_delayed_work(&poll_pkg_cstate_work, HZ);
 }
 
-static void start_power_clamp_thread(unsigned long cpu)
-{
-	struct task_struct **p = per_cpu_ptr(powerclamp_thread, cpu);
-	struct task_struct *thread;
-
-	thread = kthread_create_on_node(clamp_thread,
-					(void *) cpu,
-					cpu_to_node(cpu),
-					"kidle_inject/%ld", cpu);
-	if (IS_ERR(thread))
-		return;
-
-	/* bind to cpu here */
-	kthread_bind(thread, cpu);
-	wake_up_process(thread);
-	*p = thread;
-}
-
 static int start_power_clamp(void)
 {
 	unsigned long cpu;
+	struct task_struct *thread;
 
 	/* check if pkg cstate counter is completely 0, abort in this case */
 	if (!pkg_state_counter()) {
@@ -522,7 +504,7 @@ static int start_power_clamp(void)
 		return -EINVAL;
 	}
 
-	set_target_ratio = clamp(set_target_ratio, 0U, MAX_TARGET_RATIO - 1);
+	set_target_ratio = clamp(set_target_ratio, 0U, MAX_TARGET_RATIO);
 	/* prevent cpu hotplug */
 	get_online_cpus();
 
@@ -536,7 +518,20 @@ static int start_power_clamp(void)
 
 	/* start one thread per online cpu */
 	for_each_online_cpu(cpu) {
-		start_power_clamp_thread(cpu);
+		struct task_struct **p =
+			per_cpu_ptr(powerclamp_thread, cpu);
+
+		thread = kthread_create_on_node(clamp_thread,
+						(void *) cpu,
+						cpu_to_node(cpu),
+						"kidle_inject/%ld", cpu);
+		/* bind to cpu here */
+		if (likely(!IS_ERR(thread))) {
+			kthread_bind(thread, cpu);
+			wake_up_process(thread);
+			*p = thread;
+		}
+
 	}
 	put_online_cpus();
 
@@ -568,6 +563,7 @@ static int powerclamp_cpu_callback(struct notifier_block *nfb,
 				unsigned long action, void *hcpu)
 {
 	unsigned long cpu = (unsigned long)hcpu;
+	struct task_struct *thread;
 	struct task_struct **percpu_thread =
 		per_cpu_ptr(powerclamp_thread, cpu);
 
@@ -576,7 +572,15 @@ static int powerclamp_cpu_callback(struct notifier_block *nfb,
 
 	switch (action) {
 	case CPU_ONLINE:
-		start_power_clamp_thread(cpu);
+		thread = kthread_create_on_node(clamp_thread,
+						(void *) cpu,
+						cpu_to_node(cpu),
+						"kidle_inject/%lu", cpu);
+		if (likely(!IS_ERR(thread))) {
+			kthread_bind(thread, cpu);
+			wake_up_process(thread);
+			*percpu_thread = thread;
+		}
 		/* prefer BSP as controlling CPU */
 		if (cpu == 0) {
 			control_cpu = 0;
