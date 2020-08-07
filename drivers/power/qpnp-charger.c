@@ -513,12 +513,12 @@ static int ext_ovp_isns_enable(const char *val, const struct kernel_param *kp)
 	return rc;
 }
 
-static struct kernel_param_ops ext_ovp_isns_ops = {
+static const struct kernel_param_ops ext_ovp_isns_ops = {
 	.get = ext_ovp_isns_read,
 };
 module_param_cb(ext_ovp_isns_ua, &ext_ovp_isns_ops, &ext_ovp_isns_ua, 0644);
 
-static struct kernel_param_ops ext_ovp_en_ops = {
+static const struct kernel_param_ops ext_ovp_en_ops = {
 	.set = ext_ovp_isns_enable,
 	.get = param_get_bool,
 };

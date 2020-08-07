@@ -169,7 +169,7 @@ static int set_host_ready(const char *val, const struct kernel_param *kp)
 	return ret;
 }
 
-static struct kernel_param_ops host_ready_ops = {
+static const struct kernel_param_ops host_ready_ops = {
 	.set = set_host_ready,
 	.get = param_get_bool,
 };

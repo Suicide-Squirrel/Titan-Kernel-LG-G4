@@ -128,7 +128,7 @@ static int set_enabled(const char *val, const struct kernel_param *kp)
 	return 0;
 }
 
-static struct kernel_param_ops enabled_param_ops = {
+static const struct kernel_param_ops enabled_param_ops = {
 	.set = set_enabled,
 	.get = param_get_bool,
 };

@@ -506,12 +506,12 @@ static int mct_enable_show(char *buf, const struct kernel_param *kp)
 	return validate_and_show(MCT_ENABLE, buf);
 }
 
-static struct kernel_param_ops pmic_notify_ops = {
+static const struct kernel_param_ops pmic_notify_ops = {
 	.set = param_set_bool,
 	.get = param_get_bool,
 };
 
-static struct kernel_param_ops module_ops = {
+static const struct kernel_param_ops module_ops = {
 	.set = mct_enable_store,
 	.get = mct_enable_show,
 };
