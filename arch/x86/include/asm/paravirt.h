@@ -185,7 +185,15 @@ do {						\
 	low = (int)_l;				\
 } while (0)
 
-#define rdtscll(val) (val = paravirt_read_tsc())
+static inline cycles_t get_cycles(void)
+{
+#ifndef CONFIG_X86_TSC
+	if (!cpu_has_tsc)
+		return 0;
+#endif
+
+	return native_read_tsc();
+}
 
 static inline unsigned long long paravirt_sched_clock(void)
 {
