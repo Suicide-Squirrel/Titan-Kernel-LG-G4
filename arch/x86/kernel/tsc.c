@@ -59,7 +59,7 @@ u64 native_sched_clock(void)
 	}
 
 	/* read the Time Stamp Counter: */
-	this_offset = native_read_tsc();
+	this_offset = rdtsc();
 
 	/* return the value in ns */
 	return __cycles_2_ns(this_offset);
@@ -77,11 +77,11 @@ unsigned long long
 sched_clock(void) __attribute__((alias("native_sched_clock")));
 #endif
 
-unsigned long long native_read_tsc(void)
+unsigned long long rdtsc(void)
 {
-	return __native_read_tsc();
+	return __rdtsc();
 }
-EXPORT_SYMBOL(native_read_tsc);
+EXPORT_SYMBOL(rdtsc);
 
 int check_tsc_unstable(void)
 {
@@ -619,7 +619,7 @@ static void set_cyc2ns_scale(unsigned long cpu_khz, int cpu)
 	scale = &per_cpu(cyc2ns, cpu);
 	offset = &per_cpu(cyc2ns_offset, cpu);
 
-	tsc_now = native_read_tsc();
+	tsc_now = rdtsc();
 	ns_now = __cycles_2_ns(tsc_now);
 
 	if (cpu_khz) {
