@@ -101,7 +101,7 @@ void use_tsc_delay(void)
 int read_current_timer(unsigned long *timer_val)
 {
 	if (delay_fn == delay_tsc) {
-		*timer_val = native_read_tsc();
+		*timer_val = rdtsc();
 		return 0;
 	}
 	return -1;

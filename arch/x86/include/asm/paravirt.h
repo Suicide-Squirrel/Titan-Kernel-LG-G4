@@ -192,7 +192,7 @@ static inline cycles_t get_cycles(void)
 		return 0;
 #endif
 
-	return native_read_tsc();
+	return rdtsc();
 }
 
 static inline unsigned long long paravirt_sched_clock(void)
