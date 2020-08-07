@@ -188,9 +188,6 @@ do {							\
 
 #endif	/* !CONFIG_PARAVIRT */
 
-#define rdtscl(low)						\
-	((low) = (u32)native_read_tsc())
-
 #define wrmsrl_safe(msr, val) wrmsr_safe((msr), (u32)(val),		\
 					     (u32)((val) >> 32))
 
