@@ -1651,7 +1651,7 @@ static int qpnp_pon_debugfs_uvlo_dload_set(const char *val,
 	return 0;
 }
 
-static struct kernel_param_ops dload_on_uvlo_ops = {
+static const struct kernel_param_ops dload_on_uvlo_ops = {
 	.set = qpnp_pon_debugfs_uvlo_dload_set,
 	.get = qpnp_pon_debugfs_uvlo_dload_get,
 };

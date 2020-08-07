@@ -124,7 +124,7 @@ static int rmnet_init(const char *val, const struct kernel_param *kp)
 	return ret;
 }
 
-static struct kernel_param_ops rmnet_init_ops = {
+static const struct kernel_param_ops rmnet_init_ops = {
 	.set = rmnet_init,
 	.get = param_get_bool,
 };

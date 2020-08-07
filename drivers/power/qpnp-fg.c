@@ -5566,7 +5566,7 @@ static int fg_sense_type_set(const char *val, const struct kernel_param *kp)
 	return rc;
 }
 
-static struct kernel_param_ops fg_sense_type_ops = {
+static const struct kernel_param_ops fg_sense_type_ops = {
 	.set = fg_sense_type_set,
 	.get = param_get_int,
 };
@@ -5600,7 +5600,7 @@ static int fg_restart_set(const char *val, const struct kernel_param *kp)
 	return 0;
 }
 
-static struct kernel_param_ops fg_restart_ops = {
+static const struct kernel_param_ops fg_restart_ops = {
 	.set = fg_restart_set,
 	.get = param_get_int,
 };

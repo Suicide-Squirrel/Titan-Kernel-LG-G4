@@ -614,7 +614,7 @@ static void lowmem_adj_array_free(void *arg)
 	param_array_ops.free(arg);
 }
 
-static struct kernel_param_ops lowmem_adj_array_ops = {
+static const struct kernel_param_ops lowmem_adj_array_ops = {
 	.set = lowmem_adj_array_set,
 	.get = lowmem_adj_array_get,
 	.free = lowmem_adj_array_free,

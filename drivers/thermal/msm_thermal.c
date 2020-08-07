@@ -4277,7 +4277,7 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 	return ret;
 }
 
-static struct kernel_param_ops module_ops = {
+static const struct kernel_param_ops module_ops = {
 	.set = set_enabled,
 	.get = param_get_bool,
 };

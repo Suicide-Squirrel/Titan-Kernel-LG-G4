@@ -1734,7 +1734,7 @@ static int bms_reset_set(const char *val, const struct kernel_param *kp)
 	return 0;
 }
 
-static struct kernel_param_ops bms_reset_ops = {
+static const struct kernel_param_ops bms_reset_ops = {
 	.set = bms_reset_set,
 	.get = param_get_bool,
 };

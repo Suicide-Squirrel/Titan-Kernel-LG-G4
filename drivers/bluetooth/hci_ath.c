@@ -538,7 +538,7 @@ static int bluesleep_lpm_set(const char *val, const struct kernel_param *kp)
 
 }
 
-static struct kernel_param_ops bluesleep_lpm_ops = {
+static const struct kernel_param_ops bluesleep_lpm_ops = {
 	.set = bluesleep_lpm_set,
 	.get = param_get_int,
 };
@@ -578,7 +578,7 @@ static int bluesleep_lpm_btwrite(const char *val, const struct kernel_param *kp)
 	return 0;
 }
 
-static struct kernel_param_ops bluesleep_lpm_btwrite_ops = {
+static const struct kernel_param_ops bluesleep_lpm_btwrite_ops = {
 	.set = bluesleep_lpm_btwrite,
 	.get = param_get_int,
 };

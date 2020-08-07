@@ -101,7 +101,7 @@ static int lpm_cpu_update(const char *val, const struct kernel_param *kp)
 	return ret;
 }
 
-static struct kernel_param_ops cpu_debug_events = {
+static const struct kernel_param_ops cpu_debug_events = {
 	.set = lpm_cpu_update,
 };
 

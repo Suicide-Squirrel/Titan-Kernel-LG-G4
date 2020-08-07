@@ -4534,7 +4534,7 @@ static int set_hdcp_feature_on(const char *val, const struct kernel_param *kp)
 	return rc;
 }
 
-static struct kernel_param_ops hdcp_feature_on_param_ops = {
+static const struct kernel_param_ops hdcp_feature_on_param_ops = {
 	.set = set_hdcp_feature_on,
 	.get = param_get_bool,
 };
