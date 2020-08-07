@@ -182,9 +182,6 @@ static inline int rdmsrl_safe(unsigned msr, unsigned long long *p)
 #define rdtscl(low)						\
 	((low) = (u32)__native_read_tsc())
 
-#define rdtscll(val)						\
-	((val) = __native_read_tsc())
-
 #define rdpmc(counter, low, high)			\
 do {							\
 	u64 _l = native_read_pmc((counter));		\
