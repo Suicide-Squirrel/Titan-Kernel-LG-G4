@@ -39,7 +39,7 @@ static __always_inline cycles_t vget_cycles(void)
 	if (!cpu_has_tsc)
 		return 0;
 #endif
-	return (cycles_t)__rdtsc();
+	return (cycles_t)rdtsc();
 }
 
 extern void tsc_init(void);

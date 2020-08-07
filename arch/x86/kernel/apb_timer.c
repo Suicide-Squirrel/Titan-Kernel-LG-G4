@@ -404,13 +404,13 @@ unsigned long apbt_quick_calibrate(void)
 	old = dw_apb_clocksource_read(clocksource_apbt);
 	old += loop;
 
-	t1 = __rdtsc();
+	t1 = rdtsc();
 
 	do {
 		new = dw_apb_clocksource_read(clocksource_apbt);
 	} while (new < old);
 
-	t2 = __rdtsc();
+	t2 = rdtsc();
 
 	shift = 5;
 	if (unlikely(loop >> shift == 0)) {

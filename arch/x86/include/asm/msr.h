@@ -105,12 +105,10 @@ notrace static inline int native_write_msr_safe(unsigned int msr,
 	return err;
 }
 
-extern unsigned long long rdtsc(void);
-
 extern int rdmsr_safe_regs(u32 regs[8]);
 extern int wrmsr_safe_regs(u32 regs[8]);
 
-static __always_inline unsigned long long __rdtsc(void)
+static __always_inline unsigned long long rdtsc(void)
 {
 	DECLARE_ARGS(val, low, high);
 
@@ -180,7 +178,7 @@ static inline int rdmsrl_safe(unsigned msr, unsigned long long *p)
 }
 
 #define rdtscl(low)						\
-	((low) = (u32)__rdtsc())
+	((low) = (u32)rdtsc())
 
 #define rdpmc(counter, low, high)			\
 do {							\

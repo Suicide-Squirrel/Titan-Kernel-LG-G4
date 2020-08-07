@@ -77,12 +77,6 @@ unsigned long long
 sched_clock(void) __attribute__((alias("native_sched_clock")));
 #endif
 
-unsigned long long rdtsc(void)
-{
-	return __rdtsc();
-}
-EXPORT_SYMBOL(rdtsc);
-
 int check_tsc_unstable(void)
 {
 	return tsc_unstable;
