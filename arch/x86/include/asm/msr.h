@@ -191,15 +191,6 @@ do {							\
 #define rdtscl(low)						\
 	((low) = (u32)native_read_tsc())
 
-#define rdtscp(low, high, aux)					\
-do {                                                            \
-	unsigned long long _val = native_read_tscp(&(aux));     \
-	(low) = (u32)_val;                                      \
-	(high) = (u32)(_val >> 32);                             \
-} while (0)
-
-#define rdtscpll(val, aux) (val) = native_read_tscp(&(aux))
-
 #define wrmsrl_safe(msr, val) wrmsr_safe((msr), (u32)(val),		\
 					     (u32)((val) >> 32))
 
