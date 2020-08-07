@@ -1126,8 +1126,8 @@ void syscall_init(void)
 	 * set CS/DS but only a 32bit target. LSTAR sets the 64bit rip.
 	 */
 	wrmsrl(MSR_STAR,  ((u64)__USER32_CS)<<48  | ((u64)__KERNEL_CS)<<32);
-	wrmsrl(MSR_LSTAR, system_call);
-	wrmsrl(MSR_CSTAR, ignore_sysret);
+	wrmsrl(MSR_LSTAR, (unsigned long)system_call);
+	wrmsrl(MSR_CSTAR, (unsigned long)ignore_sysret);
 
 #ifdef CONFIG_IA32_EMULATION
 	syscall32_cpu_init();
