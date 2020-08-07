@@ -1242,10 +1242,7 @@ static const struct pv_cpu_ops xen_cpu_ops __initconst = {
 	.read_msr = native_read_msr_safe,
 	.write_msr = xen_write_msr_safe,
 
-	.read_tsc = rdtsc,
 	.read_pmc = native_read_pmc,
-
-	.read_tscp = native_read_tscp,
 
 	.iret = xen_iret,
 	.irq_enable_sysexit = xen_sysexit,
