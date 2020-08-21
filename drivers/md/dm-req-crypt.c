@@ -934,10 +934,10 @@ static inline void req_crypt_blk_partition_remap(struct bio *bio)
 		/*
 		* Check for integer overflow, should never happen.
 		*/
-		if (p->start_sect > (UINT_MAX - bio->bi_sector))
+		if (p->start_sect > (UINT_MAX - bio->bi_iter.bi_sector))
 			BUG();
 
-		bio->bi_sector += p->start_sect;
+		bio->bi_iter.bi_sector += p->start_sect;
 		bio->bi_bdev = bdev->bd_contains;
 	}
 }
@@ -1047,7 +1047,7 @@ static int req_crypt_map(struct dm_target *ti, struct request *clone,
 		 */
 		req_crypt_blk_partition_remap(bio_src);
 		if (copy_bio_sector_to_req == 0) {
-			clone->__sector = bio_src->bi_sector;
+			clone->__sector = bio_src->bi_iter.bi_sector;
 			clone->buffer = bio_data(bio_src);
 			copy_bio_sector_to_req++;
 		}

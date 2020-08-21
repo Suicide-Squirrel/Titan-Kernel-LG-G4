@@ -105,7 +105,7 @@ static int simdisk_xfer_bio(struct simdisk *dev, struct bio *bio)
 {
 	int i;
 	struct bio_vec *bvec;
-	sector_t sector = bio->bi_sector;
+	sector_t sector = bio->bi_iter.bi_sector;
 
 	bio_for_each_segment(bvec, bio, i) {
 		char *buffer = __bio_kmap_atomic(bio, i, KM_USER0);

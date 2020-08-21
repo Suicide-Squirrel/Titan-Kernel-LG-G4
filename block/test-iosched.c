@@ -185,8 +185,8 @@ int test_iosched_add_unique_test_req(struct test_iosched *tios,
 		break;
 	case REQ_UNIQUE_DISCARD:
 		bio->bi_rw = REQ_WRITE | REQ_DISCARD;
-		bio->bi_size = nr_sects << 9;
-		bio->bi_sector = start_sec;
+		bio->bi_iter.bi_size = nr_sects << 9;
+		bio->bi_iter.bi_sector = start_sec;
 		break;
 	default:
 		pr_err("%s: Invalid request type %d", __func__,
@@ -347,7 +347,7 @@ struct test_request *test_iosched_create_test_req(
 	rq->cmd_flags &= ~REQ_IO_STAT;
 
 	if (rq->bio) {
-		rq->bio->bi_sector = start_sec;
+		rq->bio->bi_iter.bi_sector = start_sec;
 		rq->bio->bi_end_io = end_test_bio;
 		bio = rq->bio;
 		while ((bio = bio->bi_next) != NULL)
@@ -947,13 +947,13 @@ static void print_req(struct request *req)
 		pr_debug("%s: nr_phys_segments=%d, num_of_sectors=%d",
 		       __func__, req->nr_phys_segments, blk_rq_sectors(req));
 		bio = req->bio;
-		pr_debug("%s: bio: bi_size=%d, bi_sector=0x%lx",
-			      __func__, bio->bi_size,
-			      (unsigned long)bio->bi_sector);
+		pr_debug("%s: bio: bi_iter.bi_size=%d, bi_iter.bi_sector=0x%lx",
+			      __func__, bio->bi_iter.bi_size,
+			      (unsigned long)bio->bi_iter.bi_sector);
 		while ((bio = bio->bi_next) != NULL) {
-			pr_debug("%s: bio: bi_size=%d, bi_sector=0x%lx",
-				      __func__, bio->bi_size,
-				      (unsigned long)bio->bi_sector);
+			pr_debug("%s: bio: bi_iter.bi_size=%d, bi_iter.bi_sector=0x%lx",
+				      __func__, bio->bi_iter.bi_size,
+				      (unsigned long)bio->bi_iter.bi_sector);
 		}
 	}
 }

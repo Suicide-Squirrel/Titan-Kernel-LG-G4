@@ -252,7 +252,7 @@ static inline int sdfat_remount_syncfs(struct super_block *sb)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 static inline sector_t __sdfat_bio_sector(struct bio *bio)
 {
-	return bio->bi_iter.bi_sector;
+	return bio->bi_iter.bi_iter.bi_sector;
 }
 
 static inline void __sdfat_set_bio_iterate(struct bio *bio, sector_t sector,
@@ -260,9 +260,9 @@ static inline void __sdfat_set_bio_iterate(struct bio *bio, sector_t sector,
 {
 	struct bvec_iter *iter = &(bio->bi_iter);
 
-	iter->bi_sector = sector;
-	iter->bi_size = size;
-	iter->bi_idx = idx;
+	iter->bi_iter.bi_sector = sector;
+	iter->bi_iter.bi_size = size;
+	iter->bi_iter.bi_idx = idx;
 	iter->bi_bvec_done = done;
 }
 
@@ -388,15 +388,15 @@ out_unlocked:
 #else /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0) */
 static inline sector_t __sdfat_bio_sector(struct bio *bio)
 {
-	return bio->bi_sector;
+	return bio->bi_iter.bi_sector;
 }
 
 static inline void __sdfat_set_bio_iterate(struct bio *bio, sector_t sector,
 		unsigned int size, unsigned int idx, unsigned int done)
 {
-	bio->bi_sector = sector;
-	bio->bi_idx = idx;
-	bio->bi_size = size; //PAGE_SIZE;
+	bio->bi_iter.bi_sector = sector;
+	bio->bi_iter.bi_idx = idx;
+	bio->bi_iter.bi_size = size; //PAGE_SIZE;
 }
 
 static void __sdfat_truncate_pagecache(struct inode *inode,

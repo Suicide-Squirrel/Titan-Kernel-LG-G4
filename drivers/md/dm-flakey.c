@@ -235,11 +235,11 @@ static void flakey_dtr(struct dm_target *ti)
 	kfree(fc);
 }
 
-static sector_t flakey_map_sector(struct dm_target *ti, sector_t bi_sector)
+static sector_t flakey_map_sector(struct dm_target *ti, sector_t bi_iter.bi_sector)
 {
 	struct flakey_c *fc = ti->private;
 
-	return fc->start + dm_target_offset(ti, bi_sector);
+	return fc->start + dm_target_offset(ti, bi_iter.bi_sector);
 }
 
 static void flakey_map_bio(struct dm_target *ti, struct bio *bio)
@@ -248,7 +248,7 @@ static void flakey_map_bio(struct dm_target *ti, struct bio *bio)
 
 	bio->bi_bdev = fc->dev->bdev;
 	if (bio_sectors(bio))
-		bio->bi_sector = flakey_map_sector(ti, bio->bi_sector);
+		bio->bi_iter.bi_sector = flakey_map_sector(ti, bio->bi_iter.bi_sector);
 }
 
 static void corrupt_bio_data(struct bio *bio, struct flakey_c *fc)
@@ -263,10 +263,10 @@ static void corrupt_bio_data(struct bio *bio, struct flakey_c *fc)
 		data[fc->corrupt_bio_byte - 1] = fc->corrupt_bio_value;
 
 		DMDEBUG("Corrupting data bio=%p by writing %u to byte %u "
-			"(rw=%c bi_rw=%lu bi_sector=%llu cur_bytes=%u)\n",
+			"(rw=%c bi_rw=%lu bi_iter.bi_sector=%llu cur_bytes=%u)\n",
 			bio, fc->corrupt_bio_value, fc->corrupt_bio_byte,
 			(bio_data_dir(bio) == WRITE) ? 'w' : 'r',
-			bio->bi_rw, (unsigned long long)bio->bi_sector, bio_bytes);
+			bio->bi_rw, (unsigned long long)bio->bi_iter.bi_sector, bio_bytes);
 	}
 }
 
@@ -396,7 +396,7 @@ static int flakey_merge(struct dm_target *ti, struct bvec_merge_data *bvm,
 		return max_size;
 
 	bvm->bi_bdev = fc->dev->bdev;
-	bvm->bi_sector = flakey_map_sector(ti, bvm->bi_sector);
+	bvm->bi_iter.bi_sector = flakey_map_sector(ti, bvm->bi_iter.bi_sector);
 
 	return min(max_size, q->merge_bvec_fn(q, bvm, biovec));
 }

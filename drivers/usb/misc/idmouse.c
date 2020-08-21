@@ -76,7 +76,7 @@ struct usb_idmouse {
 
 	unsigned char *bulk_in_buffer; /* the buffer to receive data */
 	size_t bulk_in_size; /* the maximum bulk packet size */
-	size_t orig_bi_size; /* same as above, but reported by the device */
+	size_t orig_bi_iter.bi_size; /* same as above, but reported by the device */
 	__u8 bulk_in_endpointAddr; /* the address of the bulk in endpoint */
 
 	int open; /* if the port is open or not */
@@ -171,8 +171,8 @@ static int idmouse_create_image(struct usb_idmouse *dev)
 		if (result < 0) {
 			/* Maybe this error was caused by the increased packet size? */
 			/* Reset to the original value and tell userspace to retry.  */
-			if (dev->bulk_in_size != dev->orig_bi_size) {
-				dev->bulk_in_size = dev->orig_bi_size;
+			if (dev->bulk_in_size != dev->orig_bi_iter.bi_size) {
+				dev->bulk_in_size = dev->orig_bi_iter.bi_size;
 				result = -EAGAIN;
 			}
 			break;
@@ -360,7 +360,7 @@ static int idmouse_probe(struct usb_interface *interface,
 	endpoint = &iface_desc->endpoint[0].desc;
 	if (!dev->bulk_in_endpointAddr && usb_endpoint_is_bulk_in(endpoint)) {
 		/* we found a bulk in endpoint */
-		dev->orig_bi_size = usb_endpoint_maxp(endpoint);
+		dev->orig_bi_iter.bi_size = usb_endpoint_maxp(endpoint);
 		dev->bulk_in_size = 0x200; /* works _much_ faster */
 		dev->bulk_in_endpointAddr = endpoint->bEndpointAddress;
 		dev->bulk_in_buffer =

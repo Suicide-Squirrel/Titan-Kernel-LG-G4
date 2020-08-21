@@ -143,7 +143,7 @@ struct block_device *f2fs_target_device(struct f2fs_sb_info *sbi,
 	}
 	if (bio) {
 		bio->bi_bdev = bdev;
-		bio->bi_sector = SECTOR_FROM_BLOCK(blk_addr);
+		bio->bi_iter.bi_sector = SECTOR_FROM_BLOCK(blk_addr);
 	}
 	return bdev;
 }
@@ -194,7 +194,7 @@ static inline void __submit_bio(struct f2fs_sb_info *sbi,
 		if (type != DATA && type != NODE)
 			goto submit_io;
 
-		start = bio->bi_size >> F2FS_BLKSIZE_BITS;
+		start = bio->bi_iter.bi_size >> F2FS_BLKSIZE_BITS;
 		start %= F2FS_IO_SIZE(sbi);
 
 		if (start == 0)

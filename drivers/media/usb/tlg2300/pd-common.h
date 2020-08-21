@@ -44,7 +44,7 @@ struct vbi_data {
 	struct front_face	*front;
 
 	unsigned int		copied;
-	unsigned int		vbi_size; /* the whole size of two fields */
+	unsigned int		vbi_iter.bi_size; /* the whole size of two fields */
 	int 			users;
 };
 

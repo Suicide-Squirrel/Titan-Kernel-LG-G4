@@ -528,7 +528,7 @@ fiops_find_rq_fmerge(struct fiops_data *fiopsd, struct bio *bio)
 	cic = fiops_cic_lookup(fiopsd, tsk->io_context);
 
 	if (cic) {
-		sector_t sector = bio->bi_sector + bio_sectors(bio);
+		sector_t sector = bio->bi_iter.bi_sector + bio_sectors(bio);
 
 		return elv_rb_find(&cic->sort_list, sector);
 	}

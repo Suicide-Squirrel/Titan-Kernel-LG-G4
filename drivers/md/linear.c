@@ -66,8 +66,8 @@ static int linear_mergeable_bvec(struct request_queue *q,
 {
 	struct mddev *mddev = q->queuedata;
 	struct dev_info *dev0;
-	unsigned long maxsectors, bio_sectors = bvm->bi_size >> 9;
-	sector_t sector = bvm->bi_sector + get_start_sect(bvm->bi_bdev);
+	unsigned long maxsectors, bio_sectors = bvm->bi_iter.bi_size >> 9;
+	sector_t sector = bvm->bi_iter.bi_sector + get_start_sect(bvm->bi_bdev);
 	int maxbytes = biovec->bv_len;
 	struct request_queue *subq;
 
@@ -77,7 +77,7 @@ static int linear_mergeable_bvec(struct request_queue *q,
 	subq = bdev_get_queue(dev0->rdev->bdev);
 	if (subq->merge_bvec_fn) {
 		bvm->bi_bdev = dev0->rdev->bdev;
-		bvm->bi_sector -= dev0->end_sector - dev0->rdev->sectors;
+		bvm->bi_iter.bi_sector -= dev0->end_sector - dev0->rdev->sectors;
 		maxbytes = min(maxbytes, subq->merge_bvec_fn(subq, bvm,
 							     biovec));
 	}
@@ -297,19 +297,19 @@ static void linear_make_request(struct mddev *mddev, struct bio *bio)
 	}
 
 	rcu_read_lock();
-	tmp_dev = which_dev(mddev, bio->bi_sector);
+	tmp_dev = which_dev(mddev, bio->bi_iter.bi_sector);
 	start_sector = tmp_dev->end_sector - tmp_dev->rdev->sectors;
 
 
-	if (unlikely(bio->bi_sector >= (tmp_dev->end_sector)
-		     || (bio->bi_sector < start_sector))) {
+	if (unlikely(bio->bi_iter.bi_sector >= (tmp_dev->end_sector)
+		     || (bio->bi_iter.bi_sector < start_sector))) {
 		char b[BDEVNAME_SIZE];
 
 		printk(KERN_ERR
 		       "md/linear:%s: make_request: Sector %llu out of bounds on "
 		       "dev %s: %llu sectors, offset %llu\n",
 		       mdname(mddev),
-		       (unsigned long long)bio->bi_sector,
+		       (unsigned long long)bio->bi_iter.bi_sector,
 		       bdevname(tmp_dev->rdev->bdev, b),
 		       (unsigned long long)tmp_dev->rdev->sectors,
 		       (unsigned long long)start_sector);
@@ -326,7 +326,7 @@ static void linear_make_request(struct mddev *mddev, struct bio *bio)
 
 		rcu_read_unlock();
 
-		bp = bio_split(bio, end_sector - bio->bi_sector);
+		bp = bio_split(bio, end_sector - bio->bi_iter.bi_sector);
 
 		linear_make_request(mddev, &bp->bio1);
 		linear_make_request(mddev, &bp->bio2);
@@ -335,7 +335,7 @@ static void linear_make_request(struct mddev *mddev, struct bio *bio)
 	}
 		    
 	bio->bi_bdev = tmp_dev->rdev->bdev;
-	bio->bi_sector = bio->bi_sector - start_sector
+	bio->bi_iter.bi_sector = bio->bi_iter.bi_sector - start_sector
 		+ tmp_dev->rdev->data_offset;
 	rcu_read_unlock();
 

@@ -1333,7 +1333,7 @@ next_bio:
 		goto fail;
 	}
 	/* > peer_req->i.sector, unless this is the first bio */
-	bio->bi_sector = sector;
+	bio->bi_iter.bi_sector = sector;
 	bio->bi_bdev = mdev->ldev->backing_bdev;
 	bio->bi_rw = rw;
 	bio->bi_private = peer_req;
@@ -1352,8 +1352,8 @@ next_bio:
 			if (bio->bi_vcnt == 0) {
 				dev_err(DEV,
 					"bio_add_page failed for len=%u, "
-					"bi_vcnt=0 (bi_sector=%llu)\n",
-					len, (unsigned long long)bio->bi_sector);
+					"bi_vcnt=0 (bi_iter.bi_sector=%llu)\n",
+					len, (unsigned long long)bio->bi_iter.bi_sector);
 				err = -ENOSPC;
 				goto fail;
 			}
@@ -1615,7 +1615,7 @@ static int recv_dless_read(struct drbd_conf *mdev, struct drbd_request *req,
 	mdev->recv_cnt += data_size>>9;
 
 	bio = req->master_bio;
-	D_ASSERT(sector == bio->bi_sector);
+	D_ASSERT(sector == bio->bi_iter.bi_sector);
 
 	bio_for_each_segment(bvec, bio, i) {
 		void *mapped = kmap(bvec->bv_page) + bvec->bv_offset;

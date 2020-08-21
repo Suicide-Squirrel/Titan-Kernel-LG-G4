@@ -77,9 +77,9 @@ static void dm_bufio_alloc_callback(struct dm_buffer *buf)
 /*
  * Translate input sector number to the sector number on the target device.
  */
-static sector_t verity_map_sector(struct dm_verity *v, sector_t bi_sector)
+static sector_t verity_map_sector(struct dm_verity *v, sector_t bi_iter.bi_sector)
 {
-	return v->data_start + dm_target_offset(v->ti, bi_sector);
+	return v->data_start + dm_target_offset(v->ti, bi_iter.bi_sector);
 }
 
 /*
@@ -698,9 +698,9 @@ int verity_map(struct dm_target *ti, struct bio *bio)
 	struct dm_verity_io *io;
 
 	bio->bi_bdev = v->data_dev->bdev;
-	bio->bi_sector = verity_map_sector(v, bio->bi_sector);
+	bio->bi_iter.bi_sector = verity_map_sector(v, bio->bi_iter.bi_sector);
 
-	if (((unsigned)bio->bi_sector | bio_sectors(bio)) &
+	if (((unsigned)bio->bi_iter.bi_sector | bio_sectors(bio)) &
 	    ((1 << (v->data_dev_block_bits - SECTOR_SHIFT)) - 1)) {
 		DMERR_LIMIT("unaligned io");
 		return -EIO;
@@ -719,8 +719,8 @@ int verity_map(struct dm_target *ti, struct bio *bio)
 	io->v = v;
 	io->orig_bi_end_io = bio->bi_end_io;
 	io->orig_bi_private = bio->bi_private;
-	io->block = bio->bi_sector >> (v->data_dev_block_bits - SECTOR_SHIFT);
-	io->n_blocks = bio->bi_size >> v->data_dev_block_bits;
+	io->block = bio->bi_iter.bi_sector >> (v->data_dev_block_bits - SECTOR_SHIFT);
+	io->n_blocks = bio->bi_iter.bi_size >> v->data_dev_block_bits;
 
 	bio->bi_end_io = verity_end_io;
 	bio->bi_private = io;
@@ -828,7 +828,7 @@ int verity_merge(struct dm_target *ti, struct bvec_merge_data *bvm,
 		return max_size;
 
 	bvm->bi_bdev = v->data_dev->bdev;
-	bvm->bi_sector = verity_map_sector(v, bvm->bi_sector);
+	bvm->bi_iter.bi_sector = verity_map_sector(v, bvm->bi_iter.bi_sector);
 
 	return min(max_size, q->merge_bvec_fn(q, bvm, biovec));
 }

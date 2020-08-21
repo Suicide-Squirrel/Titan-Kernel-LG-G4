@@ -791,7 +791,7 @@ static void blk_add_trace_bio(struct request_queue *q, struct bio *bio,
 	if (!error && !bio_flagged(bio, BIO_UPTODATE))
 		error = EIO;
 
-	__blk_add_trace(bt, bio->bi_sector, bio->bi_size, bio->bi_rw, what,
+	__blk_add_trace(bt, bio->bi_iter.bi_sector, bio->bi_iter.bi_size, bio->bi_rw, what,
 			error, 0, NULL, tsk);
 }
 
@@ -904,7 +904,7 @@ static void blk_add_trace_split(void *ignore,
 		    bio->bi_io_vec->bv_page->tsk_dirty)
 			tsk = bio->bi_io_vec->bv_page->tsk_dirty;
 
-		__blk_add_trace(bt, bio->bi_sector, bio->bi_size, bio->bi_rw,
+		__blk_add_trace(bt, bio->bi_iter.bi_sector, bio->bi_iter.bi_size, bio->bi_rw,
 				BLK_TA_SPLIT, !bio_flagged(bio, BIO_UPTODATE),
 				sizeof(rpdu), &rpdu, tsk);
 	}
@@ -943,7 +943,7 @@ static void blk_add_trace_bio_remap(void *ignore,
 	    bio->bi_io_vec->bv_page->tsk_dirty)
 		tsk = bio->bi_io_vec->bv_page->tsk_dirty;
 
-	__blk_add_trace(bt, bio->bi_sector, bio->bi_size, bio->bi_rw,
+	__blk_add_trace(bt, bio->bi_iter.bi_sector, bio->bi_iter.bi_size, bio->bi_rw,
 			BLK_TA_REMAP, !bio_flagged(bio, BIO_UPTODATE),
 			sizeof(r), &r, tsk);
 }

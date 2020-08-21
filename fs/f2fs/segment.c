@@ -850,7 +850,7 @@ static int __blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 		unsigned int req_sects;
 		sector_t end_sect, tmp;
 
-		/* Make sure bi_size doesn't overflow */
+		/* Make sure bi_iter.bi_size doesn't overflow */
 		req_sects = min_t(sector_t, nr_sects, UINT_MAX >> 9);
 
 		/**
@@ -874,11 +874,11 @@ static int __blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 				return ret;
 		}
 		bio = f2fs_bio_alloc(1);
-		bio->bi_sector = sector;
+		bio->bi_iter.bi_sector = sector;
 		bio->bi_bdev = bdev;
 		bio_set_op_attrs(bio, op, 0);
 
-		bio->bi_size = req_sects << 9;
+		bio->bi_iter.bi_size = req_sects << 9;
 		nr_sects -= req_sects;
 		sector = end_sect;
 

@@ -220,7 +220,7 @@ static void bio_invalidate(struct closure *cl)
 	struct bio *bio = op->cache_bio;
 
 	pr_debug("invalidating %i sectors from %llu",
-		 bio_sectors(bio), (uint64_t) bio->bi_sector);
+		 bio_sectors(bio), (uint64_t) bio->bi_iter.bi_sector);
 
 	while (bio_sectors(bio)) {
 		unsigned len = min(bio_sectors(bio), 1U << 14);
@@ -228,11 +228,11 @@ static void bio_invalidate(struct closure *cl)
 		if (bch_keylist_realloc(&op->keys, 0, op->c))
 			goto out;
 
-		bio->bi_sector	+= len;
-		bio->bi_size	-= len << 9;
+		bio->bi_iter.bi_sector	+= len;
+		bio->bi_iter.bi_size	-= len << 9;
 
 		bch_keylist_add(&op->keys,
-				&KEY(op->inode, bio->bi_sector, len));
+				&KEY(op->inode, bio->bi_iter.bi_sector, len));
 	}
 
 	op->insert_data_done = true;
@@ -510,7 +510,7 @@ static void bch_insert_data_loop(struct closure *cl)
 		k = op->keys.top;
 		bkey_init(k);
 		SET_KEY_INODE(k, op->inode);
-		SET_KEY_OFFSET(k, bio->bi_sector);
+		SET_KEY_OFFSET(k, bio->bi_iter.bi_sector);
 
 		if (!bch_alloc_sectors(k, bio_sectors(bio), s))
 			goto err;
@@ -539,7 +539,7 @@ static void bch_insert_data_loop(struct closure *cl)
 		pr_debug("%s", pkey(k));
 		bch_keylist_push(&op->keys);
 
-		trace_bcache_cache_insert(n, n->bi_sector, n->bi_bdev);
+		trace_bcache_cache_insert(n, n->bi_iter.bi_sector, n->bi_bdev);
 		n->bi_rw |= REQ_WRITE;
 		bch_submit_bbio(n, op->c, k, 0);
 	} while (n != bio);
@@ -593,7 +593,7 @@ err:
  * data is written it calls bch_journal, and after the keys have been added to
  * the next journal write they're inserted into the btree.
  *
- * It inserts the data in op->cache_bio; bi_sector is used for the key offset,
+ * It inserts the data in op->cache_bio; bi_iter.bi_sector is used for the key offset,
  * and op->inode is used for the key inode.
  *
  * If op->skip is true, instead of inserting the data it invalidates the region
@@ -728,7 +728,7 @@ static struct search *search_alloc(struct bio *bio, struct bcache_device *d)
 	s->start_time		= jiffies;
 	do_bio_hook(s);
 
-	if (bio->bi_size != bio_segments(bio) * PAGE_SIZE) {
+	if (bio->bi_iter.bi_size != bio_segments(bio) * PAGE_SIZE) {
 		bv = mempool_alloc(d->unaligned_bvec, GFP_NOIO);
 		memcpy(bv, bio_iovec(bio),
 		       sizeof(struct bio_vec) * bio_segments(bio));
@@ -794,7 +794,7 @@ static void request_read_error(struct closure *cl)
 		 * device.
 		 */
 		pr_debug("recovering at sector %llu",
-			 (uint64_t) s->orig_bio->bi_sector);
+			 (uint64_t) s->orig_bio->bi_iter.bi_sector);
 
 		s->error = 0;
 		bv = s->bio.bio.bi_io_vec;
@@ -838,9 +838,9 @@ static void request_read_done(struct closure *cl)
 		void *dst_ptr;
 
 		bio_reset(s->op.cache_bio);
-		s->op.cache_bio->bi_sector	= s->cache_miss->bi_sector;
+		s->op.cache_bio->bi_iter.bi_sector	= s->cache_miss->bi_iter.bi_sector;
 		s->op.cache_bio->bi_bdev	= s->cache_miss->bi_bdev;
-		s->op.cache_bio->bi_size	= s->cache_bio_sectors << 9;
+		s->op.cache_bio->bi_iter.bi_size	= s->cache_bio_sectors << 9;
 		bch_bio_map(s->op.cache_bio, NULL);
 
 		src = bio_iovec(s->op.cache_bio);
@@ -956,9 +956,9 @@ static int cached_dev_cache_miss(struct btree *b, struct search *s,
 	if (!s->op.cache_bio)
 		goto out_submit;
 
-	s->op.cache_bio->bi_sector	= miss->bi_sector;
+	s->op.cache_bio->bi_iter.bi_sector	= miss->bi_iter.bi_sector;
 	s->op.cache_bio->bi_bdev	= miss->bi_bdev;
-	s->op.cache_bio->bi_size	= s->cache_bio_sectors << 9;
+	s->op.cache_bio->bi_iter.bi_size	= s->cache_bio_sectors << 9;
 
 	s->op.cache_bio->bi_end_io	= request_endio;
 	s->op.cache_bio->bi_private	= &s->cl;
@@ -1024,7 +1024,7 @@ static void request_write(struct cached_dev *dc, struct search *s)
 	struct closure *cl = &s->cl;
 	struct bio *bio = &s->bio.bio;
 	struct bkey start, end;
-	start = KEY(dc->disk.id, bio->bi_sector, 0);
+	start = KEY(dc->disk.id, bio->bi_iter.bi_sector, 0);
 	end = KEY(dc->disk.id, bio_end(bio), 0);
 
 	bch_keybuf_check_overlapping(&s->op.c->moving_gc_keys, &start, &end);
@@ -1160,7 +1160,7 @@ static void check_should_skip(struct cached_dev *dc, struct search *s)
 	     (bio->bi_rw & REQ_WRITE)))
 		goto skip;
 
-	if (bio->bi_sector   & (c->sb.block_size - 1) ||
+	if (bio->bi_iter.bi_sector   & (c->sb.block_size - 1) ||
 	    bio_sectors(bio) & (c->sb.block_size - 1)) {
 		pr_debug("skipping unaligned io");
 		goto skip;
@@ -1183,8 +1183,8 @@ static void check_should_skip(struct cached_dev *dc, struct search *s)
 
 		spin_lock(&dc->io_lock);
 
-		hlist_for_each_entry(i, iohash(dc, bio->bi_sector), hash)
-			if (i->last == bio->bi_sector &&
+		hlist_for_each_entry(i, iohash(dc, bio->bi_iter.bi_sector), hash)
+			if (i->last == bio->bi_iter.bi_sector &&
 			    time_before(jiffies, i->jiffies))
 				goto found;
 
@@ -1193,8 +1193,8 @@ static void check_should_skip(struct cached_dev *dc, struct search *s)
 		add_sequential(s->task);
 		i->sequential = 0;
 found:
-		if (i->sequential + bio->bi_size > i->sequential)
-			i->sequential	+= bio->bi_size;
+		if (i->sequential + bio->bi_iter.bi_size > i->sequential)
+			i->sequential	+= bio->bi_iter.bi_size;
 
 		i->last			 = bio_end(bio);
 		i->jiffies		 = jiffies + msecs_to_jiffies(5000);
@@ -1206,7 +1206,7 @@ found:
 
 		spin_unlock(&dc->io_lock);
 	} else {
-		s->task->sequential_io = bio->bi_size;
+		s->task->sequential_io = bio->bi_iter.bi_size;
 
 		add_sequential(s->task);
 	}
@@ -1239,7 +1239,7 @@ static void cached_dev_make_request(struct request_queue *q, struct bio *bio)
 	part_stat_unlock();
 
 	bio->bi_bdev = dc->bdev;
-	bio->bi_sector += dc->sb.data_offset;
+	bio->bi_iter.bi_sector += dc->sb.data_offset;
 
 	if (cached_dev_get(dc)) {
 		s = search_alloc(bio, d);
@@ -1309,7 +1309,7 @@ static int flash_dev_cache_miss(struct btree *b, struct search *s,
 {
 	/* Zero fill bio */
 
-	while (bio->bi_idx != bio->bi_vcnt) {
+	while (bio->bi_iter.bi_idx != bio->bi_vcnt) {
 		struct bio_vec *bv = bio_iovec(bio);
 		unsigned j = min(bv->bv_len >> 9, sectors);
 
@@ -1323,10 +1323,10 @@ static int flash_dev_cache_miss(struct btree *b, struct search *s,
 		if (bv->bv_len)
 			return 0;
 
-		bio->bi_sector	+= j;
-		bio->bi_size	-= j << 9;
+		bio->bi_iter.bi_sector	+= j;
+		bio->bi_iter.bi_size	-= j << 9;
 
-		bio->bi_idx++;
+		bio->bi_iter.bi_idx++;
 		sectors		-= j;
 	}
 
@@ -1357,7 +1357,7 @@ static void flash_dev_make_request(struct request_queue *q, struct bio *bio)
 		closure_call(&s->op.cl, btree_read_async, NULL, cl);
 	} else if (bio_has_data(bio) || s->op.skip) {
 		bch_keybuf_check_overlapping(&s->op.c->moving_gc_keys,
-					     &KEY(d->id, bio->bi_sector, 0),
+					     &KEY(d->id, bio->bi_iter.bi_sector, 0),
 					     &KEY(d->id, bio_end(bio), 0));
 
 		s->writeback	= true;

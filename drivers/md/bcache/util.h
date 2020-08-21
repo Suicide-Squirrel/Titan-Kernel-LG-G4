@@ -572,7 +572,7 @@ static inline unsigned fract_exp_two(unsigned x, unsigned fract_bits)
 	return x;
 }
 
-#define bio_end(bio)	((bio)->bi_sector + bio_sectors(bio))
+#define bio_end(bio)	((bio)->bi_iter.bi_sector + bio_sectors(bio))
 
 void bch_bio_map(struct bio *bio, void *base);
 

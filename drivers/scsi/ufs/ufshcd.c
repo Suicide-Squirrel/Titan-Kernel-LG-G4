@@ -401,7 +401,7 @@ static void ufshcd_add_command_trace(struct ufs_hba *hba,
 			 * commands
 			 */
 			if (lrbp->cmd->request && lrbp->cmd->request->bio)
-				lba = lrbp->cmd->request->bio->bi_sector;
+				lba = lrbp->cmd->request->bio->bi_iter.bi_sector;
 			transfer_len = be32_to_cpu(
 				lrbp->ucd_req_ptr->sc.exp_data_transfer_len);
 		}

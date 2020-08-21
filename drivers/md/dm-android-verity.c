@@ -143,7 +143,7 @@ static int read_block_dev(struct bio_read *payload, struct block_device *bdev,
 	}
 
 	bio->bi_bdev = bdev;
-	bio->bi_sector = offset;
+	bio->bi_iter.bi_sector = offset;
 
 	payload->page_io = kzalloc(sizeof(struct page *) *
 		payload->number_of_pages, GFP_KERNEL);

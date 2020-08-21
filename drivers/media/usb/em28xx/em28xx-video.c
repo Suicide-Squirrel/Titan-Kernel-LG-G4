@@ -391,9 +391,9 @@ static inline void process_frame_data_em28xx(struct em28xx *dev,
 	}
 
 	if (dev->capture_type == 1) {
-		int vbi_size = dev->vbi_width * dev->vbi_height;
-		int vbi_data_len = ((dev->vbi_read + data_len) > vbi_size) ?
-				   (vbi_size - dev->vbi_read) : data_len;
+		int vbi_iter.bi_size = dev->vbi_width * dev->vbi_height;
+		int vbi_data_len = ((dev->vbi_read + data_len) > vbi_iter.bi_size) ?
+				   (vbi_iter.bi_size - dev->vbi_read) : data_len;
 
 		/* Copy VBI data */
 		if (vbi_buf != NULL)

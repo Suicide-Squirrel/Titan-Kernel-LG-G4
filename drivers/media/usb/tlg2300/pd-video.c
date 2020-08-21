@@ -247,7 +247,7 @@ static void check_trailer(struct video_data *video, char *src, int count)
 	int offset; /* trailer's offset */
 	char *buf;
 
-	offset = (video->context.pix.sizeimage / 2 + vbi->vbi_size / 2)
+	offset = (video->context.pix.sizeimage / 2 + vbi->vbi_iter.bi_size / 2)
 		- (vbi->copied + video->lines_size * video->lines_copied);
 	if (video->prev_left)
 		offset -= (video->lines_size - video->prev_left);
@@ -281,7 +281,7 @@ static inline void copy_vbi_data(struct vbi_data *vbi,
 		char *buf = videobuf_to_vmalloc(front->curr_frame);
 
 		if (vbi->video->field_count)
-			buf += (vbi->vbi_size / 2);
+			buf += (vbi->vbi_iter.bi_size / 2);
 		memcpy(buf + vbi->copied, src, count);
 	}
 	vbi->copied += count;
@@ -295,7 +295,7 @@ static inline void copy_vbi_video_data(struct video_data *video,
 				char *src, unsigned int count)
 {
 	struct vbi_data *vbi = video->vbi;
-	unsigned int vbi_delta = (vbi->vbi_size / 2) - vbi->copied;
+	unsigned int vbi_delta = (vbi->vbi_iter.bi_size / 2) - vbi->copied;
 
 	if (vbi_delta >= count) {
 		copy_vbi_data(vbi, src, count);
@@ -583,7 +583,7 @@ static int pd_buf_prepare(struct videobuf_queue *q, struct videobuf_buffer *vb,
 		break;
 	case V4L2_BUF_TYPE_VBI_CAPTURE:
 		if (VIDEOBUF_NEEDS_INIT == vb->state) {
-			vb->size	= front->pd->vbi_data.vbi_size;
+			vb->size	= front->pd->vbi_data.vbi_iter.bi_size;
 			rc = videobuf_iolock(q, vb, NULL);
 			if (rc < 0)
 				return rc;
@@ -662,7 +662,7 @@ static int pd_buf_setup(struct videobuf_queue *q, unsigned int *count,
 	case V4L2_BUF_TYPE_VBI_CAPTURE: {
 		struct vbi_data *vbi = &pd->vbi_data;
 
-		*size = PAGE_ALIGN(vbi->vbi_size);
+		*size = PAGE_ALIGN(vbi->vbi_iter.bi_size);
 		log("size : %d", *size);
 		if (*count == 0)
 			*count = 4;
@@ -828,10 +828,10 @@ found:
 	context = &video->context;
 	context->tvnormid = poseidon_tvnorms[i].v4l2_id;
 	if (context->tvnormid & V4L2_STD_525_60) {
-		vbi->vbi_size = V4L_NTSC_VBI_FRAMESIZE;
+		vbi->vbi_iter.bi_size = V4L_NTSC_VBI_FRAMESIZE;
 		height = 480;
 	} else {
-		vbi->vbi_size = V4L_PAL_VBI_FRAMESIZE;
+		vbi->vbi_iter.bi_size = V4L_PAL_VBI_FRAMESIZE;
 		height = 576;
 	}
 

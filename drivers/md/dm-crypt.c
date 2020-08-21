@@ -641,8 +641,8 @@ static void crypt_convert_init(struct crypt_config *cc,
 	ctx->bio_out = bio_out;
 	ctx->offset_in = 0;
 	ctx->offset_out = 0;
-	ctx->idx_in = bio_in ? bio_in->bi_idx : 0;
-	ctx->idx_out = bio_out ? bio_out->bi_idx : 0;
+	ctx->idx_in = bio_in ? bio_in->bi_iter.bi_idx : 0;
+	ctx->idx_out = bio_out ? bio_out->bi_iter.bi_idx : 0;
 	ctx->cc_sector = sector + cc->iv_offset;
 	init_completion(&ctx->restart);
 }
@@ -849,7 +849,7 @@ retry:
 		bvec->bv_len = len;
 		bvec->bv_offset = 0;
 
-		clone->bi_size += len;
+		clone->bi_iter.bi_size += len;
 
 		remaining_size -= len;
 	}
@@ -981,7 +981,7 @@ static int kcryptd_io_read(struct dm_crypt_io *io, gfp_t gfp)
 	crypt_inc_pending(io);
 
 	clone_init(io, clone);
-	clone->bi_sector = cc->start + io->sector;
+	clone->bi_iter.bi_sector = cc->start + io->sector;
 
 	generic_make_request(clone);
 	return 0;
@@ -1086,7 +1086,7 @@ static void kcryptd_crypt_write_io_submit(struct dm_crypt_io *io)
 	/* crypt_convert should have filled the clone bio */
 	BUG_ON(io->ctx.idx_out < clone->bi_vcnt);
 
-	clone->bi_sector = cc->start + io->sector;
+	clone->bi_iter.bi_sector = cc->start + io->sector;
 
 	spin_lock_irqsave(&cc->write_thread_wait.lock, flags);
 	p = &cc->write_tree.rb_node;
@@ -1122,7 +1122,7 @@ static void kcryptd_crypt_write_convert(struct dm_crypt_io *io)
 	crypt_inc_pending(io);
 	crypt_convert_init(cc, &io->ctx, NULL, io->base_bio, sector);
 
-	clone = crypt_alloc_buffer(io, io->base_bio->bi_size);
+	clone = crypt_alloc_buffer(io, io->base_bio->bi_iter.bi_size);
 	if (unlikely(!clone)) {
 		io->error = -EIO;
 		goto dec;
@@ -1724,12 +1724,12 @@ static int crypt_map(struct dm_target *ti, struct bio *bio)
 	if (unlikely(bio->bi_rw & (REQ_FLUSH | REQ_DISCARD))) {
 		bio->bi_bdev = cc->dev->bdev;
 		if (bio_sectors(bio))
-			bio->bi_sector = cc->start + dm_target_offset(ti, bio->bi_sector);
+			bio->bi_iter.bi_sector = cc->start + dm_target_offset(ti, bio->bi_iter.bi_sector);
 		return DM_MAPIO_REMAPPED;
 	}
 
 	io = dm_per_bio_data(bio, cc->per_bio_data_size);
-	crypt_io_init(io, cc, bio, dm_target_offset(ti, bio->bi_sector));
+	crypt_io_init(io, cc, bio, dm_target_offset(ti, bio->bi_iter.bi_sector));
 	io->ctx.req = (struct ablkcipher_request *)(io + 1);
 
 	if (bio_data_dir(io->base_bio) == READ) {
