@@ -291,7 +291,7 @@ int ceph_msgr_init(void)
 		return -ENOMEM;
 
 	ceph_msgr_wq = alloc_workqueue("ceph-msgr",
-				       WQ_NON_REENTRANT | WQ_MEM_RECLAIM, 0);
+				       WQ_MEM_RECLAIM, 0);
 	if (ceph_msgr_wq)
 		return 0;
 

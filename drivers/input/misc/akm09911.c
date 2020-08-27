@@ -2244,8 +2244,7 @@ int akm_compass_probe(struct i2c_client *client, const struct i2c_device_id *id)
 				WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
 			INIT_WORK(&s_akm->dwork.work, akm_dev_poll);
 		} else {
-			s_akm->work_queue = alloc_workqueue("akm_poll_work",
-					WQ_NON_REENTRANT, 0);
+			s_akm->work_queue = alloc_workqueue("akm_poll_work", 0);
 			INIT_DELAYED_WORK(&s_akm->dwork, akm_dev_poll);
 		}
 	}

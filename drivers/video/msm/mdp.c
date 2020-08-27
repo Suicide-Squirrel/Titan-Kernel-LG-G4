@@ -736,7 +736,7 @@ static int mdp_histogram_init(void)
 		return -EEXIST;
 
 	mdp_hist_wq = alloc_workqueue("mdp_hist_wq",
-					WQ_NON_REENTRANT | WQ_UNBOUND, 0);
+					WQ_UNBOUND, 0);
 
 	for (i = 0; i < MDP_HIST_MGMT_MAX; i++)
 		mdp_hist_mgmt_array[i] = NULL;

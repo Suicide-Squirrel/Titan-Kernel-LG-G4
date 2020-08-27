@@ -639,7 +639,7 @@ int vpu_hfi_init(struct vpu_platform_resources *res)
 
 	/* create the kernel work queue */
 	hdevice->main_workq = alloc_workqueue("vpu_rx_workq",
-			WQ_NON_REENTRANT | WQ_UNBOUND, 0);
+			WQ_UNBOUND, 0);
 
 	if (unlikely(!hdevice->main_workq)) {
 		pr_err("create rx workq failed\n");

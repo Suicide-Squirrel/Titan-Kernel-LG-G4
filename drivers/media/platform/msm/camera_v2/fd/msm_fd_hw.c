@@ -592,7 +592,7 @@ int msm_fd_hw_request_irq(struct platform_device *pdev,
 	}
 
 	fd->work_queue = alloc_workqueue(MSM_FD_WORQUEUE_NAME,
-		WQ_HIGHPRI | WQ_NON_REENTRANT | WQ_UNBOUND, 0);
+		WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!fd->work_queue) {
 		dev_err(fd->dev, "Can not register workqueue\n");
 		ret = -ENOMEM;
