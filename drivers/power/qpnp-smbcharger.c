@@ -5004,9 +5004,13 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 	int usbin_vol;
 	union power_supply_propval prop = {0, };
 #endif
-
-	pr_smb(PR_STATUS, "chip->usb_present = %d usb_present = %d\n",
-			chip->usb_present, usb_present);
+	if(!usb_present) {
+		pr_smb(PR_STATUS, "chip->usb_present = %d usb_present = %d\n",
+				chip->usb_present, usb_present);
+	} else {
+			handle_usb_insertion(chip);
+			goto out;
+	}
 #ifdef CONFIG_LGE_PM_UV_WAKELOCK
 	if ( (chip->uevent_wake_lock.ws.name) != NULL )
 		wake_lock_timeout(&chip->uevent_wake_lock, HZ*3);
