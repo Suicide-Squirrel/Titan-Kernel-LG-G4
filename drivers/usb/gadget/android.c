@@ -428,7 +428,7 @@ static void android_pm_qos_work(struct work_struct *data)
 				curr_sample_int_count);
 	}
 
-	queue_delayed_work(system_nrt_wq, &dev->pm_qos_work,
+	schedule_delayed_work(&dev->pm_qos_work,
 			msecs_to_jiffies(1000*next_sample_delay_sec));
 }
 
@@ -480,7 +480,7 @@ static void android_work(struct work_struct *data)
 		cancel_delayed_work_sync(&dev->pm_qos_work);
 		android_pm_qos_update_latency(dev, pdata->pm_qos_latency[WFI]);
 		dev->curr_pm_qos_state = WFI;
-		queue_delayed_work(system_nrt_wq, &dev->pm_qos_work,
+		schedule_delayed_work(&dev->pm_qos_work,
 			    msecs_to_jiffies(1000*dev->down_pm_qos_sample_sec));
 	} else if (pdata->pm_qos_latency[0] && pm_qos_vote == 0) {
 		cancel_delayed_work_sync(&dev->pm_qos_work);

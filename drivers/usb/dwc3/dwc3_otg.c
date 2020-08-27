@@ -261,13 +261,13 @@ static int dwc3_otg_set_peripheral(struct usb_otg *otg,
 		dev_dbg(otg->phy->dev, "%s: set gadget %s\n",
 					__func__, gadget->name);
 		otg->gadget = gadget;
-		queue_delayed_work(system_nrt_wq, &dotg->sm_work, 0);
+		schedule_delayed_work(&dotg->sm_work, 0);
 	} else {
 		if (otg->phy->state == OTG_STATE_B_PERIPHERAL) {
 			dwc3_otg_start_peripheral(otg, 0);
 			otg->gadget = NULL;
 			otg->phy->state = OTG_STATE_UNDEFINED;
-			queue_delayed_work(system_nrt_wq, &dotg->sm_work, 0);
+			schedule_delayed_work(&dotg->sm_work, 0);
 		} else {
 			otg->gadget = NULL;
 		}
@@ -296,8 +296,7 @@ static int dwc3_otg_set_suspend(struct usb_phy *phy, int suspend)
 
 	if (suspend) {
 		set_bit(DWC3_OTG_SUSPEND, &dotg->inputs);
-		queue_delayed_work(system_nrt_wq,
-			&dotg->sm_work,
+		schedule_delayed_work(&dotg->sm_work,
 			msecs_to_jiffies(lpm_after_suspend_delay));
 	} else {
 		clear_bit(DWC3_OTG_SUSPEND, &dotg->inputs);
@@ -322,7 +321,7 @@ static void dwc3_ext_chg_det_done(struct usb_otg *otg, struct dwc3_charger *chg)
 	 * STOP chg_det as part of !BSV handling would reset the chg_det flags
 	 */
 	if (test_bit(B_SESS_VLD, &dotg->inputs))
-		queue_delayed_work(system_nrt_wq, &dotg->sm_work, 0);
+		schedule_delayed_work(&dotg->sm_work, 0);
 }
 
 /**
@@ -409,15 +408,14 @@ static void dwc3_ext_event_notify(struct usb_otg *otg,
 		if (!init) {
 			init = true;
 			if (!work_busy(&dotg->sm_work.work))
-				queue_delayed_work(system_nrt_wq,
-							&dotg->sm_work, 0);
+				schedule_delayed_work(&dotg->sm_work, 0);
 
 			complete(&dotg->dwc3_xcvr_vbus_init);
 			dev_dbg(phy->dev, "XCVR: BSV init complete\n");
 			return;
 		}
 
-		queue_delayed_work(system_nrt_wq, &dotg->sm_work, 0);
+		schedule_delayed_work(&dotg->sm_work, 0);
 	}
 #ifdef CONFIG_LGE_USB_MAXIM_EVP
 	else if (event == DWC3_EVENT_EVP_DETECT) {
@@ -429,7 +427,7 @@ static void dwc3_ext_event_notify(struct usb_otg *otg,
 		if (ext_xceiv->evp_detect) {
 			dev_info(phy->dev, "XCVR: EVP detection start.\n");
 			dotg->otg.gadget->evp_sts |= EVP_STS_DETGO;
-			queue_delayed_work(system_nrt_wq, &dotg->sm_work, 0);
+			schedule_delayed_work(&dotg->sm_work, 0);
 		} else {
 			dev_info(phy->dev, "XCVR: QC2.0 detected, dwc3 into LPM.\n");
 			dotg->otg.gadget->evp_sts |= EVP_STS_QC20;
@@ -499,7 +497,7 @@ static int dwc3_otg_evp_connect(struct usb_phy *phy, bool connect)
 	struct dwc3_otg *dotg = container_of(phy->otg, struct dwc3_otg, otg);
 
 	if (connect)
-		queue_delayed_work(system_nrt_wq, &dotg->evp_connect_work, 0);
+		schedule_delayed_work(&dotg->evp_connect_work, 0);
 	else
 		cancel_delayed_work(&dotg->evp_connect_work);
 
@@ -758,7 +756,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 						max_chgr_retry_count) {
 #ifdef CONFIG_LGE_PM_USB_ID
 #ifdef CONFIG_LGE_USB_CHARGING_SPEC_VZW
-						queue_delayed_work(system_nrt_wq, dotg->charger->drv_check_state_wq, 0);
+						schedule_delayed_work(dotg->charger->drv_check_state_wq, 0);
 						dwc3_otg_start_peripheral(&dotg->otg, 1);
 						phy->state = OTG_STATE_B_PERIPHERAL;
 						work = 1;
@@ -912,7 +910,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	}
 
 	if (work)
-		queue_delayed_work(system_nrt_wq, &dotg->sm_work, delay);
+		schedule_delayed_work(&dotg->sm_work, delay);
 }
 
 /**

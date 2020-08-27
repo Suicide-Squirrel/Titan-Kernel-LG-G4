@@ -55,7 +55,7 @@ static irqreturn_t appsport_ext_det_irq(int irq, void *data)
 {
 	struct appsport_platform_data *pdata = data;
 
-	queue_delayed_work(system_nrt_wq, &pdata->ext_det_work, msecs_to_jiffies(100));
+	schedule_delayed_work(&pdata->ext_det_work, msecs_to_jiffies(100));
 
 	return IRQ_HANDLED;
 }
@@ -157,7 +157,7 @@ static int appsport_probe(struct platform_device *pdev)
 	if (ret)
 		goto err1;
 
-	queue_delayed_work(system_nrt_wq, &pdata->ext_det_work, msecs_to_jiffies(100));
+	schedule_delayed_work(&pdata->ext_det_work, msecs_to_jiffies(100));
 
 	return 0;
 
