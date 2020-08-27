@@ -236,7 +236,6 @@ struct smbchg_chip {
 	int				recharge_irq;
 	int				fastchg_irq;
 	int				safety_timeout_irq;
-	int				power_ok_irq;
 	int				dcin_uv_irq;
 	int				usbin_uv_irq;
 	int				usbin_ov_irq;
@@ -4641,21 +4640,6 @@ static irqreturn_t safety_timeout_handler(int irq, void *_chip)
 }
 
 /**
- * power_ok_handler() - called when the switcher turns on or turns off
- * @chip: pointer to smbchg_chip
- * @rt_stat: the status bit indicating switcher turning on or off
- */
-static irqreturn_t power_ok_handler(int irq, void *_chip)
-{
-	struct smbchg_chip *chip = _chip;
-	u8 reg = 0;
-
-	smbchg_read(chip, &reg, chip->misc_base + RT_STS, 1);
-	pr_smb(PR_INTERRUPT, "triggered: 0x%02x\n", reg);
-	return IRQ_HANDLED;
-}
-
-/**
  * dcin_uv_handler() - called when the dc voltage crosses the uv threshold
  * @chip: pointer to smbchg_chip
  * @rt_stat: the status bit indicating whether dc voltage is uv
@@ -6445,8 +6429,6 @@ static int smbchg_request_irqs(struct smbchg_chip *chip)
 			enable_irq_wake(chip->dcin_uv_irq);
 			break;
 		case SMBCHG_MISC_SUBTYPE:
-			REQUEST_IRQ(chip, spmi_resource, chip->power_ok_irq,
-				"power-ok", power_ok_handler, flags, rc);
 			REQUEST_IRQ(chip, spmi_resource, chip->chg_hot_irq,
 				"temp-shutdown", chg_hot_handler, flags, rc);
 			REQUEST_IRQ(chip, spmi_resource,
