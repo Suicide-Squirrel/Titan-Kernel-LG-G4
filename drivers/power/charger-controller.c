@@ -411,7 +411,7 @@ static void charging_information(struct work_struct *work)
 		batt_fake, batt_temp, batt_soc, batt_vol,
 		pmi_iusb_set, pmi_iusb_aicl, pmi_ibat_set, total_ibat_now);
 
-	schedule_delayed_work(&chgr_contr->charging_inform_work,
+	queue_delayed_work(system_power_efficient_wq, &chgr_contr->charging_inform_work,
 		round_jiffies_relative(msecs_to_jiffies(CHARGING_INFORM_NORMAL_TIME)));
 	power_supply_changed(chgr_contr->batt_psy);
 }
@@ -518,10 +518,10 @@ static void check_charging_state(struct work_struct *work)
 	}
 
 	if (temp == 200) {
-		schedule_delayed_work(&chgr_contr->otp_work,
+		queue_delayed_work(system_power_efficient_wq, &chgr_contr->otp_work,
 			round_jiffies_relative(msecs_to_jiffies(OTP_INIT_TIME)));
 	} else {
-		schedule_delayed_work(&chgr_contr->otp_work,
+		queue_delayed_work(system_power_efficient_wq, &chgr_contr->otp_work,
 			round_jiffies_relative(msecs_to_jiffies(OTP_POLLING_TIME)));
 	}
 
@@ -889,7 +889,7 @@ static int update_pm_psy_status(int requester)
 	if (is_usb_on || is_wireless_on) {
 		if (!otp_enabled) {
 			pr_cc(PR_INFO, "OTP scenario enabled\n");
-			schedule_delayed_work(&chgr_contr->otp_work,
+			queue_delayed_work(system_power_efficient_wq, &chgr_contr->otp_work,
 				round_jiffies_relative(msecs_to_jiffies(OTP_INIT_TIME)));
 			otp_enabled = true;
 		}
@@ -1064,7 +1064,7 @@ static int set_charger_control_current(int limit, int requester)
 		pr_cc(PR_INFO, "[QC20] Current Ibat max set to %d\n",
 						chgr_contr->current_ibat_max);
 
-		schedule_delayed_work(&chgr_contr->qc20_ibat_limit_work,
+		queue_delayed_work(system_power_efficient_wq, &chgr_contr->qc20_ibat_limit_work,
 					msecs_to_jiffies(QC20_IBAT_LIMIT_POLL_TIME));
 #endif
 
@@ -1460,7 +1460,7 @@ int notify_charger_controller(struct power_supply *psy, int requester)
 			if (val.intval == 1) {
 				pr_cc(PR_INFO, "[QC20] Detecting QC 2.0.\n");
 				chgr_contr->qc20.is_qc20 = 1;
-				schedule_delayed_work(&chgr_contr->highvol_check_work,
+				queue_delayed_work(system_power_efficient_wq, &chgr_contr->highvol_check_work,
 					msecs_to_jiffies(100));
 			}
 			else {
@@ -1472,7 +1472,7 @@ int notify_charger_controller(struct power_supply *psy, int requester)
 #else
 			pr_cc(PR_INFO, "[QC20] Detecting QC 2.0.\n");
 			chgr_contr->qc20.is_qc20 = 1;
-			schedule_delayed_work(&chgr_contr->highvol_check_work,
+			queue_delayed_work(system_power_efficient_wq, &chgr_contr->highvol_check_work,
 				msecs_to_jiffies(100));
 		} else {
 			chgr_contr->qc20.is_qc20 = 0;
@@ -1724,7 +1724,7 @@ static void cc_highvol_check_work(struct work_struct *work)
 		pr_cc(PR_INFO, "[QC20] usbin_vol %d is under %d\n",
 			usbin_vol, QC20_USBIN_VOL_THRSHD);
 		chip->qc20.check_count++;
-		schedule_delayed_work(&chip->highvol_check_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->highvol_check_work,
 			MONITOR_USBIN_QC20_CHG);
 	}
 }
@@ -2625,7 +2625,7 @@ if (cc->wireless_psy != NULL) {
 #endif
 
 #ifdef CONFIG_LGE_PM_CHARGE_INFO
-	schedule_delayed_work(&chgr_contr->charging_inform_work,
+	queue_delayed_work(system_power_efficient_wq, &chgr_contr->charging_inform_work,
 		round_jiffies_relative(msecs_to_jiffies(CHARGING_INFORM_NORMAL_TIME)));
 #endif
 

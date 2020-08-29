@@ -472,7 +472,7 @@ static void bq27x00_battery_poll(struct work_struct *work)
 	if (poll_interval > 0) {
 		/* The timer does not have to be accurate. */
 		set_timer_slack(&di->work.timer, poll_interval * HZ / 4);
-		schedule_delayed_work(&di->work, poll_interval * HZ);
+		queue_delayed_work(system_power_efficient_wq, &di->work, poll_interval * HZ);
 	}
 }
 
@@ -687,7 +687,7 @@ static void bq27x00_external_power_changed(struct power_supply *psy)
 	struct bq27x00_device_info *di = to_bq27x00_device_info(psy);
 
 	cancel_delayed_work_sync(&di->work);
-	schedule_delayed_work(&di->work, 0);
+	queue_delayed_work(system_power_efficient_wq, &di->work, 0);
 }
 
 static int bq27x00_powersupply_init(struct bq27x00_device_info *di)

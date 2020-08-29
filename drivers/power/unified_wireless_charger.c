@@ -185,7 +185,7 @@ static void wireless_align_proc(struct unified_wlc_chip *chip,
 		wireless_align_start(chip);
 		if (likely(delayed_work_pending(&chip->wireless_align_work)))
 			flush_delayed_work(&chip->wireless_align_work);
-		schedule_delayed_work(&chip->wireless_align_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->wireless_align_work,
 					msecs_to_jiffies(WLC_ALIGN_INTERVAL));
 	} else {
 		cancel_delayed_work_sync(&chip->wireless_align_work);
@@ -233,7 +233,7 @@ static void wireless_align_work(struct work_struct *work)
 		power_supply_changed(&chip->wireless_psy);
 
 check_status:
-	schedule_delayed_work(&chip->wireless_align_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->wireless_align_work,
 					msecs_to_jiffies(WLC_ALIGN_INTERVAL));
 }
 #endif
@@ -317,7 +317,7 @@ static int pm_power_set_event_property_wireless(struct power_supply *psy,
 	switch(psp){
 	case POWER_SUPPLY_PROP_WIRELESS_CHARGE_COMPLETED:
 		pr_info("[WLC] ask POWER_SUPPLY_PROP_WIRELESS_CHARGE_COMPLETED\n");
-		schedule_delayed_work(&chip->wireless_eoc_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->wireless_eoc_work,
 			round_jiffies_relative(msecs_to_jiffies(2000)));
 		break;
 	default:
@@ -367,7 +367,7 @@ static void wireless_set_online_work(struct work_struct *work)
 	if (!wlc && (online_work_cnt < MAX_CHECKING_COUNT)) {
 		pr_info("[WLC] It was Ghost WLC (wlc(%d))..... Retry count : %d\n"
 			, wlc, online_work_cnt);
-		schedule_delayed_work(&chip->wireless_set_online_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->wireless_set_online_work,
 			round_jiffies_relative(msecs_to_jiffies(100)));
 	} else {
 		pr_info("[WLC] Cancel online work.\n");
@@ -408,7 +408,7 @@ static void wireless_set_offline_work(struct work_struct *work)
 		} else {
 			pr_info("[WLC] Checking USB ........ Retry count : %d\n"
 						, offline_work_cnt);
-			schedule_delayed_work(&chip->wireless_set_offline_work,
+			queue_delayed_work(system_power_efficient_wq, &chip->wireless_set_offline_work,
 					round_jiffies_relative(msecs_to_jiffies(1000)));
 			return;
 		}
@@ -428,7 +428,7 @@ static void wireless_inserted(struct unified_wlc_chip *chip)
 	online_work_cnt = 0;
 	disconnection_cnt = 0;
 
-	schedule_delayed_work(&chip->wireless_set_online_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->wireless_set_online_work,
 			round_jiffies_relative(msecs_to_jiffies(200)));
 }
 
@@ -443,7 +443,7 @@ static void wireless_removed(struct unified_wlc_chip *chip)
 	wireless_charging = false;
 	chip->wlc_state = false;
 	power_supply_changed(&chip->wireless_psy);
-	schedule_delayed_work(&chip->wireless_set_offline_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->wireless_set_offline_work,
 		round_jiffies_relative(msecs_to_jiffies(500)));
 }
 
@@ -472,7 +472,7 @@ void wireless_interrupt_handler(bool dc_present)
 	else
 		pr_info("[WLC] I'm NOT on the WLC PAD\n");
 
-	schedule_delayed_work(&chip->wireless_interrupt_work, round_jiffies_relative(msecs_to_jiffies(100)));
+	queue_delayed_work(system_power_efficient_wq, &chip->wireless_interrupt_work, round_jiffies_relative(msecs_to_jiffies(100)));
 
 	return;
 }
