@@ -717,10 +717,16 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					}
 					break;
 #endif
-				case DWC3_PROPRIETARY_CHARGER:
 					dev_dbg(phy->dev, "lpm, DCP charger\n");
 					dwc3_otg_set_power(phy,
-						dcp_max_current);
+							DWC3_IDEV_CHG_DCP);
+					dbg_event(0xFF, "DCP put", 0);
+					pm_runtime_put_sync(phy->dev);
+					break;
+				case DWC3_PROPRIETARY_CHARGER:
+					dev_dbg(phy->dev, "lpm, PROP charger\n");
+					dwc3_otg_set_power(phy,
+							DWC3_IDEV_CHG_PROP);
 					dbg_event(0xFF, "PROPCHG put", 0);
 					pm_runtime_put_sync(phy->dev);
 					break;
@@ -849,7 +855,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dwc3_otg_start_peripheral(&dotg->otg, 0);
 			phy->state = OTG_STATE_B_IDLE;
 			if (charger)
-				charger->chg_type = DWC3_DCP_CHARGER;
+				charger->chg_type = DWC3_PROPRIETARY_CHARGER;
 			clear_bit(B_FALSE_SDP, &dotg->inputs);
 			work = 1;
 		} else if (!test_bit(B_SESS_VLD, &dotg->inputs) ||
