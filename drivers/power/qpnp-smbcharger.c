@@ -1294,12 +1294,10 @@ static struct power_supply *get_parallel_psy(struct smbchg_chip *chip)
 {
 	if (!chip->parallel.avail)
 		return NULL;
-	if (chip->parallel.psy)
+	else {
+		chip->parallel.psy = power_supply_get_by_name("usb-parallel");
 		return chip->parallel.psy;
-	chip->parallel.psy = power_supply_get_by_name("usb-parallel");
-	if (!chip->parallel.psy)
-		pr_smb(PR_STATUS, "parallel charger not found\n");
-	return chip->parallel.psy;
+	}
 }
 
 static void smbchg_usb_update_online_work(struct work_struct *work)
