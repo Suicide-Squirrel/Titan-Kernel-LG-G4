@@ -667,13 +667,16 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		if (!test_bit(ID, &dotg->inputs)) {
 			dev_dbg(phy->dev, "!id\n");
 			phy->state = OTG_STATE_A_IDLE;
+			dotg->notify_psy = true;
 			work = 1;
 		} else if (test_bit(B_SESS_VLD, &dotg->inputs)) {
 			dev_dbg(phy->dev, "b_sess_vld\n");
 			phy->state = OTG_STATE_B_IDLE;
+			dotg->notify_psy = true;
 			work = 1;
 		} else {
 			phy->state = OTG_STATE_B_IDLE;
+			dotg->notify_psy = true;
 			dev_dbg(phy->dev, "No device, trying to suspend\n");
 			dbg_event(0xFF, "UNDEF put", 0);
 			pm_runtime_put_sync(phy->dev);
@@ -684,6 +687,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		if (!test_bit(ID, &dotg->inputs)) {
 			dev_dbg(phy->dev, "!id\n");
 			phy->state = OTG_STATE_A_IDLE;
+			dotg->notify_psy = true;
 			work = 1;
 			dotg->charger_retry_count = 0;
 			if (charger) {
@@ -712,6 +716,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					if (dotg->otg.gadget->evp_sts & EVP_STS_DETGO) {
 						dwc3_otg_start_peripheral(&dotg->otg, 1);
 						phy->state = OTG_STATE_B_PERIPHERAL;
+						dotg->notify_psy = true;
 						work = 1;
 					} else {
 						dwc3_otg_set_power(phy,
@@ -739,6 +744,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;
+					dotg->notify_psy = true;
 					work = 1;
 					break;
 				case DWC3_SDP_CHARGER:
@@ -763,6 +769,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;
+					dotg->notify_psy = true;
 					dotg->falsesdp_retry_count = 0;
 					if (dotg->charger &&
 						!dotg->charger->factory_mode) {
@@ -792,11 +799,13 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 						schedule_delayed_work(dotg->charger->drv_check_state_wq, 0);
 						dwc3_otg_start_peripheral(&dotg->otg, 1);
 						phy->state = OTG_STATE_B_PERIPHERAL;
+						dotg->notify_psy = true;
 						work = 1;
 #else
 						dwc3_otg_set_power(phy, 100);
 						dwc3_otg_start_peripheral(&dotg->otg, 1);
 						phy->state = OTG_STATE_B_PERIPHERAL;
+						dotg->notify_psy = true;
 						work = 1;
 #endif
 #else
@@ -820,6 +829,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 				 * and start peripheral
 				 */
 				phy->state = OTG_STATE_B_PERIPHERAL;
+				dotg->notify_psy = true;
 				if (dwc3_otg_start_peripheral(&dotg->otg, 1)) {
 					/*
 					 * Probably set_peripheral not called
@@ -829,6 +839,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					dev_err(phy->dev, "enter lpm as\n"
 						"unable to start B-device\n");
 					phy->state = OTG_STATE_UNDEFINED;
+					dotg->notify_psy = true;
 					dbg_event(0xFF, "NoCH put", 0);
 					pm_runtime_put_sync(phy->dev);
 					return;
@@ -878,6 +889,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dotg->otg.gadget->evp_sts = 0;
 #endif
 			phy->state = OTG_STATE_B_IDLE;
+			dotg->notify_psy = true;
 			if (charger)
 				charger->chg_type = DWC3_INVALID_CHARGER;
 			work = 1;
@@ -899,10 +911,12 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		if (test_bit(ID, &dotg->inputs)) {
 			dev_dbg(phy->dev, "id\n");
 			phy->state = OTG_STATE_B_IDLE;
+			dotg->notify_psy = true;
 			dotg->vbus_retry_count = 0;
 			work = 1;
 		} else {
 			phy->state = OTG_STATE_A_HOST;
+			dotg->notify_psy = true;
 			ret = dwc3_otg_start_host(&dotg->otg, 1);
 			if ((ret == -EPROBE_DEFER) &&
 						dotg->vbus_retry_count < 3) {
@@ -911,6 +925,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 				 * not up yet. Will try to start host after 1sec
 				 */
 				phy->state = OTG_STATE_A_IDLE;
+				dotg->notify_psy = true;
 				dev_dbg(phy->dev, "Unable to get vbus regulator. Retrying...\n");
 				delay = VBUS_REG_CHECK_DELAY;
 				work = 1;
@@ -919,6 +934,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 				dev_dbg(phy->dev, "enter lpm as\n"
 					"unable to start A-device\n");
 				phy->state = OTG_STATE_A_IDLE;
+				dotg->notify_psy = true;
 				dbg_event(0xFF, "AIDL put", 0);
 				pm_runtime_put_sync(phy->dev);
 				return;
@@ -940,6 +956,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dev_dbg(phy->dev, "id\n");
 			dwc3_otg_start_host(&dotg->otg, 0);
 			phy->state = OTG_STATE_B_IDLE;
+			dotg->notify_psy = true;
 			dotg->vbus_retry_count = 0;
 			work = 1;
 		} else {
