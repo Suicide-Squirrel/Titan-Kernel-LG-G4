@@ -2885,9 +2885,9 @@ static int handle_usb_removal(struct smb135x_chg *chip)
 {
 	if (chip->usb_psy) {
 		pr_debug("setting usb psy type = %d\n",
-				POWER_SUPPLY_TYPE_UNKNOWN);
+				POWER_SUPPLY_TYPE_USB);
 		power_supply_set_supply_type(chip->usb_psy,
-				POWER_SUPPLY_TYPE_UNKNOWN);
+				POWER_SUPPLY_TYPE_USB);
 		pr_debug("setting usb psy present = %d\n", chip->usb_present);
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
 		pr_debug("setting usb psy allow detection 0\n");
