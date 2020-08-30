@@ -55,6 +55,10 @@ struct ipv6_devconf {
 	__s32           ndisc_notify;
 	__s32		accept_ra_prefix_route;
 	__s32		accept_ra_mtu;
+	struct ipv6_stable_secret {
+		bool initialized;
+		struct in6_addr secret;
+	} stable_secret;
 	void		*sysctl;
 };
 
