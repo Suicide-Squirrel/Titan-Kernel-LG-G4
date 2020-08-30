@@ -1128,7 +1128,7 @@ static int vmci_transport_recv_listen(struct sock *sk,
 	sock_hold(sk);
 	sock_hold(pending);
 	INIT_DELAYED_WORK(&vpending->dwork, vsock_pending_work);
-	schedule_delayed_work(&vpending->dwork, HZ);
+	queue_delayed_work(system_power_efficient_wq,&vpending->dwork, HZ);
 
 out:
 	return err;

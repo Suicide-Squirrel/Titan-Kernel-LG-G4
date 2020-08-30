@@ -445,7 +445,7 @@ static int __msm8x16_wcd_reg_read(struct snd_soc_codec *codec,
 			ret = msm8x16_wcd_ahb_read_device(
 					msm8x16_wcd, reg, 1, &temp);
 			atomic_set(&pdata->mclk_enabled, true);
-			schedule_delayed_work(&pdata->disable_mclk_work, 50);
+			queue_delayed_work(system_power_efficient_wq,&pdata->disable_mclk_work, 50);
 err:
 			mutex_unlock(&pdata->cdc_mclk_mutex);
 			mutex_unlock(&msm8x16_wcd->io_lock);
@@ -496,7 +496,7 @@ static int __msm8x16_wcd_reg_write(struct snd_soc_codec *codec,
 			ret = msm8x16_wcd_ahb_write_device(
 						msm8x16_wcd, reg, &val, 1);
 			atomic_set(&pdata->mclk_enabled, true);
-			schedule_delayed_work(&pdata->disable_mclk_work, 50);
+			queue_delayed_work(system_power_efficient_wq,&pdata->disable_mclk_work, 50);
 err:
 			mutex_unlock(&pdata->cdc_mclk_mutex);
 			mutex_unlock(&msm8x16_wcd->io_lock);
@@ -2393,7 +2393,7 @@ static int msm8x16_wcd_codec_enable_dec(struct snd_soc_dapm_widget *w,
 		if (tx_hpf_work[decimator - 1].tx_hpf_cut_of_freq !=
 				CF_MIN_3DB_150HZ) {
 
-			schedule_delayed_work(&tx_hpf_work[decimator - 1].dwork,
+			queue_delayed_work(system_power_efficient_wq,&tx_hpf_work[decimator - 1].dwork,
 					msecs_to_jiffies(300));
 		}
 		/* apply the digital gain after the decimator is enabled*/

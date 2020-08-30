@@ -177,7 +177,7 @@ static void __schedule_delayed(struct ceph_mon_client *monc)
 	else
 		delay = 20 * HZ;
 	dout("__schedule_delayed after %u\n", delay);
-	schedule_delayed_work(&monc->delayed_work, delay);
+	queue_delayed_work(system_power_efficient_wq,&monc->delayed_work, delay);
 }
 
 /*

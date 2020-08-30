@@ -297,7 +297,7 @@ static struct rds_ib_mr *rds_ib_alloc_fmr(struct rds_ib_device *rds_ibdev)
 	int err = 0, iter = 0;
 
 	if (atomic_read(&pool->dirty_count) >= pool->max_items / 10)
-		schedule_delayed_work(&pool->flush_worker, 10);
+		queue_delayed_work(system_power_efficient_wq,&pool->flush_worker, 10);
 
 	while (1) {
 		ibmr = rds_ib_reuse_fmr(pool);
@@ -711,7 +711,7 @@ void rds_ib_free_mr(void *trans_private, int invalidate)
 	/* If we've pinned too many pages, request a flush */
 	if (atomic_read(&pool->free_pinned) >= pool->max_free_pinned ||
 	    atomic_read(&pool->dirty_count) >= pool->max_items / 10)
-		schedule_delayed_work(&pool->flush_worker, 10);
+		queue_delayed_work(system_power_efficient_wq,&pool->flush_worker, 10);
 
 	if (invalidate) {
 		if (likely(!in_interrupt())) {
@@ -719,7 +719,7 @@ void rds_ib_free_mr(void *trans_private, int invalidate)
 		} else {
 			/* We get here if the user created a MR marked
 			 * as use_once and invalidate at the same time. */
-			schedule_delayed_work(&pool->flush_worker, 10);
+			queue_delayed_work(system_power_efficient_wq,&pool->flush_worker, 10);
 		}
 	}
 

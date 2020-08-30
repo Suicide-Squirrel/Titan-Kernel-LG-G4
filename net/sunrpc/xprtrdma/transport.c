@@ -433,7 +433,7 @@ xprt_rdma_connect(struct rpc_xprt *xprt, struct rpc_task *task)
 
 	if (r_xprt->rx_ep.rep_connected != 0) {
 		/* Reconnect */
-		schedule_delayed_work(&r_xprt->rdma_connect,
+		queue_delayed_work(system_power_efficient_wq,&r_xprt->rdma_connect,
 			xprt->reestablish_timeout);
 		xprt->reestablish_timeout <<= 1;
 		if (xprt->reestablish_timeout > (30 * HZ))
@@ -441,7 +441,7 @@ xprt_rdma_connect(struct rpc_xprt *xprt, struct rpc_task *task)
 		else if (xprt->reestablish_timeout < (5 * HZ))
 			xprt->reestablish_timeout = (5 * HZ);
 	} else {
-		schedule_delayed_work(&r_xprt->rdma_connect, 0);
+		queue_delayed_work(system_power_efficient_wq,&r_xprt->rdma_connect, 0);
 		if (!RPC_IS_ASYNC(task))
 			flush_delayed_work(&r_xprt->rdma_connect);
 	}

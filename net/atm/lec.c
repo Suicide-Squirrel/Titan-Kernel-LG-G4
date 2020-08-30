@@ -1262,7 +1262,7 @@ static void lec_arp_init(struct lec_priv *priv)
 	INIT_HLIST_HEAD(&priv->mcast_fwds);
 	spin_lock_init(&priv->lec_arp_lock);
 	INIT_DELAYED_WORK(&priv->lec_arp_work, lec_arp_check_expire);
-	schedule_delayed_work(&priv->lec_arp_work, LEC_ARP_REFRESH_INTERVAL);
+	queue_delayed_work(system_power_efficient_wq,&priv->lec_arp_work, LEC_ARP_REFRESH_INTERVAL);
 }
 
 static void lec_arp_clear_vccs(struct lec_arp_table *entry)
@@ -1715,7 +1715,7 @@ restart:
 	}
 	spin_unlock_irqrestore(&priv->lec_arp_lock, flags);
 
-	schedule_delayed_work(&priv->lec_arp_work, LEC_ARP_REFRESH_INTERVAL);
+	queue_delayed_work(system_power_efficient_wq,&priv->lec_arp_work, LEC_ARP_REFRESH_INTERVAL);
 }
 
 /*

@@ -1456,7 +1456,7 @@ static int wm8753_resume(struct snd_soc_codec *codec)
 	if (codec->dapm.suspend_bias_level == SND_SOC_BIAS_ON) {
 		wm8753_set_bias_level(codec, SND_SOC_BIAS_PREPARE);
 		codec->dapm.bias_level = SND_SOC_BIAS_ON;
-		schedule_delayed_work(&codec->dapm.delayed_work,
+		queue_delayed_work(system_power_efficient_wq,&codec->dapm.delayed_work,
 			msecs_to_jiffies(caps_charge));
 	}
 
@@ -1488,7 +1488,7 @@ static int wm8753_probe(struct snd_soc_codec *codec)
 
 	/* charge output caps */
 	wm8753_set_bias_level(codec, SND_SOC_BIAS_PREPARE);
-	schedule_delayed_work(&codec->dapm.delayed_work,
+	queue_delayed_work(system_power_efficient_wq,&codec->dapm.delayed_work,
 			      msecs_to_jiffies(caps_charge));
 
 	/* set the update bits */

@@ -100,7 +100,7 @@ static void queue_process(struct work_struct *work)
 			__netif_tx_unlock(txq);
 			local_irq_restore(flags);
 
-			schedule_delayed_work(&npinfo->tx_work, HZ/10);
+			queue_delayed_work(system_power_efficient_wq,&npinfo->tx_work, HZ/10);
 			return;
 		}
 		__netif_tx_unlock(txq);
@@ -423,7 +423,7 @@ void netpoll_send_skb_on_dev(struct netpoll *np, struct sk_buff *skb,
 
 	if (status != NETDEV_TX_OK) {
 		skb_queue_tail(&npinfo->txq, skb);
-		schedule_delayed_work(&npinfo->tx_work,0);
+		queue_delayed_work(system_power_efficient_wq,&npinfo->tx_work,0);
 	}
 }
 EXPORT_SYMBOL(netpoll_send_skb_on_dev);

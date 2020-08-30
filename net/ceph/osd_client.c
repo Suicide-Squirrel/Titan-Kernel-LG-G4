@@ -1105,7 +1105,7 @@ static struct ceph_osd *__lookup_osd(struct ceph_osd_client *osdc, int o)
 
 static void __schedule_osd_timeout(struct ceph_osd_client *osdc)
 {
-	schedule_delayed_work(&osdc->timeout_work,
+	queue_delayed_work(system_power_efficient_wq,&osdc->timeout_work,
 			osdc->client->options->osd_keepalive_timeout * HZ);
 }
 
@@ -1455,7 +1455,7 @@ static void handle_osds_timeout(struct work_struct *work)
 	remove_old_osds(osdc);
 	up_read(&osdc->map_sem);
 
-	schedule_delayed_work(&osdc->osds_timeout_work,
+	queue_delayed_work(system_power_efficient_wq,&osdc->osds_timeout_work,
 			      round_jiffies_relative(delay));
 }
 
@@ -2310,7 +2310,7 @@ int ceph_osdc_init(struct ceph_osd_client *osdc, struct ceph_client *client)
 	osdc->event_tree = RB_ROOT;
 	osdc->event_count = 0;
 
-	schedule_delayed_work(&osdc->osds_timeout_work,
+	queue_delayed_work(system_power_efficient_wq,&osdc->osds_timeout_work,
 	   round_jiffies_relative(osdc->client->options->osd_idle_ttl * HZ));
 
 	err = -ENOMEM;

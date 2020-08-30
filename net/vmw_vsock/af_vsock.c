@@ -1206,7 +1206,7 @@ static int vsock_stream_connect(struct socket *sock, struct sockaddr *addr,
 			sock_hold(sk);
 			INIT_DELAYED_WORK(&vsk->dwork,
 					  vsock_connect_timeout);
-			schedule_delayed_work(&vsk->dwork, timeout);
+			queue_delayed_work(system_power_efficient_wq,&vsk->dwork, timeout);
 
 			/* Skip ahead to preserve error code set above. */
 			goto out_wait;
