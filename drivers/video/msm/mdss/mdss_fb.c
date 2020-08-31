@@ -321,6 +321,7 @@ static const struct file_operations bl_enable_time_fops = {
 static int lcd_backlight_registered;
 
 #ifdef CONFIG_LGE_LCD_OFF_DIMMING
+#ifdef CONFIG_LGE_PM_BATTERY_ID_CHECKER
 static bool is_factory_cable(void)
 {
 	unsigned int cable_info;
@@ -333,6 +334,7 @@ static bool is_factory_cable(void)
 	else
 		return false;
 }
+#endif
 #endif
 
 #if IS_ENABLED(CONFIG_LGE_DISPLAY_DUAL_BACKLIGHT) && IS_ENABLED(CONFIG_LGE_DISPLAY_POWER_SEQUENCE)
@@ -380,10 +382,13 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	if (lge_get_bootreason_with_lcd_dimming() && !fb_blank_called) {
 		value = 1;
 		pr_info("%s: lcd dimming mode. set value = %d\n", __func__, value);
-	} else if (is_factory_cable() && !lge_battery_check() && !fb_blank_called) {
+	}
+#ifdef CONFIG_LGE_PM_BATTERY_ID_CHECKER
+	if (is_factory_cable() && !lge_battery_check() && !fb_blank_called) {
 		value = 1;
 		pr_info("%s: Detect factory cable. set value = %d\n", __func__, value);
 	}
+#endif
 #endif
 
 #if defined(CONFIG_LGE_MIPI_P1_INCELL_QHD_CMD_PANEL)
