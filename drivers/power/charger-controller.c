@@ -441,7 +441,8 @@ static void check_charging_state(struct work_struct *work)
 		chgr_contr->batt_temp = 0;
 	chgr_contr->batt_volt = volt;
 
-	pr_cc(PR_INFO, "current batt_temp[%d], batt_temp_state[%d], "
+	pr_cc(PR_INFO,  "batt_temp_state: [-1]=cold, [0]=Normal, [1+]=Need to cooldown\n");
+	pr_cc(PR_INFO,  "current batt_temp[%d], batt_temp_state[%d], "
 			"current batt_volt[%d], batt_volt_state[%d]\n",
 			chgr_contr->batt_temp, chgr_contr->batt_temp_state,
 			chgr_contr->batt_volt, chgr_contr->batt_volt_state);
