@@ -1286,12 +1286,12 @@ static int qpnp_flash_led_parse_common_dt(
 
 	led->pdata->hdrm_sns_ch1_en = of_property_read_bool(node,
 						"qcom,headroom-sense-ch1-enabled");
-/* LGE: flash dimming issue */
-/* QMC original */
-/*	led->pdata->power_detect_en = of_property_read_bool(node,
+
+	led->pdata->power_detect_en = of_property_read_bool(node,
 						"qcom,power-detect-enabled");
-*/
+/* we don't have LGE flash dimming issue on aosp
 	led->pdata->power_detect_en = false;
+*/
 	return 0;
 }
 
