@@ -302,7 +302,7 @@ skip_color_tuning:
 	else
 		qpnp_led_blue->cdev.brightness = LED_OFF;
 
-	usleep(100);
+	usleep_range(100,100);
 
 	/* Control(Turn ON/OFF) LEDs at the same time */
 	return_code = qpnp_rgb_set(qpnp_led_red);
@@ -374,7 +374,7 @@ static int qpnp_pattern_solid(struct qpnp_led_data *led)
 			printk("pwm_lut_config failed : %d\n", return_code);
 	}
 
-	usleep(100);
+	usleep_range(100,100);
 	printk("LED : %s, COLOR : %d\n", led_name, led->cdev.brightness);
 	return qpnp_rgb_set(led);
 }

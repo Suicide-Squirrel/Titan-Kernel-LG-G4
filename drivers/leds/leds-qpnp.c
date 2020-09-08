@@ -696,7 +696,7 @@ static int qpnp_wled_set(struct qpnp_led_data *led)
 				return rc;
 			}
 
-			usleep(WLED_OVP_DELAY);
+			usleep_range(WLED_OVP_DELAY, WLED_OVP_DELAY);
 		} else if (led->wled_cfg->pmic_version == PMIC_VER_8941) {
 			if (led->wled_cfg->num_physical_strings <=
 					WLED_THREE_STRINGS) {
@@ -731,7 +731,7 @@ static int qpnp_wled_set(struct qpnp_led_data *led)
 						"WLED write sink reg failed");
 					return rc;
 				}
-				usleep(WLED_OVP_DELAY);
+				usleep_range(WLED_OVP_DELAY, WLED_OVP_DELAY);
 			} else {
 				val = WLED_DISABLE_ALL_SINKS;
 				rc = spmi_ext_register_writel(
@@ -762,7 +762,7 @@ static int qpnp_wled_set(struct qpnp_led_data *led)
 					msleep(WLED_OVP_DELAY_LOOP);
 					tries++;
 				}
-				usleep(WLED_OVP_DELAY);
+				usleep_range(WLED_OVP_DELAY, WLED_OVP_DELAY);
 			}
 		}
 
@@ -1466,7 +1466,7 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 			/*
 			 * Add 1ms delay for bharger enter stable state
 			 */
-			usleep(FLASH_RAMP_UP_DELAY_US);
+			usleep_range(FLASH_RAMP_UP_DELAY_US, FLASH_RAMP_UP_DELAY_US);
 
 			if (!led->flash_cfg->strobe_type)
 				led->flash_cfg->trigger_flash &=
@@ -1530,7 +1530,7 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 			 * Disable module after ramp down complete for stable
 			 * behavior
 			 */
-			usleep(FLASH_RAMP_DN_DELAY_US);
+			usleep_range(FLASH_RAMP_UP_DELAY_US, FLASH_RAMP_UP_DELAY_US);
 
 			rc = qpnp_led_masked_write(led,
 				FLASH_ENABLE_CONTROL(led->base),
