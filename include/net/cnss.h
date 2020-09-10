@@ -138,6 +138,8 @@ extern void cnss_wlan_unregister_driver(struct cnss_wlan_driver *driver);
 extern int cnss_get_fw_files(struct cnss_fw_files *pfw_files);
 extern int cnss_get_fw_files_for_target(struct cnss_fw_files *pfw_files,
 					u32 target_type, u32 target_version);
+extern int cnss_pci_request_bus_bandwidth(int bandwidth);
+extern int cnss_sdio_request_bus_bandwidth(int bandwidth);
 extern void cnss_flush_work(void *work);
 extern void cnss_flush_delayed_work(void *dwork);
 extern void cnss_get_monotonic_boottime(struct timespec *ts);
@@ -168,6 +170,15 @@ extern void cnss_request_pm_qos_type(int latency_type, u32 qos_val);
 extern int cnss_set_cpus_allowed_ptr(struct task_struct *task, ulong cpu);
 extern void cnss_request_pm_qos(u32 qos_val);
 extern void cnss_remove_pm_qos(void);
+
+extern void cnss_pci_request_pm_qos_type(int latency_type, u32 qos_val);
+extern void cnss_pci_request_pm_qos(u32 qos_val);
+extern void cnss_pci_remove_pm_qos(void);
+
+extern void cnss_sdio_request_pm_qos_type(int latency_type, u32 qos_val);
+extern void cnss_sdio_request_pm_qos(u32 qos_val);
+extern void cnss_sdio_remove_pm_qos(void);
+
 extern int cnss_get_platform_cap(struct cnss_platform_cap *cap);
 extern void cnss_set_driver_status(enum cnss_driver_status driver_status);
 
