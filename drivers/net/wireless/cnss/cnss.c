@@ -34,6 +34,7 @@
 #include <linux/msm-bus-board.h>
 #include <linux/spinlock.h>
 #include <linux/suspend.h>
+#include <linux/mutex.h>
 #include <linux/rwsem.h>
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
@@ -234,8 +235,6 @@ static struct cnss_data {
 	void *ramdump_addr;
 	phys_addr_t ramdump_phys;
 	struct msm_dump_data dump_data;
-	u16 unsafe_ch_count;
-	u16 unsafe_ch_list[CNSS_MAX_CH_NUM];
 	struct cnss_wlan_driver *driver;
 	struct pci_dev *pdev;
 	const struct pci_device_id *id;
@@ -2063,44 +2062,6 @@ cut_power:
 }
 EXPORT_SYMBOL(cnss_wlan_unregister_driver);
 
-int cnss_set_wlan_unsafe_channel(u16 *unsafe_ch_list, u16 ch_count)
-{
-	if (!penv)
-		return -ENODEV;
-
-	if ((!unsafe_ch_list) || (ch_count > CNSS_MAX_CH_NUM))
-		return -EINVAL;
-
-	penv->unsafe_ch_count = ch_count;
-
-	if (ch_count != 0)
-		memcpy((char *)penv->unsafe_ch_list, (char *)unsafe_ch_list,
-			ch_count * sizeof(u16));
-
-	return 0;
-}
-EXPORT_SYMBOL(cnss_set_wlan_unsafe_channel);
-
-int cnss_get_wlan_unsafe_channel(u16 *unsafe_ch_list,
-					u16 *ch_count, u16 buf_len)
-{
-	if (!penv)
-		return -ENODEV;
-
-	if (!unsafe_ch_list || !ch_count)
-		return -EINVAL;
-
-	if (buf_len < (penv->unsafe_ch_count * sizeof(u16)))
-		return -ENOMEM;
-
-	*ch_count = penv->unsafe_ch_count;
-	memcpy((char *)unsafe_ch_list, (char *)penv->unsafe_ch_list,
-			penv->unsafe_ch_count * sizeof(u16));
-
-	return 0;
-}
-EXPORT_SYMBOL(cnss_get_wlan_unsafe_channel);
-
 int cnss_wlan_set_dfs_nol(void *info, u16 info_len)
 {
 	void *temp;
@@ -2228,6 +2189,64 @@ void cnss_get_boottime(struct timespec *ts)
 	ktime_get_ts(ts);
 }
 EXPORT_SYMBOL(cnss_get_boottime);
+
+static DEFINE_MUTEX(unsafe_channel_list_lock);
+
+static struct cnss_unsafe_channel_list {
+	u16 unsafe_ch_count;
+	u16 unsafe_ch_list[CNSS_MAX_CH_NUM];
+} unsafe_channel_list;
+
+int cnss_set_wlan_unsafe_channel(u16 *unsafe_ch_list, u16 ch_count)
+{
+	struct cnss_unsafe_channel_list *unsafe_list;
+
+	mutex_lock(&unsafe_channel_list_lock);
+	if ((!unsafe_ch_list) || (!ch_count) || (ch_count > CNSS_MAX_CH_NUM)) {
+		mutex_unlock(&unsafe_channel_list_lock);
+		return -EINVAL;
+	}
+
+	unsafe_list = &unsafe_channel_list;
+	unsafe_channel_list.unsafe_ch_count = ch_count;
+
+	memcpy(
+		(char *)unsafe_list->unsafe_ch_list,
+		(char *)unsafe_ch_list, ch_count * sizeof(u16));
+	mutex_unlock(&unsafe_channel_list_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(cnss_set_wlan_unsafe_channel);
+
+int cnss_get_wlan_unsafe_channel(
+			u16 *unsafe_ch_list,
+			u16 *ch_count, u16 buf_len)
+{
+	struct cnss_unsafe_channel_list *unsafe_list;
+
+	mutex_lock(&unsafe_channel_list_lock);
+	if (!unsafe_ch_list || !ch_count) {
+		mutex_unlock(&unsafe_channel_list_lock);
+		return -EINVAL;
+	}
+
+	unsafe_list = &unsafe_channel_list;
+	if (buf_len < (unsafe_list->unsafe_ch_count * sizeof(u16))) {
+		mutex_unlock(&unsafe_channel_list_lock);
+		return -ENOMEM;
+	}
+
+	*ch_count = unsafe_list->unsafe_ch_count;
+	memcpy(
+		(char *)unsafe_ch_list,
+		(char *)unsafe_list->unsafe_ch_list,
+		unsafe_list->unsafe_ch_count * sizeof(u16));
+	mutex_unlock(&unsafe_channel_list_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(cnss_get_wlan_unsafe_channel);
 
 void cnss_init_work(struct work_struct *work, work_func_t func)
 {
