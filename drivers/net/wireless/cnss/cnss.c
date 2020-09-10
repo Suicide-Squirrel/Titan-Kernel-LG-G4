@@ -246,7 +246,6 @@ static struct cnss_data {
 	bool notify_modem_status;
 	struct pci_saved_state *saved_state;
 	u16 revision_id;
-	u16 dfs_nol_info_len;
 	bool recovery_in_progress;
 	bool fw_available;
 	struct codeswap_codeseg_info *cnss_seg_info;
@@ -265,7 +264,6 @@ static struct cnss_data {
 	struct wakeup_source ws;
 	uint32_t recovery_count;
 	enum cnss_driver_status driver_status;
-	void *dfs_nol_info;
 #ifdef CONFIG_CNSS_SECURE_FW
 	void *fw_mem;
 #endif
@@ -2062,52 +2060,6 @@ cut_power:
 }
 EXPORT_SYMBOL(cnss_wlan_unregister_driver);
 
-int cnss_wlan_set_dfs_nol(void *info, u16 info_len)
-{
-	void *temp;
-
-	if (!penv)
-		return -ENODEV;
-
-	if (!info || !info_len)
-		return -EINVAL;
-
-	temp = kmalloc(info_len, GFP_KERNEL);
-	if (!temp)
-		return -ENOMEM;
-
-	memcpy(temp, info, info_len);
-
-	kfree(penv->dfs_nol_info);
-
-	penv->dfs_nol_info = temp;
-	penv->dfs_nol_info_len = info_len;
-
-	return 0;
-}
-EXPORT_SYMBOL(cnss_wlan_set_dfs_nol);
-
-int cnss_wlan_get_dfs_nol(void *info, u16 info_len)
-{
-	int len;
-
-	if (!penv)
-		return -ENODEV;
-
-	if (!info || !info_len)
-		return -EINVAL;
-
-	if (penv->dfs_nol_info == NULL || penv->dfs_nol_info_len == 0)
-		return -ENOENT;
-
-	len = min(info_len, penv->dfs_nol_info_len);
-
-	memcpy(info, penv->dfs_nol_info, len);
-
-	return len;
-}
-EXPORT_SYMBOL(cnss_wlan_get_dfs_nol);
-
 void cnss_pm_wake_lock_init(struct wakeup_source *ws, const char *name)
 {
 	wakeup_source_init(ws, name);
@@ -2191,11 +2143,17 @@ void cnss_get_boottime(struct timespec *ts)
 EXPORT_SYMBOL(cnss_get_boottime);
 
 static DEFINE_MUTEX(unsafe_channel_list_lock);
+static DEFINE_MUTEX(dfs_nol_info_lock);
 
 static struct cnss_unsafe_channel_list {
 	u16 unsafe_ch_count;
 	u16 unsafe_ch_list[CNSS_MAX_CH_NUM];
 } unsafe_channel_list;
+
+static struct cnss_dfs_nol_info {
+	void *dfs_nol_info;
+	u16 dfs_nol_info_len;
+} dfs_nol_info;
 
 int cnss_set_wlan_unsafe_channel(u16 *unsafe_ch_list, u16 ch_count)
 {
@@ -2247,6 +2205,62 @@ int cnss_get_wlan_unsafe_channel(
 	return 0;
 }
 EXPORT_SYMBOL(cnss_get_wlan_unsafe_channel);
+
+int cnss_wlan_set_dfs_nol(const void *info, u16 info_len)
+{
+	void *temp;
+	struct cnss_dfs_nol_info *dfs_info;
+
+	mutex_lock(&dfs_nol_info_lock);
+	if (!info || !info_len) {
+		mutex_unlock(&dfs_nol_info_lock);
+		return -EINVAL;
+	}
+
+	temp = kmalloc(info_len, GFP_KERNEL);
+	if (!temp) {
+		mutex_unlock(&dfs_nol_info_lock);
+		return -ENOMEM;
+	}
+
+	memcpy(temp, info, info_len);
+	dfs_info = &dfs_nol_info;
+	kfree(dfs_info->dfs_nol_info);
+
+	dfs_info->dfs_nol_info = temp;
+	dfs_info->dfs_nol_info_len = info_len;
+	mutex_unlock(&dfs_nol_info_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(cnss_wlan_set_dfs_nol);
+
+int cnss_wlan_get_dfs_nol(void *info, u16 info_len)
+{
+	int len;
+	struct cnss_dfs_nol_info *dfs_info;
+
+	mutex_lock(&dfs_nol_info_lock);
+	if (!info || !info_len) {
+		mutex_unlock(&dfs_nol_info_lock);
+		return -EINVAL;
+	}
+
+	dfs_info = &dfs_nol_info;
+
+	if (dfs_info->dfs_nol_info == NULL || dfs_info->dfs_nol_info_len == 0) {
+		mutex_unlock(&dfs_nol_info_lock);
+		return -ENOENT;
+	}
+
+	len = min(info_len, dfs_info->dfs_nol_info_len);
+
+	memcpy(info, dfs_info->dfs_nol_info, len);
+	mutex_unlock(&dfs_nol_info_lock);
+
+	return len;
+}
+EXPORT_SYMBOL(cnss_wlan_get_dfs_nol);
 
 void cnss_init_work(struct work_struct *work, work_func_t func)
 {
@@ -2817,8 +2831,6 @@ static int cnss_remove(struct platform_device *pdev)
 	device_remove_file(&pdev->dev, &dev_attr_fw_image_setup);
 
 	cnss_pm_wake_lock_destroy(&penv->ws);
-
-	kfree(penv->dfs_nol_info);
 
 	if (penv->bus_client)
 		msm_bus_scale_unregister_client(penv->bus_client);
