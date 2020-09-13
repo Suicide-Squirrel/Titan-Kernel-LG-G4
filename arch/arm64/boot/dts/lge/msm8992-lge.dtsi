@@ -247,6 +247,11 @@
 			"testmode", "battexit", "/sys/class/power_supply/battery/present"
 			;
 	};
+
+	hob_ram {
+		compatible = "mmi,hob_ram";
+		mmi,allocation-type-smem;
+	};
 };
 
 &rpm_bus {
