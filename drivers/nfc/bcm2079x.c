@@ -583,7 +583,9 @@ static const struct file_operations bcm2079x_dev_fops = {
     .write = bcm2079x_dev_write,
     .open = bcm2079x_dev_open,
     .unlocked_ioctl = bcm2079x_dev_unlocked_ioctl,
+#ifdef CONFIG_COMPAT
     .compat_ioctl = bcm2079x_dev_unlocked_ioctl,
+#endif
 };
 
 
