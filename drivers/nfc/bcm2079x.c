@@ -234,7 +234,7 @@ static int change_client_addr(struct bcm2079x_dev *bcm2079x_dev, int addr)
     addr_data[sizeof(addr_data) - 1] = (ret & 0xFF);
     pr_info("Change client device from (0x%04X) flag ="
          "0x%04x, addr_data[%ld] = %02x\n",
-         client->addr, client->flags, sizeof(addr_data) - 1,
+         client->addr, client->flags, (int)sizeof(addr_data) - 1,
          addr_data[sizeof(addr_data) - 1]);
 #if defined (BCM2079X_MTK_PLATFORM)
     ret = nfc_i2c_dma_write(client, addr_data, sizeof(addr_data));
@@ -246,7 +246,7 @@ static int change_client_addr(struct bcm2079x_dev *bcm2079x_dev, int addr)
         client->flags &= ~I2C_CLIENT_TEN;
         pr_info("Change client device from (0x%04X) flag ="
              "0x%04x, addr_data[%ld] = %02x\n",
-             client->addr, client->flags, sizeof(addr_data) - 1,
+             client->addr, client->flags, (int)sizeof(addr_data) - 1,
              addr_data[sizeof(addr_data) - 1]);
 #if defined (BCM2079X_MTK_PLATFORM)
         ret = nfc_i2c_dma_write(client, addr_data, sizeof(addr_data));
