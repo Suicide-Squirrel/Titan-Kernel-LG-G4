@@ -1,4 +1,3 @@
-
 /* LGE_CHANGE_S
  *
  * do read/mmap profiling during booting

@@ -20,33 +20,6 @@
 
 #include <asm/uaccess.h>
 
-int vfs_readdir(struct file *file, filldir_t filler, void *buf)
-{
-  struct inode *inode = file_inode(file);
-  int res = -ENOTDIR;
-  if (!file->f_op || !file->f_op->readdir)
-	goto out; 
-
-  res = security_file_permission(file, MAY_READ);
-  if (res)
-	goto out; 
-
-  res = mutex_lock_killable(&inode->i_mutex);
-  if (res)
-	goto out; 
-
-  res = -ENOENT;
-  if (!IS_DEADDIR(inode)) {
-	res = file->f_op->readdir(file, buf, filler);
-	file_accessed(file);
-  }    
-  mutex_unlock(&inode->i_mutex);
-out:
-  return res; 
-}
-
-EXPORT_SYMBOL(vfs_readdir);
-
 int iterate_dir(struct file *file, struct dir_context *ctx)
 {
 	struct inode *inode = file_inode(file);
@@ -64,7 +37,6 @@ int iterate_dir(struct file *file, struct dir_context *ctx)
 
 	res = -ENOENT;
 	if (!IS_DEADDIR(inode)) {
-		ctx->romnt = (inode->i_sb->s_flags & MS_RDONLY);
 		if (file->f_op->iterate) {
 			ctx->pos = file->f_pos;
 			res = file->f_op->iterate(file, ctx);
@@ -80,14 +52,6 @@ out:
 	return res;
 }
 EXPORT_SYMBOL(iterate_dir);
-
-static bool hide_name(const char *name, int namlen)
-{
-	if (namlen == 2 && !memcmp(name, "su", 2))
-		if (!su_visible())
-			return true;
-	return false;
-}
 
 /*
  * Traditional linux readdir() handling..
@@ -127,8 +91,6 @@ static int fillonedir(void * __buf, const char * name, int namlen, loff_t offset
 		buf->result = -EOVERFLOW;
 		return -EOVERFLOW;
 	}
-	if (hide_name(name, namlen) && buf->ctx.romnt)
-		return 0;
 	buf->result++;
 	dirent = buf->dirent;
 	if (!access_ok(VERIFY_WRITE, dirent,
@@ -206,8 +168,6 @@ static int filldir(void * __buf, const char * name, int namlen, loff_t offset,
 		buf->error = -EOVERFLOW;
 		return -EOVERFLOW;
 	}
-	if (hide_name(name, namlen) && buf->ctx.romnt)
-		return 0;
 	dirent = buf->previous;
 	if (dirent) {
 		if (__put_user(offset, &dirent->d_off))
@@ -286,8 +246,6 @@ static int filldir64(void * __buf, const char * name, int namlen, loff_t offset,
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
 		return -EINVAL;
-	if (hide_name(name, namlen) && buf->ctx.romnt)
-		return 0;
 	dirent = buf->previous;
 	if (dirent) {
 		if (__put_user(offset, &dirent->d_off))

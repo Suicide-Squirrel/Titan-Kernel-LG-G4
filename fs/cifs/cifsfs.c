@@ -1179,12 +1179,6 @@ init_cifs(void)
 		goto out_clean_proc;
 	}
 
-	cifsiod_wq = alloc_workqueue("cifsiod", WQ_FREEZABLE|WQ_MEM_RECLAIM, 0);
-	if (!cifsiod_wq) {
-		rc = -ENOMEM;
-		goto out_clean_proc;
-	}
-
 	rc = cifs_fscache_register();
 	if (rc)
 		goto out_destroy_wq;

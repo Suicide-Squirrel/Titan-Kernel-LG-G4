@@ -55,6 +55,7 @@
 #include <linux/pipe_fs_i.h>
 #include <linux/oom.h>
 #include <linux/compat.h>
+#include <linux/resource.h>
 
 #include <asm/uaccess.h>
 #include <asm/mmu_context.h>
@@ -65,16 +66,6 @@
 #include "coredump.h"
 
 #include <trace/events/sched.h>
-/* LGE_CHANGE_S
- *
- * do read/mmap profiling during booting
- * in order to use the data as readahead args
- *
- * byungchul.park@lge.com 20120503
- */
-#include "sreadahead_prof.h"
-/* LGE_CHAGE_E */
-
 
 int suid_dumpable = 0;
 
@@ -141,16 +132,6 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
 		goto exit;
 
 	fsnotify_open(file);
-/* LGE_CHANGE_S
- *
- * do read/mmap profiling during booting
- * in order to use the data as readahead args
- *
- * byungchul.park@lge.com 20120503
- */
-	sreadahead_prof(file, 0, 0);
-/* LGE_CHANGE_E */
-
 
 	error = -ENOEXEC;
 	if(file->f_op) {
@@ -737,23 +718,24 @@ int setup_arg_pages(struct linux_binprm *bprm,
 	/* mprotect_fixup is overkill to remove the temporary stack flags */
 	vma->vm_flags &= ~VM_STACK_INCOMPLETE_SETUP;
 
+#ifdef _STK_LIM
+	/* save all the virtual space we're allowed */
+	stack_expand = ((_STK_LIM) & (PAGE_MASK));
+#else
 	stack_expand = 131072UL; /* randomly 32*4k (or 2*64k) pages */
+#endif
 	stack_size = vma->vm_end - vma->vm_start;
 	/*
 	 * Align this down to a page boundary as expand_stack
 	 * will align it up.
 	 */
 	rlim_stack = rlimit(RLIMIT_STACK) & PAGE_MASK;
+	if (stack_size + stack_expand > rlim_stack)
+		stack_expand = rlim_stack - stack_size;
 #ifdef CONFIG_STACK_GROWSUP
-	if (stack_size + stack_expand > rlim_stack)
-		stack_base = vma->vm_start + rlim_stack;
-	else
-		stack_base = vma->vm_end + stack_expand;
+	stack_base = vma->vm_end + stack_expand;
 #else
-	if (stack_size + stack_expand > rlim_stack)
-		stack_base = vma->vm_end - rlim_stack;
-	else
-		stack_base = vma->vm_start - stack_expand;
+	stack_base = vma->vm_start - stack_expand;
 #endif
 	current->mm->start_stack = bprm->p;
 	ret = expand_stack(vma, stack_base);
@@ -791,16 +773,6 @@ struct file *open_exec(const char *name)
 		goto exit;
 
 	fsnotify_open(file);
-/* LGE_CHANGE_S
- *
- * do read/mmap profiling during booting
- * in order to use the data as readahead args
- *
- * byungchul.park@lge.com 20120503
- */
-	sreadahead_prof(file, 0, 0);
-/* LGE_CHANGE_E */
-
 
 	err = deny_write_access(file);
 	if (err)
@@ -988,6 +960,15 @@ static int de_thread(struct task_struct *tsk)
 		leader->group_leader = tsk;
 
 		tsk->exit_signal = SIGCHLD;
+		/*
+		 * need to delete leader from adj tree, because it will not be
+		 * group leader (exit_signal = -1) soon. release_task(leader)
+		 * can't delete it.
+		 */
+		spin_lock_irq(lock);
+		delete_from_adj_tree(leader);
+		add_2_adj_tree(tsk);
+		spin_unlock_irq(lock);
 		leader->exit_signal = -1;
 
 		BUG_ON(leader->exit_state != EXIT_ZOMBIE);
@@ -1130,7 +1111,7 @@ EXPORT_SYMBOL(flush_old_exec);
 
 void would_dump(struct linux_binprm *bprm, struct file *file)
 {
-	if (inode_permission2(file->f_path.mnt, file_inode(file), MAY_READ) < 0)
+	if (inode_permission(file_inode(file), MAY_READ) < 0)
 		bprm->interp_flags |= BINPRM_FLAGS_ENFORCE_NONDUMP;
 }
 EXPORT_SYMBOL(would_dump);
@@ -1514,7 +1495,6 @@ static int do_execve_common(const char *filename,
 	bool clear_in_exec;
 	int retval;
 	const struct cred *cred = current_cred();
-	bool is_su;
 
 	/*
 	 * We move the actual failure in case of RLIMIT_NPROC excess from
@@ -1591,17 +1571,9 @@ static int do_execve_common(const char *filename,
 	if (retval < 0)
 		goto out;
 
-	/* search_binary_handler can release file and it may be freed */
-	is_su = d_is_su(file->f_dentry);
-
 	retval = search_binary_handler(bprm);
 	if (retval < 0)
 		goto out;
-
-	if (is_su && capable(CAP_SYS_ADMIN)) {
-		current->flags |= PF_SU;
-		su_exec();
-	}
 
 	/* execve succeeded */
 	current->fs->in_exec = 0;

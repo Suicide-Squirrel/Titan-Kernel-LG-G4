@@ -187,6 +187,7 @@ ext4_listxattr(struct dentry *dentry, char *buffer, size_t size)
 {
 	return ext4_xattr_list(dentry, buffer, size);
 }
+
 static int
 ext4_xattr_check_names(struct ext4_xattr_entry *entry, void *end,
 		       void *value_start)

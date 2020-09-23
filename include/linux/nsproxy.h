@@ -44,14 +44,14 @@ extern struct nsproxy init_nsproxy;
  *
  *  3. the access to other task namespaces is performed like this
  *     task_lock(task);
- *     nsproxy = task->nsproxy;
+ *     nsproxy = tsk->nsproxy;
  *     if (nsproxy != NULL) {
  *             / *
  *               * work with the namespaces here
  *               * e.g. get the reference on one of them
  *               * /
  *     } / *
- *         * NULL task->nsproxy means that this task is
+ *         * NULL task_nsproxy() means that this task is
  *         * almost dead (zombie)
  *         * /
  *     task_unlock(task);
