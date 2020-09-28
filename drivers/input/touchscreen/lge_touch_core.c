@@ -176,6 +176,7 @@ void send_uevent_lpwg(struct i2c_client *client, int type)
 			== UEVENT_IDLE) {
 		atomic_set(&ts->state.uevent, UEVENT_BUSY);
 		send_uevent(&client->dev, lpwg_uevent[type-1]);
+		atomic_set(&ts->state.uevent, UEVENT_IDLE);
 	}
 
 	if (type == LPWG_DOUBLE_TAP) {
